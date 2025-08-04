@@ -5,7 +5,14 @@ import { motion } from 'framer-motion'
 const CardWrapper = styled(motion.div)`
   background-color: ${props => props.theme.colors.white};
   border-radius: ${props => props.theme.borderRadius.medium};
+  box-shadow: ${props => {
+    if (props.elevated) return props.theme.shadows.medium
+    if (props.border) return 'none'
+    return props.theme.shadows.subtle
+  }};
+  border: ${props => props.border ? `1px solid ${props.theme.colors.border}` : 'none'};
   overflow: hidden;
+  transition: all 0.2s ease;
   
   ${({ padding, theme }) => {
     switch (padding) {
@@ -13,8 +20,6 @@ const CardWrapper = styled(motion.div)`
         return 'padding: 0;'
       case 'small':
         return `padding: ${theme.spacing.md};`
-      case 'medium':
-        return `padding: ${theme.spacing.lg};`
       case 'large':
         return `padding: ${theme.spacing.xl};`
       default:
@@ -22,55 +27,41 @@ const CardWrapper = styled(motion.div)`
     }
   }}
   
-  ${({ elevated, theme }) =>
-    elevated &&
-    `
-      box-shadow: ${theme.shadows.medium};
-    `}
-  
-  ${({ clickable }) =>
+  ${({ clickable, theme }) =>
     clickable &&
     `
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
       
       &:hover {
         transform: translateY(-2px);
-        box-shadow: ${props => props.theme.shadows.strong};
+        box-shadow: ${theme.shadows.medium};
       }
-    `}
-  
-  ${({ border, theme }) =>
-    border &&
-    `
-      border: 1px solid ${theme.colors.border};
+      
+      &:active {
+        transform: translateY(0);
+      }
     `}
 `
 
-const Card = ({
-  children,
-  padding = 'medium',
-  elevated = false,
-  clickable = false,
+const Card = ({ 
+  children, 
+  padding = 'medium', 
+  elevated = false, 
+  clickable = false, 
   border = false,
-  onClick,
-  ...props
+  className,
+  ...props 
 }) => {
-  const cardVariants = {
-    hover: clickable ? { y: -2 } : {},
-    tap: clickable ? { y: 0 } : {}
-  }
-
   return (
     <CardWrapper
       padding={padding}
       elevated={elevated}
       clickable={clickable}
       border={border}
-      onClick={onClick}
-      variants={cardVariants}
-      whileHover={clickable ? 'hover' : undefined}
-      whileTap={clickable ? 'tap' : undefined}
+      className={className}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       {...props}
     >
       {children}

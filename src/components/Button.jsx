@@ -7,8 +7,11 @@ const ButtonWrapper = styled(motion.button)`
   align-items: center;
   justify-content: center;
   gap: ${props => props.theme.spacing.sm};
+  border: none;
   border-radius: ${props => props.theme.borderRadius.small};
+  font-family: ${props => props.theme.typography.fontFamily};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
+  cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
@@ -19,6 +22,7 @@ const ButtonWrapper = styled(motion.button)`
         return `
           background-color: ${theme.colors.primary};
           color: ${theme.colors.white};
+          
           &:hover:not(:disabled) {
             background-color: #5CAD6C;
           }
@@ -27,6 +31,7 @@ const ButtonWrapper = styled(motion.button)`
         return `
           background-color: ${theme.colors.secondary};
           color: ${theme.colors.text.primary};
+          
           &:hover:not(:disabled) {
             background-color: #F4D04A;
           }
@@ -35,7 +40,7 @@ const ButtonWrapper = styled(motion.button)`
         return `
           background-color: transparent;
           color: ${theme.colors.primary};
-          border: 1px solid ${theme.colors.primary};
+          
           &:hover:not(:disabled) {
             background-color: ${theme.colors.primary}10;
           }
@@ -44,14 +49,19 @@ const ButtonWrapper = styled(motion.button)`
         return `
           background-color: ${theme.colors.destructive};
           color: ${theme.colors.white};
+          
           &:hover:not(:disabled) {
-            background-color: #F07A7A;
+            background-color: #F17676;
           }
         `
       default:
         return `
           background-color: ${theme.colors.primary};
           color: ${theme.colors.white};
+          
+          &:hover:not(:disabled) {
+            background-color: #5CAD6C;
+          }
         `
     }
   }}
@@ -64,16 +74,10 @@ const ButtonWrapper = styled(motion.button)`
           padding: 0 ${theme.spacing.sm};
           font-size: ${theme.typography.fontSize.bodySmall};
         `
-      case 'medium':
-        return `
-          height: 40px;
-          padding: 0 ${theme.spacing.md};
-          font-size: ${theme.typography.fontSize.bodyMedium};
-        `
       case 'large':
         return `
           height: 48px;
-          padding: 0 ${theme.spacing.lg};
+          padding: 0 ${theme.spacing.xl};
           font-size: ${theme.typography.fontSize.bodyLarge};
         `
       default:
@@ -91,20 +95,28 @@ const ButtonWrapper = styled(motion.button)`
       width: 100%;
     `}
   
-  ${({ loading }) =>
-    loading &&
+  ${({ disabled }) =>
+    disabled &&
     `
-      color: transparent;
-      pointer-events: none;
+      cursor: not-allowed;
+      opacity: 0.5;
     `}
+  
+  &:focus {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
 `
 
-const Spinner = styled.div`
-  position: absolute;
+const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid ${props => props.theme.colors.white};
+  border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   
@@ -124,11 +136,13 @@ const Button = ({
   icon,
   fullWidth = false,
   onClick,
+  className,
   ...props
 }) => {
-  const buttonVariants = {
-    hover: { scale: 1.02 },
-    tap: { scale: 0.98 }
+  const handleClick = (e) => {
+    if (!disabled && !loading && onClick) {
+      onClick(e)
+    }
   }
 
   return (
@@ -138,15 +152,20 @@ const Button = ({
       disabled={disabled || loading}
       loading={loading}
       fullWidth={fullWidth}
-      onClick={onClick}
-      variants={buttonVariants}
-      whileHover={!disabled && !loading ? 'hover' : undefined}
-      whileTap={!disabled && !loading ? 'tap' : undefined}
+      onClick={handleClick}
+      className={className}
+      whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
+      whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
       {...props}
     >
-      {loading && <Spinner />}
-      {icon && !loading && <span>{icon}</span>}
-      {children}
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          {icon && <span className="button-icon">{icon}</span>}
+          {children}
+        </>
+      )}
     </ButtonWrapper>
   )
 }

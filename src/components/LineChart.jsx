@@ -3,16 +3,17 @@ import styled from 'styled-components'
 import { motion } from 'framer-motion'
 
 const ChartContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: ${props => props.height || 200}px;
   width: 100%;
-  height: ${props => props.height}px;
   position: relative;
-  padding: ${props => props.theme.spacing.md};
 `
 
 const SvgContainer = styled.svg`
+  flex: 1;
   width: 100%;
-  height: 100%;
-  overflow: visible;
+  height: ${props => props.height - 40}px;
 `
 
 const GridLine = styled.line`
@@ -21,22 +22,17 @@ const GridLine = styled.line`
   stroke-dasharray: 2, 2;
 `
 
-const AxisLine = styled.line`
-  stroke: ${props => props.theme.colors.text.secondary};
-  stroke-width: 1;
+const Area = styled(motion.path)`
+  fill: ${props => props.color || props.theme.colors.primary};
+  fill-opacity: ${props => props.areaOpacity || 0.1};
 `
 
-const LinePath = styled(motion.path)`
+const Line = styled(motion.path)`
   fill: none;
   stroke: ${props => props.color || props.theme.colors.primary};
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-`
-
-const AreaPath = styled(motion.path)`
-  fill: ${props => props.color || props.theme.colors.primary};
-  fill-opacity: 0.1;
 `
 
 const Dot = styled(motion.circle)`
@@ -50,211 +46,260 @@ const Dot = styled(motion.circle)`
   }
 `
 
-const Tooltip = styled(motion.div)`
+const XAxis = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0 ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.sm};
+`
+
+const XAxisLabel = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+  text-align: center;
+`
+
+const YAxis = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: ${props => props.height - 40}px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: ${props => props.theme.spacing.sm} 0;
+`
+
+const YAxisLabel = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+  text-align: right;
+  padding-right: ${props => props.theme.spacing.sm};
+`
+
+const Tooltip = styled.div`
   position: absolute;
   background-color: ${props => props.theme.colors.text.primary};
   color: ${props => props.theme.colors.white};
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.small};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  pointer-events: none;
-  z-index: 10;
-  box-shadow: ${props => props.theme.shadows.medium};
   white-space: nowrap;
-`
-
-const YAxisLabel = styled.text`
-  font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  fill: ${props => props.theme.colors.text.secondary};
-  text-anchor: end;
-`
-
-const XAxisLabel = styled.text`
-  font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  fill: ${props => props.theme.colors.text.secondary};
-  text-anchor: middle;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  ${Dot}:hover + & {
+    opacity: 1;
+  }
 `
 
 const LineChart = ({
-  data,
+  data = [],
   height = 200,
   color,
   showDots = true,
   showArea = true,
   showGrid = true,
-  showTooltip = true,
+  showAxes = true,
+  areaOpacity = 0.1,
   className,
   ...props
 }) => {
-  const [tooltip, setTooltip] = React.useState(null)
+  const [hoveredPoint, setHoveredPoint] = React.useState(null)
+  const svgRef = React.useRef(null)
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 })
+
+  React.useEffect(() => {
+    if (svgRef.current) {
+      const rect = svgRef.current.getBoundingClientRect()
+      setDimensions({
+        width: rect.width,
+        height: rect.height
+      })
+    }
+  }, [height])
 
   const padding = {
     top: 20,
     right: 20,
-    bottom: 30,
-    left: 40
+    bottom: 20,
+    left: showAxes ? 40 : 20
   }
 
-  const chartWidth = 1000
-  const chartHeight = height - padding.top - padding.bottom
+  const chartWidth = dimensions.width - padding.left - padding.right
+  const chartHeight = dimensions.height - padding.top - padding.bottom
 
-  const maxValue = Math.max(...data.map(d => d.value), 1)
-  const minValue = Math.min(...data.map(d => d.value), 0)
+  const maxValue = Math.max(...data.map(d => d.value || 0), 1)
+  const minValue = Math.min(...data.map(d => d.value || 0), 0)
 
-  const xScale = (index) => {
-    return padding.left + (index / (data.length - 1)) * (chartWidth - padding.left - padding.right)
+  const getXPosition = (index) => {
+    return padding.left + (index / (data.length - 1)) * chartWidth
   }
 
-  const yScale = (value) => {
+  const getYPosition = (value) => {
     return padding.top + (1 - (value - minValue) / (maxValue - minValue)) * chartHeight
   }
 
-  const linePath = data.reduce((path, point, index) => {
-    const x = xScale(index)
-    const y = yScale(point.value)
-    return `${path}${index === 0 ? 'M' : 'L'} ${x} ${y} `
-  }, '')
-
-  const areaPath = `${linePath} L ${xScale(data.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`
-
-  const handleDotHover = (event, point) => {
-    if (!showTooltip) return
-
-    const rect = event.currentTarget.getBoundingClientRect()
-    setTooltip({
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10,
-      content: `${point.label || point.date}: ${point.value}%`
-    })
+  const handleDotHover = (point, event) => {
+    setHoveredPoint({ point, event })
   }
 
   const handleDotLeave = () => {
-    setTooltip(null)
+    setHoveredPoint(null)
   }
 
-  const gridLines = []
-  if (showGrid) {
-    for (let i = 0; i <= 5; i++) {
-      const y = padding.top + (i / 5) * chartHeight
-      gridLines.push(
+  const generatePath = () => {
+    if (data.length < 2) return ''
+
+    let path = `M ${getXPosition(0)} ${getYPosition(data[0].value)}`
+    
+    for (let i = 1; i < data.length; i++) {
+      const x1 = getXPosition(i - 1)
+      const y1 = getYPosition(data[i - 1].value)
+      const x2 = getXPosition(i)
+      const y2 = getYPosition(data[i].value)
+      
+      const controlX1 = x1 + (x2 - x1) / 2
+      const controlY1 = y1
+      const controlX2 = x1 + (x2 - x1) / 2
+      const controlY2 = y2
+      
+      path += ` C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${x2} ${y2}`
+    }
+    
+    return path
+  }
+
+  const generateAreaPath = () => {
+    if (data.length < 2) return ''
+
+    const linePath = generatePath()
+    const lastX = getXPosition(data.length - 1)
+    const lastY = getYPosition(data[data.length - 1].value)
+    const firstX = getXPosition(0)
+    const bottomY = padding.top + chartHeight
+    
+    return `${linePath} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`
+  }
+
+  const generateGridLines = () => {
+    const lines = []
+    const gridLineCount = 5
+    
+    for (let i = 0; i <= gridLineCount; i++) {
+      const y = padding.top + (i / gridLineCount) * chartHeight
+      const value = maxValue - (i / gridLineCount) * (maxValue - minValue)
+      
+      lines.push(
         <GridLine
           key={`grid-${i}`}
           x1={padding.left}
           y1={y}
-          x2={chartWidth - padding.right}
+          x2={padding.left + chartWidth}
           y2={y}
         />
       )
     }
+    
+    return lines
   }
 
-  const yAxisLabels = []
-  for (let i = 0; i <= 5; i++) {
-    const value = minValue + (maxValue - minValue) * (1 - i / 5)
-    const y = padding.top + (i / 5) * chartHeight
-    yAxisLabels.push(
-      <YAxisLabel
-        key={`label-${i}`}
-        x={padding.left - 10}
-        y={y + 4}
-      >
-        {Math.round(value)}%
-      </YAxisLabel>
-    )
+  const generateYAxisLabels = () => {
+    const labels = []
+    const labelCount = 5
+    
+    for (let i = 0; i <= labelCount; i++) {
+      const value = maxValue - (i / labelCount) * (maxValue - minValue)
+      labels.push(
+        <YAxisLabel key={`y-label-${i}`}>
+          {Math.round(value)}
+        </YAxisLabel>
+      )
+    }
+    
+    return labels
   }
 
-  const xAxisLabels = data.map((point, index) => {
-    const x = xScale(index)
-    return (
-      <XAxisLabel
-        key={`x-label-${index}`}
-        x={x}
-        y={height - 10}
-      >
-        {point.label || point.day || index + 1}
-      </XAxisLabel>
-    )
-  })
+  if (!dimensions.width) {
+    return <ChartContainer height={height} className={className} {...props} />
+  }
 
   return (
     <ChartContainer height={height} className={className} {...props}>
-      <SvgContainer viewBox={`0 0 ${chartWidth} ${height}`}>
-        {/* Grid lines */}
-        {gridLines}
+      <SvgContainer
+        ref={svgRef}
+        height={height - 40}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+      >
+        {showGrid && generateGridLines()}
         
-        {/* Axes */}
-        <AxisLine
-          x1={padding.left}
-          y1={padding.top + chartHeight}
-          x2={chartWidth - padding.right}
-          y2={padding.top + chartHeight}
-        />
-        <AxisLine
-          x1={padding.left}
-          y1={padding.top}
-          x2={padding.left}
-          y2={padding.top + chartHeight}
-        />
-        
-        {/* Y-axis labels */}
-        {yAxisLabels}
-        
-        {/* X-axis labels */}
-        {xAxisLabels}
-        
-        {/* Area */}
         {showArea && (
-          <AreaPath
-            d={areaPath}
+          <Area
+            d={generateAreaPath()}
+            color={color}
+            areaOpacity={areaOpacity}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, ease: 'easeInOut' }}
+            transition={{ duration: 1, ease: 'easeInOut' }}
           />
         )}
         
-        {/* Line */}
-        <LinePath
-          d={linePath}
+        <Line
+          d={generatePath()}
+          color={color}
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
-          transition={{ duration: 0.8, ease: 'easeInOut' }}
+          transition={{ duration: 1, ease: 'easeInOut' }}
         />
         
-        {/* Dots */}
-        {showDots && data.map((point, index) => (
-          <Dot
-            key={`dot-${index}`}
-            cx={xScale(index)}
-            cy={yScale(point.value)}
-            r={4}
-            color={color}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            onMouseEnter={(e) => handleDotHover(e, point)}
-            onMouseLeave={handleDotLeave}
-          />
-        ))}
+        {showDots &&
+          data.map((point, index) => (
+            <g key={index}>
+              <Dot
+                cx={getXPosition(index)}
+                cy={getYPosition(point.value)}
+                r={4}
+                color={color}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                onMouseEnter={(e) => handleDotHover(point, e)}
+                onMouseLeave={handleDotLeave}
+              />
+              {hoveredPoint?.point === point && (
+                <Tooltip
+                  style={{
+                    left: getXPosition(index),
+                    top: getYPosition(point.value) - 40,
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  {point.label || `Day ${point.day}`}: {point.value}
+                </Tooltip>
+              )}
+            </g>
+          ))}
       </SvgContainer>
       
-      {tooltip && (
-        <Tooltip
-          initial={{ opacity: 0, y: tooltip.y + 5 }}
-          animate={{ opacity: 1, y: tooltip.y }}
-          exit={{ opacity: 0, y: tooltip.y + 5 }}
-          style={{
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: 'translateX(-50%)'
-          }}
-        >
-          {tooltip.content}
-        </Tooltip>
+      {showAxes && (
+        <>
+          <YAxis height={height - 40}>
+            {generateYAxisLabels()}
+          </YAxis>
+          
+          <XAxis>
+            {data.map((point, index) => (
+              <XAxisLabel key={index}>
+                {point.label || point.day || index + 1}
+              </XAxisLabel>
+            ))}
+          </XAxis>
+        </>
       )}
     </ChartContainer>
   )
 }
 
 export default LineChart
- 

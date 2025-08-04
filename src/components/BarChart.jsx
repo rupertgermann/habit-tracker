@@ -3,179 +3,218 @@ import styled from 'styled-components'
 import { motion } from 'framer-motion'
 
 const ChartContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: ${props => props.height || 200}px;
   width: 100%;
-  height: ${props => props.height}px;
+  position: relative;
+`
+
+const BarsContainer = styled.div`
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
+  flex: 1;
   padding: ${props => props.theme.spacing.md} 0;
-  position: relative;
 `
 
 const BarGroup = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${props => props.theme.spacing.sm};
   flex: 1;
-  max-width: ${props => props.barWidth + props.spacing * 2}px;
+  max-width: ${props => props.barWidth + props.spacing}px;
 `
 
-const BarsContainer = styled.div`
+const BarsWrapper = styled.div`
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: ${props => props.spacing}px;
-  height: ${props => props.height - 40}px;
   width: 100%;
+  height: ${props => props.height - 40}px;
+  position: relative;
 `
 
 const Bar = styled(motion.div)`
   width: ${props => props.barWidth}px;
-  background-color: ${props => props.color};
+  background-color: ${props => {
+    if (props.type === 'completed') return props.theme.colors.primary
+    if (props.type === 'missed') return props.theme.colors.destructive
+    return props.theme.colors.primary
+  }};
   border-radius: ${props => props.theme.borderRadius.small} ${props => props.theme.borderRadius.small} 0 0;
+  margin: 0 ${props => props.spacing / 2}px;
   position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
   
-  ${({ isToday, theme }) =>
-    isToday &&
-    `
-      &::after {
-        content: '';
-        position: absolute;
-        top: -4px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 6px;
-        height: 6px;
-        background-color: ${theme.colors.primary};
-        border-radius: 50%;
-      }
-    `}
+  &:hover {
+    opacity: 0.8;
+    transform: translateY(-2px);
+  }
 `
 
 const BarLabel = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  margin-top: ${props => props.theme.spacing.sm};
+  text-align: center;
 `
 
-const BarValue = styled.span`
-  font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  color: ${props => props.theme.colors.text.primary};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
+const ValueLabel = styled.span`
   position: absolute;
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.text.primary};
   white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  ${Bar}:hover & {
+    opacity: 1;
+  }
 `
 
-const Tooltip = styled(motion.div)`
+const Tooltip = styled.div`
   position: absolute;
   background-color: ${props => props.theme.colors.text.primary};
   color: ${props => props.theme.colors.white};
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.small};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  pointer-events: none;
+  white-space: nowrap;
   z-index: 10;
-  box-shadow: ${props => props.theme.shadows.medium};
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
   
-  ${({ x, y }) => `
-    left: ${x}px;
-    top: ${y}px;
-    transform: translateX(-50%);
-  `}
+  ${Bar}:hover & {
+    opacity: 1;
+  }
 `
 
 const BarChart = ({
-  data,
+  data = [],
   height = 200,
   barWidth = 24,
   spacing = 8,
-  showValues = false,
-  showTooltip = true,
+  showValues = true,
+  showTooltips = true,
   className,
   ...props
 }) => {
-  const [tooltip, setTooltip] = React.useState(null)
+  const [hoveredBar, setHoveredBar] = React.useState(null)
 
   const maxValue = Math.max(
-    ...data.map(d => Math.max(d.completed || 0, d.missed || 0)),
-    1 // Ensure we don't divide by zero
+    ...data.map(d => Math.max(d.completed || 0, d.missed || 0, d.value || 0)),
+    1
   )
 
-  const handleBarHover = (event, dataPoint) => {
-    if (!showTooltip) return
-
-    const rect = event.currentTarget.getBoundingClientRect()
-    setTooltip({
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10,
-      content: `${dataPoint.day}: ${dataPoint.completed} completed, ${dataPoint.missed} missed`
-    })
+  const handleBarHover = (index, event) => {
+    if (showTooltips) {
+      setHoveredBar({ index, event })
+    }
   }
 
   const handleBarLeave = () => {
-    setTooltip(null)
+    setHoveredBar(null)
+  }
+
+  const getBarHeight = (value) => {
+    return (value / maxValue) * (height - 40) // 40px for labels
   }
 
   return (
     <ChartContainer height={height} className={className} {...props}>
-      {data.map((item, index) => (
-        <BarGroup key={index}>
-          <BarsContainer height={height - 40} spacing={spacing}>
-            {item.completed > 0 && (
-              <Bar
-                barWidth={barWidth}
-                height={(item.completed / maxValue) * (height - 40)}
-                color="#6CC47C"
-                initial={{ height: 0 }}
-                animate={{ height: (item.completed / maxValue) * (height - 40) }}
-                transition={{ duration: 0.3, ease: 'easeOut', delay: index * 0.05 }}
-                onMouseEnter={(e) => handleBarHover(e, item)}
-                onMouseLeave={handleBarLeave}
-                isToday={item.isToday}
-              >
-                {showValues && (
-                  <BarValue>{item.completed}</BarValue>
+      <BarsContainer>
+        {data.map((item, index) => {
+          const hasSeparateBars = item.completed !== undefined && item.missed !== undefined
+          
+          return (
+            <BarGroup key={index} barWidth={barWidth} spacing={spacing}>
+              <BarsWrapper height={height}>
+                {hasSeparateBars ? (
+                  <>
+                    <Bar
+                      type="completed"
+                      barWidth={barWidth / 2 - spacing / 2}
+                      spacing={spacing}
+                      height={getBarHeight(item.completed)}
+                      initial={{ height: 0 }}
+                      animate={{ height: getBarHeight(item.completed) }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      onMouseEnter={(e) => handleBarHover(index, e)}
+                      onMouseLeave={handleBarLeave}
+                    />
+                    <Bar
+                      type="missed"
+                      barWidth={barWidth / 2 - spacing / 2}
+                      spacing={spacing}
+                      height={getBarHeight(item.missed)}
+                      initial={{ height: 0 }}
+                      animate={{ height: getBarHeight(item.missed) }}
+                      transition={{ duration: 0.5, delay: index * 0.1 + 0.05 }}
+                      onMouseEnter={(e) => handleBarHover(index, e)}
+                      onMouseLeave={handleBarLeave}
+                    />
+                    {showValues && (
+                      <>
+                        <ValueLabel>
+                          {item.completed}
+                        </ValueLabel>
+                        <ValueLabel style={{ left: '75%' }}>
+                          {item.missed}
+                        </ValueLabel>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Bar
+                      barWidth={barWidth}
+                      spacing={spacing}
+                      height={getBarHeight(item.value || 0)}
+                      initial={{ height: 0 }}
+                      animate={{ height: getBarHeight(item.value || 0) }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      onMouseEnter={(e) => handleBarHover(index, e)}
+                      onMouseLeave={handleBarLeave}
+                    />
+                    {showValues && (
+                      <ValueLabel>
+                        {item.value || 0}
+                      </ValueLabel>
+                    )}
+                  </>
                 )}
-              </Bar>
-            )}
-            {item.missed > 0 && (
-              <Bar
-                barWidth={barWidth}
-                height={(item.missed / maxValue) * (height - 40)}
-                color="#F28A8A"
-                initial={{ height: 0 }}
-                animate={{ height: (item.missed / maxValue) * (height - 40) }}
-                transition={{ duration: 0.3, ease: 'easeOut', delay: index * 0.05 + 0.1 }}
-                onMouseEnter={(e) => handleBarHover(e, item)}
-                onMouseLeave={handleBarLeave}
-                isToday={item.isToday}
-              >
-                {showValues && (
-                  <BarValue>{item.missed}</BarValue>
+                
+                {hoveredBar?.index === index && showTooltips && (
+                  <Tooltip
+                    style={{
+                      bottom: `${Math.max(
+                        getBarHeight(hasSeparateBars ? item.completed : (item.value || 0)),
+                        getBarHeight(hasSeparateBars ? item.missed : 0)
+                      ) + 20}px`,
+                      left: '50%',
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    {hasSeparateBars ? (
+                      `${item.day}: ${item.completed} completed, ${item.missed} missed`
+                    ) : (
+                      `${item.label || item.day}: ${item.value || 0}`
+                    )}
+                  </Tooltip>
                 )}
-              </Bar>
-            )}
-          </BarsContainer>
-          <BarLabel>{item.day}</BarLabel>
-        </BarGroup>
-      ))}
-      
-      {tooltip && (
-        <Tooltip
-          x={tooltip.x}
-          y={tooltip.y}
-          initial={{ opacity: 0, y: tooltip.y + 5 }}
-          animate={{ opacity: 1, y: tooltip.y }}
-          exit={{ opacity: 0, y: tooltip.y + 5 }}
-        >
-          {tooltip.content}
-        </Tooltip>
-      )}
+              </BarsWrapper>
+              <BarLabel>{item.day || item.label}</BarLabel>
+            </BarGroup>
+          )
+        })}
+      </BarsContainer>
     </ChartContainer>
   )
 }

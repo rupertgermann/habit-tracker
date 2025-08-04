@@ -11,7 +11,7 @@ import ProgressStats from './screens/ProgressStats'
 import Settings from './screens/Settings'
 import AddEditHabit from './screens/AddEditHabit'
 import BottomNavigation from './components/BottomNavigation'
-import { HabitsProvider } from './context/HabitsContext'
+import { HabitsProvider } from './context/HabitsContext.jsx'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')

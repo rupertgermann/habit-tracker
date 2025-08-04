@@ -1,0 +1,400 @@
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
+import { format, isToday, subDays, isSameDay, parseISO } from 'date-fns'
+import Card from '../components/Card'
+import Button from '../components/Button'
+import CircularProgress from '../components/CircularProgress'
+import { useHabits } from '../context/HabitsContext'
+
+const HabitDetailContainer = styled.div`
+  padding: ${props => props.theme.spacing.lg};
+  padding-bottom: ${props => props.theme.spacing.xxxl};
+  max-width: 600px;
+  margin: 0 auto;
+`
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const Title = styled.h1`
+  font-size: ${props => props.theme.typography.fontSize.headingLarge};
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
+`
+
+const HabitIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: ${props => props.theme.borderRadius.small};
+  background-color: ${props => props.color || props.theme.colors.primary}20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.color || props.theme.colors.primary};
+  font-size: 24px;
+`
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const StatCard = styled(Card)`
+  text-align: center;
+  padding: ${props => props.theme.spacing.lg};
+`
+
+const StatValue = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.headingLarge};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
+  color: ${props => props.color || props.theme.colors.primary};
+  margin-bottom: ${props => props.theme.spacing.xs};
+`
+
+const StatLabel = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+`
+
+const Section = styled.div`
+  margin-bottom: ${props => props.theme.spacing.xl};
+`
+
+const SectionTitle = styled.h2`
+  font-size: ${props => props.theme.typography.fontSize.headingMedium};
+  margin-bottom: ${props => props.theme.spacing.md};
+`
+
+const TimelineContainer = styled.div`
+  display: flex;
+  overflow-x: auto;
+  padding: ${props => props.theme.spacing.md} 0;
+  gap: ${props => props.theme.spacing.sm};
+  -webkit-overflow-scrolling: touch;
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme.colors.border};
+    border-radius: ${props => props.theme.borderRadius.small};
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.text.secondary};
+    border-radius: ${props => props.theme.borderRadius.small};
+  }
+`
+
+const TimelineItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+  min-width: 60px;
+`
+
+const DayCircle = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: ${props => props.theme.borderRadius.round};
+  background-color: ${props => props.completed ? props.theme.colors.primary : props.theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.completed ? props.theme.colors.white : props.theme.colors.text.secondary};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  position: relative;
+  
+  ${({ isToday, theme }) =>
+    isToday &&
+    `
+      border: 2px solid ${theme.colors.primary};
+    `}
+`
+
+const DayLabel = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+  white-space: nowrap;
+`
+
+const ActionButtons = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.sm};
+`
+
+const HabitInfo = styled(Card)`
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const InfoRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${props => props.theme.spacing.sm} 0;
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid ${props => props.theme.colors.border};
+  }
+`
+
+const InfoLabel = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  color: ${props => props.theme.colors.text.secondary};
+`
+
+const InfoValue = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.text.primary};
+`
+
+const CompletionChart = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: ${props => props.theme.spacing.lg} 0;
+`
+
+const StreakIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.primary};
+`
+
+const FireIcon = styled.span`
+  font-size: 20px;
+`
+
+const HabitDetail = () => {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { getHabitById, getHabitStreak, deleteHabit, toggleHabitCompletion } = useHabits()
+  const [habit, setHabit] = useState(null)
+  const [streak, setStreak] = useState(0)
+  const [recentDays, setRecentDays] = useState([])
+
+  useEffect(() => {
+    if (id) {
+      const habitData = getHabitById(id)
+      if (habitData) {
+        setHabit(habitData)
+        setStreak(getHabitStreak(habitData))
+        
+        // Generate recent 30 days for timeline
+        const days = []
+        for (let i = 29; i >= 0; i--) {
+          const date = subDays(new Date(), i)
+          const dateStr = format(date, 'yyyy-MM-dd')
+          const isCompleted = habitData.completions.some(c => c.date === dateStr)
+          
+          days.push({
+            date,
+            dateStr,
+            isCompleted,
+            isToday: isToday(date),
+            day: format(date, 'EEE'),
+            dayNumber: format(date, 'd')
+          })
+        }
+        setRecentDays(days)
+      } else {
+        navigate('/habits')
+      }
+    }
+  }, [id, getHabitById, getHabitStreak, navigate])
+
+  const handleToggleCompletion = () => {
+    if (habit) {
+      toggleHabitCompletion(habit.id)
+      const updatedHabit = getHabitById(habit.id)
+      setHabit(updatedHabit)
+      setStreak(getHabitStreak(updatedHabit))
+      
+      // Update recent days
+      const updatedDays = recentDays.map(day => {
+        if (day.isToday) {
+          return {
+            ...day,
+            isCompleted: !day.isCompleted
+          }
+        }
+        return day
+      })
+      setRecentDays(updatedDays)
+    }
+  }
+
+  const handleEdit = () => {
+    navigate(`/edit-habit/${id}`)
+  }
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this habit? This action cannot be undone.')) {
+      deleteHabit(id)
+      navigate('/habits')
+    }
+  }
+
+  const getCompletionRate = () => {
+    if (!habit || habit.completions.length === 0) return 0
+    
+    const totalDays = 30 // Last 30 days
+    const completedDays = recentDays.filter(day => day.isCompleted).length
+    return Math.round((completedDays / totalDays) * 100)
+  }
+
+  const getFrequencyText = () => {
+    if (!habit) return ''
+    
+    switch (habit.frequency) {
+      case 'daily':
+        return 'Every day'
+      case 'weekly':
+        return 'Every week'
+      case 'custom':
+        return `${habit.daysPerWeek} days per week`
+      default:
+        return 'Every day'
+    }
+  }
+
+  const getCreatedDate = () => {
+    if (!habit) return ''
+    return format(parseISO(habit.createdAt), 'MMMM d, yyyy')
+  }
+
+  if (!habit) {
+    return <div>Loading...</div>
+  }
+
+  const completionRate = getCompletionRate()
+  const isCompletedToday = recentDays.find(day => day.isToday)?.isCompleted || false
+
+  return (
+    <HabitDetailContainer>
+      <Header>
+        <Title>
+          <HabitIcon color={habit.color}>
+            {habit.icon || '✓'}
+          </HabitIcon>
+          {habit.name}
+        </Title>
+        <Button
+          variant="ghost"
+          onClick={handleEdit}
+        >
+          Edit
+        </Button>
+      </Header>
+
+      <StatsGrid>
+        <StatCard elevated>
+          <StatValue>{streak}</StatValue>
+          <StatLabel>Current Streak</StatLabel>
+        </StatCard>
+        <StatCard elevated>
+          <StatValue>{habit.completions.length}</StatValue>
+          <StatLabel>Total Completions</StatLabel>
+        </StatCard>
+        <StatCard elevated>
+          <StatValue>{completionRate}%</StatValue>
+          <StatLabel>Success Rate</StatLabel>
+        </StatCard>
+      </StatsGrid>
+
+      <HabitInfo elevated>
+        <InfoRow>
+          <InfoLabel>Frequency</InfoLabel>
+          <InfoValue>{getFrequencyText()}</InfoValue>
+        </InfoRow>
+        <InfoRow>
+          <InfoLabel>Created</InfoLabel>
+          <InfoValue>{getCreatedDate()}</InfoValue>
+        </InfoRow>
+        <InfoRow>
+          <InfoLabel>Today</InfoLabel>
+          <InfoValue>
+            <StreakIndicator>
+              {isCompletedToday ? 'Completed' : 'Not completed'}
+              {isCompletedToday && <FireIcon>🔥</FireIcon>}
+            </StreakIndicator>
+          </InfoValue>
+        </InfoRow>
+      </HabitInfo>
+
+      <Section>
+        <SectionTitle>Progress Overview</SectionTitle>
+        <CompletionChart>
+          <CircularProgress
+            progress={completionRate}
+            size={150}
+            strokeWidth={10}
+            label="30-day rate"
+          />
+        </CompletionChart>
+      </Section>
+
+      <Section>
+        <SectionTitle>Recent Activity</SectionTitle>
+        <TimelineContainer>
+          {recentDays.map((day, index) => (
+            <TimelineItem key={index}>
+              <DayCircle
+                completed={day.isCompleted}
+                isToday={day.isToday}
+              >
+                {day.dayNumber}
+              </DayCircle>
+              <DayLabel>{day.day}</DayLabel>
+            </TimelineItem>
+          ))}
+        </TimelineContainer>
+      </Section>
+
+      <Section>
+        <SectionTitle>Actions</SectionTitle>
+        <ActionButtons>
+          <Button
+            variant={isCompletedToday ? "secondary" : "primary"}
+            fullWidth
+            onClick={handleToggleCompletion}
+          >
+            {isCompletedToday ? 'Mark as Incomplete' : 'Mark as Complete'}
+          </Button>
+          <Button
+            variant="ghost"
+            fullWidth
+            onClick={handleEdit}
+          >
+            Edit Habit
+          </Button>
+          <Button
+            variant="destructive"
+            fullWidth
+            onClick={handleDelete}
+          >
+            Delete Habit
+          </Button>
+        </ActionButtons>
+      </Section>
+    </HabitDetailContainer>
+  )
+}
+
+export default HabitDetail
