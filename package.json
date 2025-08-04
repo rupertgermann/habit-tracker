@@ -1,0 +1,27 @@
+{
+  "name": "habit-tracker",
+  "version": "1.0.0",
+  "description": "A clean, minimalist mobile app UI for a habit tracker and goal planner",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.0",
+    "styled-components": "^5.3.6",
+    "framer-motion": "^10.0.0",
+    "recharts": "^2.5.0",
+    "date-fns": "^2.29.3",
+    "react-confetti": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.27",
+    "@types/react-dom": "^18.0.10",
+    "@vitejs/plugin-react": "^3.1.0",
+    "vite": "^4.1.0"
+  }
+}
