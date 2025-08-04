@@ -1,7 +1,8 @@
 import React from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
+import { useNavigation } from '../context/NavigationContext'
 
 const NavContainer = styled.nav`
   position: fixed;
@@ -100,30 +101,21 @@ const navItems = [
   }
 ]
 
-const BottomNavigation = ({ activeTab, onTabChange }) => {
+const BottomNavigation = () => {
   const navigate = useNavigate()
-  const location = useLocation()
+  const { activeTab, setActiveTab } = useNavigation()
 
   const handleTabClick = (item) => {
-    onTabChange(item.id)
+    setActiveTab(item.id)
     navigate(item.path)
   }
-
-  // Determine active tab based on current path
-  const getActiveTab = () => {
-    const currentPath = location.pathname
-    const activeItem = navItems.find(item => item.path === currentPath)
-    return activeItem ? activeItem.id : activeTab
-  }
-
-  const currentActiveTab = getActiveTab()
 
   return (
     <NavContainer>
       {navItems.map((item) => (
         <NavItem
           key={item.id}
-          active={currentActiveTab === item.id}
+          active={activeTab === item.id}
           onClick={() => handleTabClick(item)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
