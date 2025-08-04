@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval, addWeeks, subWeeks } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import Tooltip from '../components/Tooltip'
 import { useHabits } from '../context/HabitsContext'
 
 const CalendarContainer = styled.div`
@@ -85,6 +86,72 @@ const CalendarGrid = styled.div`
   grid-template-columns: repeat(7, 1fr);
   gap: ${props => props.theme.spacing.xs};
   margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const WeekViewGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: ${props => props.theme.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const WeekDayCard = styled(Card)`
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: ${props => props.theme.spacing.sm};
+  position: relative;
+  transition: all 0.2s ease;
+  
+  ${({ isToday, theme }) =>
+    isToday &&
+    `
+      border: 2px solid ${theme.colors.primary};
+    `}
+  
+  ${({ completionLevel, theme }) => {
+    switch (completionLevel) {
+      case 0:
+        return 'background-color: #F3F4F6;'
+      case 1:
+        return 'background-color: #E0F2E3;'
+      case 2:
+        return 'background-color: #A8E0B1;'
+      case 3:
+        return 'background-color: #6CC47C;'
+      case 4:
+        return 'background-color: #4A9F5A;'
+      default:
+        return 'background-color: #F3F4F6;'
+    }
+  }}
+  
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: ${props => props.theme.shadows.medium};
+  }
+`
+
+const WeekDayName = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.text.secondary};
+  margin-bottom: ${props => props.theme.spacing.xs};
+`
+
+const WeekDayNumber = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodyLarge};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
+  color: ${props => props.theme.colors.text.primary};
+`
+
+const WeekDayCompletion = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+  margin-top: ${props => props.theme.spacing.xs};
 `
 
 const DayHeader = styled.div`
@@ -243,14 +310,16 @@ const EmptyStateText = styled.p`
 
 const CalendarView = () => {
   const navigate = useNavigate()
-  const { habits, getMonthlyCompletionData } = useHabits()
+  const { habits, getMonthlyCompletionData, getWeeklyCompletionData } = useHabits()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewType, setViewType] = useState('month')
   const [monthlyData, setMonthlyData] = useState([])
+  const [weeklyData, setWeeklyData] = useState([])
 
   useEffect(() => {
     setMonthlyData(getMonthlyCompletionData())
-  }, [getMonthlyCompletionData])
+    setWeeklyData(getWeeklyCompletionData())
+  }, [getMonthlyCompletionData, getWeeklyCompletionData])
 
   const getCompletionLevel = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd')
@@ -278,7 +347,47 @@ const CalendarView = () => {
     }
   }
 
+  const getWeekStats = () => {
+    const totalDays = weeklyData.length
+    const completedDays = weeklyData.filter(d => d.completed > 0).length
+    const perfectDays = weeklyData.filter(d => d.completed === habits.length).length
+    const totalCompletions = weeklyData.reduce((sum, d) => sum + d.completed, 0)
+    
+    return {
+      totalDays,
+      completedDays,
+      perfectDays,
+      totalCompletions,
+      completionRate: totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0
+    }
+  }
+
   const monthStats = getMonthStats()
+  const weekStats = getWeekStats()
+
+  const getDayTooltipContent = (date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const dayData = monthlyData.find(d => d.date === dateStr)
+    
+    if (!dayData || dayData.completions === 0) {
+      return `No habits completed on ${format(date, 'MMMM d, yyyy')}`
+    }
+    
+    const completedHabits = habits.filter(habit =>
+      habit.completions.some(c => c.date === dateStr)
+    )
+    
+    const tooltipContent = completedHabits.map(habit => ({
+      name: habit.name,
+      icon: habit.icon || '✓',
+      completed: true
+    }))
+    
+    return {
+      title: `${format(date, 'MMMM d, yyyy')} - ${dayData.completions}/${habits.length} habits`,
+      content: tooltipContent
+    }
+  }
 
   const renderCalendar = () => {
     const monthStart = startOfMonth(currentDate)
@@ -303,20 +412,26 @@ const CalendarView = () => {
       const isCurrentMonthDay = isSameMonth(date, currentDate)
       const isTodayDate = isToday(date)
       const completionLevel = getCompletionLevel(date)
+      const tooltipData = getDayTooltipContent(date)
       
       return (
-        <DayCell
+        <Tooltip
           key={date.toString()}
-          isCurrentMonth={isCurrentMonthDay}
-          isToday={isTodayDate}
-          completionLevel={completionLevel}
-          onClick={() => {
-            // Could navigate to a day detail view
-          }}
+          title={tooltipData.title}
+          content={tooltipData.content}
+          position="top"
+          trigger="click"
+          enabled={completionLevel > 0}
         >
-          <DayNumber>{format(date, 'd')}</DayNumber>
-          {completionLevel > 0 && <CompletionIndicator />}
-        </DayCell>
+          <DayCell
+            isCurrentMonth={isCurrentMonthDay}
+            isToday={isTodayDate}
+            completionLevel={completionLevel}
+          >
+            <DayNumber>{format(date, 'd')}</DayNumber>
+            {completionLevel > 0 && <CompletionIndicator />}
+          </DayCell>
+        </Tooltip>
       )
     })
   }
@@ -329,8 +444,78 @@ const CalendarView = () => {
     setCurrentDate(addMonths(currentDate, 1))
   }
 
+  const goToPreviousWeek = () => {
+    setCurrentDate(subWeeks(currentDate, 1))
+  }
+
+  const goToNextWeek = () => {
+    setCurrentDate(addWeeks(currentDate, 1))
+  }
+
   const goToToday = () => {
     setCurrentDate(new Date())
+  }
+
+  const getWeekDayTooltipContent = (date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const dayData = weeklyData.find(d => d.date === dateStr)
+    
+    if (!dayData || dayData.completed === 0) {
+      return `No habits completed on ${format(date, 'EEEE, MMMM d')}`
+    }
+    
+    const completedHabits = habits.filter(habit =>
+      habit.completions.some(c => c.date === dateStr)
+    )
+    
+    const tooltipContent = completedHabits.map(habit => ({
+      name: habit.name,
+      icon: habit.icon || '✓',
+      completed: true
+    }))
+    
+    return {
+      title: `${format(date, 'EEEE, MMMM d')} - ${dayData.completed}/${habits.length} habits`,
+      content: tooltipContent
+    }
+  }
+
+  const renderWeekView = () => {
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
+    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
+    const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd })
+    
+    return daysOfWeek.map((day, index) => {
+      const isTodayDate = isToday(day)
+      const dayStr = format(day, 'yyyy-MM-dd')
+      const dayData = weeklyData.find(d => d.date === dayStr)
+      const completionLevel = dayData ? Math.floor((dayData.completed / habits.length) * 4) : 0
+      const tooltipData = getWeekDayTooltipContent(day)
+      
+      return (
+        <Tooltip
+          key={day.toString()}
+          title={tooltipData.title}
+          content={tooltipData.content}
+          position="top"
+          trigger="click"
+          enabled={completionLevel > 0}
+        >
+          <WeekDayCard
+            isToday={isTodayDate}
+            completionLevel={completionLevel}
+          >
+            <WeekDayName>{format(day, 'EEE')}</WeekDayName>
+            <WeekDayNumber>{format(day, 'd')}</WeekDayNumber>
+            {dayData && (
+              <WeekDayCompletion>
+                {dayData.completed}/{habits.length}
+              </WeekDayCompletion>
+            )}
+          </WeekDayCard>
+        </Tooltip>
+      )
+    })
   }
 
   if (habits.length === 0) {
@@ -373,15 +558,19 @@ const CalendarView = () => {
       </Header>
 
       <CalendarHeader>
-        <NavButton onClick={goToPreviousMonth}>
+        <NavButton onClick={viewType === 'month' ? goToPreviousMonth : goToPreviousWeek}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </NavButton>
         
-        <MonthYear>{format(currentDate, 'MMMM yyyy')}</MonthYear>
+        <MonthYear>
+          {viewType === 'month'
+            ? format(currentDate, 'MMMM yyyy')
+            : `${format(startOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d')} - ${format(endOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d, yyyy')}`}
+        </MonthYear>
         
-        <NavButton onClick={goToNextMonth}>
+        <NavButton onClick={viewType === 'month' ? goToNextMonth : goToNextWeek}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
@@ -397,12 +586,18 @@ const CalendarView = () => {
         Go to Today
       </Button>
 
-      <CalendarGrid>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <DayHeader key={day}>{day}</DayHeader>
-        ))}
-        {renderCalendar()}
-      </CalendarGrid>
+      {viewType === 'month' ? (
+        <CalendarGrid>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <DayHeader key={day}>{day}</DayHeader>
+          ))}
+          {renderCalendar()}
+        </CalendarGrid>
+      ) : (
+        <WeekViewGrid>
+          {renderWeekView()}
+        </WeekViewGrid>
+      )}
 
       <Legend>
         <LegendItem>
@@ -429,15 +624,15 @@ const CalendarView = () => {
 
       <StatsCard elevated>
         <StatItem>
-          <StatValue>{monthStats.completionRate}%</StatValue>
+          <StatValue>{viewType === 'month' ? monthStats.completionRate : weekStats.completionRate}%</StatValue>
           <StatLabel>Completion Rate</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{monthStats.perfectDays}</StatValue>
+          <StatValue>{viewType === 'month' ? monthStats.perfectDays : weekStats.perfectDays}</StatValue>
           <StatLabel>Perfect Days</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{monthStats.totalCompletions}</StatValue>
+          <StatValue>{viewType === 'month' ? monthStats.totalCompletions : weekStats.totalCompletions}</StatValue>
           <StatLabel>Total Completions</StatLabel>
         </StatItem>
       </StatsCard>

@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ThemeProvider } from 'styled-components'
+import { ThemeProvider as StyledThemeProvider } from 'styled-components'
 import { GlobalStyles } from './styles/GlobalStyles'
-import { theme } from './styles/theme'
 import Dashboard from './screens/Dashboard'
 import HabitsList from './screens/HabitsList'
 import CalendarView from './screens/CalendarView'
@@ -10,37 +9,65 @@ import HabitDetail from './screens/HabitDetail'
 import ProgressStats from './screens/ProgressStats'
 import Settings from './screens/Settings'
 import AddEditHabit from './screens/AddEditHabit'
+import JournalView from './screens/JournalView'
 import BottomNavigation from './components/BottomNavigation'
+import TabletSplitView from './components/TabletSplitView'
 import { HabitsProvider } from './context/HabitsContext.jsx'
+import { ToastProvider } from './context/ToastContext.jsx'
+import { ThemeProvider, useTheme } from './context/ThemeContext.jsx'
 
-function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [isTablet, setIsTablet] = useState(false)
+  const { theme } = useTheme()
+
+  useEffect(() => {
+    const checkIsTablet = () => {
+      setIsTablet(window.innerWidth >= 768)
+    }
+    
+    checkIsTablet()
+    window.addEventListener('resize', checkIsTablet)
+    
+    return () => window.removeEventListener('resize', checkIsTablet)
+  }, [])
 
   return (
-    <ThemeProvider theme={theme}>
+    <StyledThemeProvider theme={theme}>
       <GlobalStyles />
-      <HabitsProvider>
-        <Router>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            minHeight: '100vh',
-            paddingBottom: '80px' // Space for bottom nav
-          }}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/habits" element={<HabitsList />} />
-              <Route path="/calendar" element={<CalendarView />} />
-              <Route path="/habit/:id" element={<HabitDetail />} />
-              <Route path="/progress" element={<ProgressStats />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/add-habit" element={<AddEditHabit />} />
-              <Route path="/edit-habit/:id" element={<AddEditHabit />} />
-            </Routes>
-            <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-          </div>
-        </Router>
-      </HabitsProvider>
+      <Router>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          paddingBottom: isTablet ? '0' : '80px' // No space needed for bottom nav on tablet
+        }}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/habits" element={isTablet ? <TabletSplitView /> : <HabitsList />} />
+            <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/habit/:id" element={isTablet ? <TabletSplitView /> : <HabitDetail />} />
+            <Route path="/progress" element={<ProgressStats />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/add-habit" element={<AddEditHabit />} />
+            <Route path="/edit-habit/:id" element={<AddEditHabit />} />
+            <Route path="/journal" element={<JournalView />} />
+          </Routes>
+          {!isTablet && <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />}
+        </div>
+      </Router>
+    </StyledThemeProvider>
+  )
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <HabitsProvider>
+          <AppContent />
+        </HabitsProvider>
+      </ToastProvider>
     </ThemeProvider>
   )
 }

@@ -5,7 +5,9 @@ import { format, isToday, subDays, isSameDay, parseISO } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import CircularProgress from '../components/CircularProgress'
+import Confetti from '../components/Confetti'
 import { useHabits } from '../context/HabitsContext'
+import { useToast } from '../context/ToastContext'
 
 const HabitDetailContainer = styled.div`
   padding: ${props => props.theme.spacing.lg};
@@ -185,9 +187,11 @@ const HabitDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getHabitById, getHabitStreak, deleteHabit, toggleHabitCompletion } = useHabits()
+  const { showSuccessToast } = useToast()
   const [habit, setHabit] = useState(null)
   const [streak, setStreak] = useState(0)
   const [recentDays, setRecentDays] = useState([])
+  const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -221,6 +225,8 @@ const HabitDetail = () => {
 
   const handleToggleCompletion = () => {
     if (habit) {
+      const isCompleting = !recentDays.find(day => day.isToday)?.isCompleted
+      
       toggleHabitCompletion(habit.id)
       const updatedHabit = getHabitById(habit.id)
       setHabit(updatedHabit)
@@ -237,6 +243,16 @@ const HabitDetail = () => {
         return day
       })
       setRecentDays(updatedDays)
+      
+      if (isCompleting) {
+        showSuccessToast(`Great job! "${habit.name}" completed!`)
+        
+        // Show confetti for milestone streaks
+        if (streak > 0 && (streak + 1) % 7 === 0) {
+          setShowConfetti(true)
+          showSuccessToast(`🔥 ${streak + 1} day streak! Keep it up!`)
+        }
+      }
     }
   }
 
@@ -288,6 +304,7 @@ const HabitDetail = () => {
 
   return (
     <HabitDetailContainer>
+      <Confetti run={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Header>
         <Title>
           <HabitIcon color={habit.color}>
@@ -368,12 +385,22 @@ const HabitDetail = () => {
       </Section>
 
       <Section>
+        <SectionTitle>Journal</SectionTitle>
+        <JournalEntry
+          habitId={habit.id}
+          date={format(new Date(), 'yyyy-MM-dd')}
+          habitName={habit.name}
+        />
+      </Section>
+
+      <Section>
         <SectionTitle>Actions</SectionTitle>
         <ActionButtons>
           <Button
             variant={isCompletedToday ? "secondary" : "primary"}
             fullWidth
             onClick={handleToggleCompletion}
+            bounceOnClick={true}
           >
             {isCompletedToday ? 'Mark as Incomplete' : 'Mark as Complete'}
           </Button>

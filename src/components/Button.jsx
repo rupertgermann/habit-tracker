@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
+import { keyframes } from 'styled-components'
 
 const ButtonWrapper = styled(motion.button)`
   display: inline-flex;
@@ -110,6 +111,12 @@ const ButtonWrapper = styled(motion.button)`
   &:active {
     transform: scale(0.98);
   }
+  
+  ${({ isBouncing }) =>
+    isBouncing &&
+    `
+      animation: ${bounce} 0.6s ease;
+    `}
 `
 
 const LoadingSpinner = styled.div`
@@ -127,6 +134,18 @@ const LoadingSpinner = styled.div`
   }
 `
 
+const bounce = keyframes`
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+`
+
 const Button = ({
   children,
   variant = 'primary',
@@ -137,10 +156,18 @@ const Button = ({
   fullWidth = false,
   onClick,
   className,
+  bounceOnClick = false,
+  ariaLabel,
   ...props
 }) => {
+  const [isBouncing, setIsBouncing] = React.useState(false)
+  
   const handleClick = (e) => {
     if (!disabled && !loading && onClick) {
+      if (bounceOnClick) {
+        setIsBouncing(true)
+        setTimeout(() => setIsBouncing(false), 600)
+      }
       onClick(e)
     }
   }
@@ -150,19 +177,23 @@ const Button = ({
       variant={variant}
       size={size}
       disabled={disabled || loading}
-      loading={loading}
+      loading={loading ? true : undefined}
       fullWidth={fullWidth}
       onClick={handleClick}
       className={className}
+      aria-label={ariaLabel || (typeof children === 'string' ? children : undefined)}
+      aria-disabled={disabled || loading}
+      aria-busy={loading}
       whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
       whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
+      isBouncing={isBouncing}
       {...props}
     >
       {loading ? (
-        <LoadingSpinner />
+        <LoadingSpinner aria-label="Loading" />
       ) : (
         <>
-          {icon && <span className="button-icon">{icon}</span>}
+          {icon && <span className="button-icon" aria-hidden="true">{icon}</span>}
           {children}
         </>
       )}

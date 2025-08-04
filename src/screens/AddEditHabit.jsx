@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import CategorySelector from '../components/CategorySelector'
 import { useHabits } from '../context/HabitsContext'
 
 const FormContainer = styled.div`
@@ -259,6 +260,7 @@ const AddEditHabit = () => {
     selectedDays: [false, false, false, false, false, false, false],
     color: '#6CC47C',
     icon: '✓',
+    category: 'other',
     reminders: []
   })
 
@@ -274,6 +276,7 @@ const AddEditHabit = () => {
           selectedDays: habit.selectedDays || [false, false, false, false, false, false, false],
           color: habit.color || '#6CC47C',
           icon: habit.icon || '✓',
+          category: habit.category || 'other',
           reminders: habit.reminders || []
         })
       }
@@ -314,6 +317,13 @@ const AddEditHabit = () => {
     setFormData(prev => ({
       ...prev,
       icon
+    }))
+  }
+
+  const handleCategoryChange = (categoryId) => {
+    setFormData(prev => ({
+      ...prev,
+      category: categoryId
     }))
   }
 
@@ -396,6 +406,16 @@ const AddEditHabit = () => {
                 showCharacterCount
               />
             </FormGroup>
+          </FormCard>
+        </FormSection>
+
+        <FormSection>
+          <SectionTitle>Category</SectionTitle>
+          <FormCard elevated>
+            <CategorySelector
+              selectedCategory={formData.category}
+              onCategoryChange={handleCategoryChange}
+            />
           </FormCard>
         </FormSection>
 

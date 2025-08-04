@@ -4,6 +4,7 @@ import Card from '../components/Card'
 import BarChart from '../components/BarChart'
 import LineChart from '../components/LineChart'
 import CircularProgress from '../components/CircularProgress'
+import StreakVisualization from '../components/StreakVisualization'
 import { useHabits } from '../context/HabitsContext'
 
 const ProgressContainer = styled.div`
@@ -57,6 +58,24 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(3, 1fr);
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const ProgressCard = styled(Card)`
+  padding: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`
+
+const ProgressTitle = styled.h2`
+  font-size: ${props => props.theme.typography.fontSize.headingMedium};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  text-align: center;
+`
+
+const StreakSection = styled.div`
+  margin-bottom: ${props => props.theme.spacing.xl};
 `
 
 const StatCard = styled(Card)`
@@ -154,17 +173,27 @@ const EmptyStateText = styled.p`
 `
 
 const ProgressStats = () => {
-  const { habits, getWeeklyCompletionData, getMonthlyCompletionData, getStats } = useHabits()
+  const { habits, getWeeklyCompletionData, getMonthlyCompletionData, getStats, getHabitStreak } = useHabits()
   const [timePeriod, setTimePeriod] = useState('week')
   const [weeklyData, setWeeklyData] = useState([])
   const [monthlyData, setMonthlyData] = useState([])
   const [stats, setStats] = useState({})
+  const [longestStreak, setLongestStreak] = useState(0)
 
   useEffect(() => {
     setWeeklyData(getWeeklyCompletionData())
     setMonthlyData(getMonthlyCompletionData())
     setStats(getStats())
-  }, [getWeeklyCompletionData, getMonthlyCompletionData, getStats])
+    
+    // Calculate longest streak across all habits
+    if (habits.length > 0) {
+      const maxStreak = Math.max(...habits.map(habit => {
+        const streak = getHabitStreak(habit)
+        return Math.max(streak, habit.longestStreak || 0)
+      }), 0)
+      setLongestStreak(maxStreak)
+    }
+  }, [getWeeklyCompletionData, getMonthlyCompletionData, getStats, habits, getHabitStreak])
 
   const getInsights = () => {
     const insights = []
@@ -241,6 +270,18 @@ const ProgressStats = () => {
         <Title>Progress</Title>
       </Header>
 
+      <ProgressCard elevated>
+        <ProgressTitle>Today's Progress</ProgressTitle>
+        <CircularProgress
+          progress={stats.completionRate}
+          size={150}
+          strokeWidth={12}
+          animated={stats.completionRate === 100}
+          daily={true}
+          label={`${stats.todayCompletions}/${stats.totalHabits} habits`}
+        />
+      </ProgressCard>
+
       <StatsGrid>
         <StatCard elevated>
           <StatValue>{stats.totalHabits}</StatValue>
@@ -251,10 +292,30 @@ const ProgressStats = () => {
           <StatLabel>Today's Rate</StatLabel>
         </StatCard>
         <StatCard elevated>
-          <StatValue>{stats.maxStreak}</StatValue>
+          <StatValue>{longestStreak}</StatValue>
           <StatLabel>Best Streak</StatLabel>
         </StatCard>
       </StatsGrid>
+
+      {habits.length > 0 && (
+        <StreakSection>
+          <ChartTitle>Current Streaks</ChartTitle>
+          {habits.map(habit => {
+            const streak = getHabitStreak(habit)
+            const habitLongestStreak = Math.max(streak, habit.longestStreak || 0)
+            
+            return (
+              <Card key={habit.id} elevated style={{ marginBottom: '16px' }}>
+                <StreakVisualization
+                  habit={habit}
+                  streak={streak}
+                  longestStreak={habitLongestStreak}
+                />
+              </Card>
+            )
+          })}
+        </StreakSection>
+      )}
 
       <ChartSection>
         <ChartTitle>Weekly Overview</ChartTitle>

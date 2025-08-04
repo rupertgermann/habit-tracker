@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { motion } from 'framer-motion'
 import { format, isToday } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import CircularProgress from '../components/CircularProgress'
 import BarChart from '../components/BarChart'
+import Confetti from '../components/Confetti'
+import EmptyState from '../components/EmptyState'
 import { useHabits } from '../context/HabitsContext'
+import { useToast } from '../context/ToastContext'
 
 const DashboardContainer = styled.div`
   padding: ${props => props.theme.spacing.lg};
@@ -167,7 +171,7 @@ const HabitStreak = styled.span`
   gap: ${props => props.theme.spacing.xs};
 `
 
-const CheckButton = styled.button`
+const CheckButton = styled(motion.button)`
   width: 32px;
   height: 32px;
   border-radius: ${props => props.theme.borderRadius.round};
@@ -194,32 +198,15 @@ const CheckIcon = styled.svg`
   stroke-linejoin: round;
 `
 
-const EmptyState = styled.div`
-  text-align: center;
-  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.lg};
-`
-
-const EmptyStateIcon = styled.div`
-  font-size: 64px;
-  margin-bottom: ${props => props.theme.spacing.lg};
-`
-
-const EmptyStateTitle = styled.h3`
-  font-size: ${props => props.theme.typography.fontSize.headingMedium};
-  margin-bottom: ${props => props.theme.spacing.sm};
-`
-
-const EmptyStateText = styled.p`
-  color: ${props => props.theme.colors.text.secondary};
-  margin-bottom: ${props => props.theme.spacing.lg};
-`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { habits, getTodayHabits, getWeeklyCompletionData, getStats } = useHabits()
+  const { habits, getTodayHabits, getWeeklyCompletionData, getStats, toggleHabitCompletion } = useHabits()
+  const { showSuccessToast } = useToast()
   const [todayHabits, setTodayHabits] = useState([])
   const [weeklyData, setWeeklyData] = useState([])
   const [stats, setStats] = useState({})
+  const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
     setTodayHabits(getTodayHabits())
@@ -228,13 +215,36 @@ const Dashboard = () => {
   }, [getTodayHabits, getWeeklyCompletionData, getStats])
 
   const handleToggleHabit = (habitId) => {
+    const habit = todayHabits.find(h => h.id === habitId)
+    const isCompleting = !habit.isCompleted
+    
+    // Toggle the habit completion
+    toggleHabitCompletion(habitId)
+    
+    // Update local state
     const updatedHabits = todayHabits.map(habit => {
       if (habit.id === habitId) {
-        return { ...habit, isCompleted: !habit.isCompleted }
+        return { ...habit, isCompleted: isCompleting }
       }
       return habit
     })
     setTodayHabits(updatedHabits)
+    
+    // Show toast notification
+    if (isCompleting) {
+      showSuccessToast(`Great job! "${habit.name}" completed!`)
+      
+      // Show confetti for milestone completions
+      const completedCount = updatedHabits.filter(h => h.isCompleted).length
+      if (completedCount === stats.totalHabits && stats.totalHabits > 0) {
+        // All habits completed
+        setShowConfetti(true)
+        showSuccessToast('🎉 Perfect day! All habits completed!')
+      } else if (completedCount % 3 === 0) {
+        // Every 3 habits completed
+        setShowConfetti(true)
+      }
+    }
   }
 
   const getMotivationalMessage = () => {
@@ -291,20 +301,20 @@ const Dashboard = () => {
           <DateText>{format(new Date(), 'EEEE, MMMM d')}</DateText>
         </Header>
         
-        <EmptyState>
-          <EmptyStateIcon>📊</EmptyStateIcon>
-          <EmptyStateTitle>Welcome to Habit Tracker</EmptyStateTitle>
-          <EmptyStateText>Start building better habits by creating your first one.</EmptyStateText>
-          <Button onClick={() => navigate('/add-habit')}>
-            Create Your First Habit
-          </Button>
-        </EmptyState>
+        <EmptyState
+          type="habits"
+          title="Welcome to Habit Tracker"
+          description="Start building better habits by creating your first one. Small steps lead to big changes!"
+          actionText="Create Your First Habit"
+          onAction={() => navigate('/add-habit')}
+        />
       </DashboardContainer>
     )
   }
 
   return (
     <DashboardContainer>
+      <Confetti run={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Header>
         <Title>Dashboard</Title>
         <DateText>{format(new Date(), 'EEEE, MMMM d')}</DateText>
@@ -371,6 +381,8 @@ const Dashboard = () => {
                   e.stopPropagation()
                   handleToggleHabit(habit.id)
                 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
                 {habit.isCompleted && (
                   <CheckIcon>
@@ -399,6 +411,32 @@ const Dashboard = () => {
             spacing={8}
             showValues={false}
           />
+        </Card>
+      </HabitsSection>
+
+      <HabitsSection>
+        <SectionHeader>
+          <SectionTitle>Journal</SectionTitle>
+          <Button variant="ghost" onClick={() => navigate('/journal')}>
+            View All
+          </Button>
+        </SectionHeader>
+        
+        <Card elevated>
+          <div style={{
+            padding: '16px',
+            textAlign: 'center',
+            color: 'var(--text-secondary)'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📔</div>
+            <p>Reflect on your habits and track your mood</p>
+            <Button
+              style={{ marginTop: '16px' }}
+              onClick={() => navigate('/journal')}
+            >
+              View Journal
+            </Button>
+          </div>
         </Card>
       </HabitsSection>
     </DashboardContainer>

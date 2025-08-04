@@ -81,6 +81,12 @@ const navItems = [
     path: '/calendar'
   },
   {
+    id: 'journal',
+    label: 'Journal',
+    icon: '📔',
+    path: '/journal'
+  },
+  {
     id: 'progress',
     label: 'Progress',
     icon: '📈',

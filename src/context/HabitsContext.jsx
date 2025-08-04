@@ -5,6 +5,23 @@ const HabitsContext = createContext()
 
 const initialState = {
   habits: [],
+  categories: [
+    { id: 'health', name: 'Health & Fitness', color: '#6CC47C', icon: '💪' },
+    { id: 'productivity', name: 'Productivity', color: '#F6D860', icon: '📝' },
+    { id: 'mindfulness', name: 'Mindfulness', color: '#8B5CF6', icon: '🧘' },
+    { id: 'learning', name: 'Learning', color: '#0EA5E9', icon: '📚' },
+    { id: 'social', name: 'Social', color: '#F28A8A', icon: '👥' },
+    { id: 'creativity', name: 'Creativity', color: '#EC4899', icon: '🎨' },
+    { id: 'other', name: 'Other', color: '#6B7280', icon: '📌' }
+  ],
+  journalEntries: [],
+  moodOptions: [
+    { id: 'very-bad', name: 'Very Bad', emoji: '😔', color: '#F28A8A' },
+    { id: 'bad', name: 'Bad', emoji: '😕', color: '#FBBF24' },
+    { id: 'neutral', name: 'Neutral', emoji: '😐', color: '#6B7280' },
+    { id: 'good', name: 'Good', emoji: '😊', color: '#6CC47C' },
+    { id: 'very-good', name: 'Very Good', emoji: '😄', color: '#34D399' }
+  ],
   isLoading: false,
   error: null
 }
@@ -17,6 +34,8 @@ const habitsReducer = (state, action) => {
       return { ...state, isLoading: false, habits: action.payload }
     case 'FETCH_HABITS_ERROR':
       return { ...state, isLoading: false, error: action.payload }
+    case 'FETCH_JOURNAL_ENTRIES_SUCCESS':
+      return { ...state, journalEntries: action.payload }
     case 'ADD_HABIT':
       return { ...state, habits: [...state.habits, action.payload] }
     case 'UPDATE_HABIT':
@@ -54,6 +73,34 @@ const habitsReducer = (state, action) => {
           return habit
         })
       }
+    case 'ADD_CATEGORY':
+      return { ...state, categories: [...state.categories, action.payload] }
+    case 'UPDATE_CATEGORY':
+      return {
+        ...state,
+        categories: state.categories.map(category =>
+          category.id === action.payload.id ? action.payload : category
+        )
+      }
+    case 'DELETE_CATEGORY':
+      return {
+        ...state,
+        categories: state.categories.filter(category => category.id !== action.payload)
+      }
+    case 'ADD_JOURNAL_ENTRY':
+      return { ...state, journalEntries: [...state.journalEntries, action.payload] }
+    case 'UPDATE_JOURNAL_ENTRY':
+      return {
+        ...state,
+        journalEntries: state.journalEntries.map(entry =>
+          entry.id === action.payload.id ? action.payload : entry
+        )
+      }
+    case 'DELETE_JOURNAL_ENTRY':
+      return {
+        ...state,
+        journalEntries: state.journalEntries.filter(entry => entry.id !== action.payload)
+      }
     default:
       return state
   }
@@ -86,6 +133,7 @@ export const HabitsProvider = ({ children }) => {
     const newHabit = {
       id: Date.now().toString(),
       ...habitData,
+      category: habitData.category || 'other',
       createdAt: new Date().toISOString(),
       completions: [],
       streak: 0,
@@ -93,6 +141,46 @@ export const HabitsProvider = ({ children }) => {
     }
     dispatch({ type: 'ADD_HABIT', payload: newHabit })
     return newHabit
+  }
+
+  const addJournalEntry = (entryData) => {
+    const newEntry = {
+      id: Date.now().toString(),
+      ...entryData,
+      createdAt: new Date().toISOString()
+    }
+    dispatch({ type: 'ADD_JOURNAL_ENTRY', payload: newEntry })
+    return newEntry
+  }
+
+  const updateJournalEntry = (id, entryData) => {
+    const updatedEntry = {
+      ...state.journalEntries.find(entry => entry.id === id),
+      ...entryData,
+      updatedAt: new Date().toISOString()
+    }
+    dispatch({ type: 'UPDATE_JOURNAL_ENTRY', payload: updatedEntry })
+    return updatedEntry
+  }
+
+  const deleteJournalEntry = (id) => {
+    dispatch({ type: 'DELETE_JOURNAL_ENTRY', payload: id })
+  }
+
+  const getJournalEntriesByDate = (date) => {
+    return state.journalEntries.filter(entry => entry.date === date)
+  }
+
+  const getJournalEntriesByDateRange = (startDate, endDate) => {
+    return state.journalEntries.filter(entry =>
+      entry.date >= startDate && entry.date <= endDate
+    )
+  }
+
+  const getJournalEntryForHabit = (habitId, date) => {
+    return state.journalEntries.find(entry =>
+      entry.habitId === habitId && entry.date === date
+    )
   }
 
   const updateHabit = (id, habitData) => {
@@ -233,6 +321,44 @@ export const HabitsProvider = ({ children }) => {
     }
   }
 
+  const addCategory = (categoryData) => {
+    const newCategory = {
+      id: Date.now().toString(),
+      ...categoryData,
+      createdAt: new Date().toISOString()
+    }
+    dispatch({ type: 'ADD_CATEGORY', payload: newCategory })
+    return newCategory
+  }
+
+  const updateCategory = (id, categoryData) => {
+    const updatedCategory = {
+      ...state.categories.find(c => c.id === id),
+      ...categoryData,
+      updatedAt: new Date().toISOString()
+    }
+    dispatch({ type: 'UPDATE_CATEGORY', payload: updatedCategory })
+    return updatedCategory
+  }
+
+  const deleteCategory = (id) => {
+    // Move habits with this category to 'other'
+    const habitsToUpdate = state.habits.filter(habit => habit.category === id)
+    habitsToUpdate.forEach(habit => {
+      updateHabit(habit.id, { category: 'other' })
+    })
+    
+    dispatch({ type: 'DELETE_CATEGORY', payload: id })
+  }
+
+  const getHabitsByCategory = (categoryId) => {
+    return state.habits.filter(habit => habit.category === categoryId)
+  }
+
+  const getCategoryById = (id) => {
+    return state.categories.find(category => category.id === id)
+  }
+
   const value = {
     ...state,
     addHabit,
@@ -244,7 +370,12 @@ export const HabitsProvider = ({ children }) => {
     getHabitStreak,
     getWeeklyCompletionData,
     getMonthlyCompletionData,
-    getStats
+    getStats,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    getHabitsByCategory,
+    getCategoryById
   }
 
   return (

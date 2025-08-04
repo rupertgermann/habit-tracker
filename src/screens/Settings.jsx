@@ -1,8 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import { useTheme } from '../context/ThemeContext'
+import { useToast } from '../context/ToastContext'
+import { useHabits } from '../context/HabitsContext'
 
 const SettingsContainer = styled.div`
   padding: ${props => props.theme.spacing.lg};
@@ -221,25 +224,209 @@ const DangerButton = styled(Button)`
 `
 
 const Settings = () => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false)
+  const { isDarkMode, toggleTheme } = useTheme()
+  const { showToast } = useToast()
+  const { habits } = useHabits()
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [reminderTime, setReminderTime] = useState('09:00')
 
-  const handleNotificationsToggle = () => {
-    setNotificationsEnabled(!notificationsEnabled)
+  // Check if notifications are supported and enabled
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted')
+    }
+  }, [])
+
+  const handleNotificationsToggle = async () => {
+    if (!('Notification' in window)) {
+      showToast('Notifications are not supported in your browser', 'error')
+      return
+    }
+
+    if (Notification.permission === 'granted') {
+      setNotificationsEnabled(false)
+      showToast('Notifications disabled', 'info')
+    } else if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        setNotificationsEnabled(true)
+        showToast('Notifications enabled', 'success')
+      } else {
+        setNotificationsEnabled(false)
+        showToast('Notifications permission denied', 'error')
+      }
+    }
   }
 
-  const handleDarkModeToggle = () => {
-    setDarkModeEnabled(!darkModeEnabled)
+  const handleReminderTimeChange = (e) => {
+    const time = e.target.value
+    setReminderTime(time)
+    
+    // Schedule reminder
+    if (notificationsEnabled) {
+      scheduleReminder(time)
+    }
   }
 
-  const handleReminderTimeChange = (value) => {
-    setReminderTime(value)
+  const scheduleReminder = (time) => {
+    // Clear any existing reminders
+    if (window.reminderTimeout) {
+      clearTimeout(window.reminderTimeout)
+    }
+
+    // Calculate time until reminder
+    const [hours, minutes] = time.split(':').map(Number)
+    const now = new Date()
+    const reminderTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+    
+    // If reminder time has passed today, schedule for tomorrow
+    if (reminderTime <= now) {
+      reminderTime.setDate(reminderTime.getDate() + 1)
+    }
+
+    const timeUntilReminder = reminderTime - now
+
+    // Schedule the reminder
+    window.reminderTimeout = setTimeout(() => {
+      if (Notification.permission === 'granted') {
+        const incompleteHabits = habits.filter(habit => {
+          const today = new Date().toISOString().split('T')[0]
+          return !habit.completions.some(c => c.date === today)
+        })
+
+        new Notification('Habit Tracker Reminder', {
+          body: `You have ${incompleteHabits.length} habits to complete today!`,
+          icon: '/favicon.ico'
+        })
+      }
+      
+      // Schedule next day's reminder
+      scheduleReminder(time)
+    }, timeUntilReminder)
   }
 
   const handleExportData = () => {
-    // Placeholder for export functionality
-    alert('Export functionality would be implemented here')
+    try {
+      const data = {
+        habits,
+        exportDate: new Date().toISOString(),
+        version: '1.0.0'
+      }
+      
+      const dataStr = JSON.stringify(data, null, 2)
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+      
+      const exportFileDefaultName = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.json`
+      
+      const linkElement = document.createElement('a')
+      linkElement.setAttribute('href', dataUri)
+      linkElement.setAttribute('download', exportFileDefaultName)
+      linkElement.click()
+      
+      showToast('Data exported successfully', 'success')
+    } catch (error) {
+      showToast('Failed to export data', 'error')
+    }
+  }
+
+  const handleExportCSV = () => {
+    try {
+      let csvContent = "Habit Name,Date,Completed\n"
+      
+      habits.forEach(habit => {
+        habit.completions.forEach(completion => {
+          csvContent += `"${habit.name}",${completion.date},Yes\n`
+        })
+      })
+      
+      const dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(csvContent)
+      const exportFileDefaultName = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.csv`
+      
+      const linkElement = document.createElement('a')
+      linkElement.setAttribute('href', dataUri)
+      linkElement.setAttribute('download', exportFileDefaultName)
+      linkElement.click()
+      
+      showToast('CSV exported successfully', 'success')
+    } catch (error) {
+      showToast('Failed to export CSV', 'error')
+    }
+  }
+
+  const handleBackupData = () => {
+    try {
+      const data = {
+        habits,
+        settings: {
+          theme: localStorage.getItem('theme'),
+          notifications: localStorage.getItem('notifications')
+        },
+        backupDate: new Date().toISOString(),
+        version: '1.0.0'
+      }
+      
+      const dataStr = JSON.stringify(data, null, 2)
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+      
+      const exportFileDefaultName = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`
+      
+      const linkElement = document.createElement('a')
+      linkElement.setAttribute('href', dataUri)
+      linkElement.setAttribute('download', exportFileDefaultName)
+      linkElement.click()
+      
+      showToast('Backup created successfully', 'success')
+    } catch (error) {
+      showToast('Failed to create backup', 'error')
+    }
+  }
+
+  const handleRestoreData = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    
+    input.onchange = (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+      
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result)
+          
+          if (data.habits && Array.isArray(data.habits)) {
+            if (window.confirm('This will replace all your current data. Are you sure you want to continue?')) {
+              // Restore habits
+              localStorage.setItem('habits', JSON.stringify(data.habits))
+              
+              // Restore settings if available
+              if (data.settings) {
+                if (data.settings.theme) {
+                  localStorage.setItem('theme', data.settings.theme)
+                }
+                if (data.settings.notifications) {
+                  localStorage.setItem('notifications', data.settings.notifications)
+                }
+              }
+              
+              showToast('Data restored successfully', 'success')
+              setTimeout(() => {
+                window.location.reload()
+              }, 1500)
+            }
+          } else {
+            showToast('Invalid backup file', 'error')
+          }
+        } catch (error) {
+          showToast('Failed to restore data', 'error')
+        }
+      }
+      
+      reader.readAsText(file)
+    }
+    
+    input.click()
   }
 
   const handleClearData = () => {
@@ -262,7 +449,7 @@ const Settings = () => {
       icon: '⏰',
       title: 'Reminder Time',
       description: 'When to send daily reminders',
-      type: 'navigate',
+      type: 'time',
       value: reminderTime,
       onChange: handleReminderTimeChange
     },
@@ -271,20 +458,8 @@ const Settings = () => {
       title: 'Dark Mode',
       description: 'Easier on the eyes at night',
       type: 'toggle',
-      value: darkModeEnabled,
-      onChange: handleDarkModeToggle
-    },
-    {
-      icon: '📊',
-      title: 'Data & Privacy',
-      description: 'Manage your data and privacy',
-      type: 'navigate'
-    },
-    {
-      icon: '💾',
-      title: 'Backup & Sync',
-      description: 'Backup your data to the cloud',
-      type: 'navigate'
+      value: isDarkMode,
+      onChange: toggleTheme
     }
   ]
 
@@ -353,20 +528,44 @@ const Settings = () => {
             <SettingLeft>
               <SettingIcon>📤</SettingIcon>
               <SettingInfo>
-                <SettingTitle>Export Data</SettingTitle>
-                <SettingDescription>Download your habit data</SettingDescription>
+                <SettingTitle>Export Data (JSON)</SettingTitle>
+                <SettingDescription>Download your habit data as JSON</SettingDescription>
               </SettingInfo>
             </SettingLeft>
             <ChevronIcon>
               <polyline points="9 18 15 12 9 6" />
             </ChevronIcon>
           </SettingItem>
-          <SettingItem>
+          <SettingItem onClick={handleExportCSV}>
+            <SettingLeft>
+              <SettingIcon>📊</SettingIcon>
+              <SettingInfo>
+                <SettingTitle>Export Data (CSV)</SettingTitle>
+                <SettingDescription>Download your habit data as CSV</SettingDescription>
+              </SettingInfo>
+            </SettingLeft>
+            <ChevronIcon>
+              <polyline points="9 18 15 12 9 6" />
+            </ChevronIcon>
+          </SettingItem>
+          <SettingItem onClick={handleBackupData}>
+            <SettingLeft>
+              <SettingIcon>💾</SettingIcon>
+              <SettingInfo>
+                <SettingTitle>Backup Data</SettingTitle>
+                <SettingDescription>Save a backup of your data</SettingDescription>
+              </SettingInfo>
+            </SettingLeft>
+            <ChevronIcon>
+              <polyline points="9 18 15 12 9 6" />
+            </ChevronIcon>
+          </SettingItem>
+          <SettingItem onClick={handleRestoreData}>
             <SettingLeft>
               <SettingIcon>🔄</SettingIcon>
               <SettingInfo>
-                <SettingTitle>Sync Data</SettingTitle>
-                <SettingDescription>Sync across devices</SettingDescription>
+                <SettingTitle>Restore Data</SettingTitle>
+                <SettingDescription>Restore from a backup file</SettingDescription>
               </SettingInfo>
             </SettingLeft>
             <ChevronIcon>

@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
+import { keyframes } from 'styled-components'
 
 const ProgressContainer = styled.div`
   display: flex;
@@ -26,6 +27,22 @@ const ProgressCircle = styled(motion.circle)`
   stroke-width: ${props => props.strokeWidth};
   stroke-linecap: round;
   transform-origin: center;
+  
+  ${({ animated }) =>
+    animated &&
+    `
+      filter: drop-shadow(0 0 3px ${props => props.color || props.theme.colors.primary}40);
+    `}
+`
+
+const DailyIndicator = styled(motion.circle)`
+  fill: none;
+  stroke: ${props => props.theme.colors.border};
+  stroke-width: ${props => props.strokeWidth / 2};
+  stroke-linecap: round;
+  stroke-dasharray: 5 5;
+  transform-origin: center;
+  opacity: 0.5;
 `
 
 const ProgressText = styled.div`
@@ -34,6 +51,12 @@ const ProgressText = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  
+  ${({ animated }) =>
+    animated &&
+    `
+      animation: ${pulse} 2s infinite;
+    `}
 `
 
 const PercentageText = styled.span`
@@ -48,6 +71,21 @@ const LabelText = styled.span`
   margin-top: ${props => props.theme.spacing.xs};
 `
 
+const pulse = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+`
+
 const CircularProgress = ({
   progress = 0,
   size = 120,
@@ -56,6 +94,8 @@ const CircularProgress = ({
   backgroundColor,
   showPercentage = true,
   label,
+  animated = false,
+  daily = false,
   className,
   ...props
 }) => {
@@ -85,10 +125,22 @@ const CircularProgress = ({
           animate={{ strokeDashoffset }}
           transition={{ duration: 0.8, ease: 'easeInOut' }}
         />
+        
+        {daily && (
+          <DailyIndicator
+            cx={size / 2}
+            cy={size / 2}
+            r={normalizedRadius}
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - (1 / 7) * circumference}
+            animate={{ strokeDashoffset: circumference - (1 / 7) * circumference }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          />
+        )}
       </SvgContainer>
       
       {(showPercentage || label) && (
-        <ProgressText>
+        <ProgressText animated={animated}>
           {showPercentage && (
             <PercentageText>{Math.round(progress)}%</PercentageText>
           )}

@@ -4,7 +4,10 @@ import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import Confetti from '../components/Confetti'
+import EmptyState from '../components/EmptyState'
 import { useHabits } from '../context/HabitsContext'
+import { useToast } from '../context/ToastContext'
 
 const HabitsListContainer = styled.div`
   padding: ${props => props.theme.spacing.lg};
@@ -29,6 +32,56 @@ const FilterTabs = styled.div`
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
   border-bottom: 1px solid ${props => props.theme.colors.border};
+`
+
+const CategoryFilter = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  overflow-x: auto;
+  padding-bottom: ${props => props.theme.spacing.sm};
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme.colors.border};
+    border-radius: ${props => props.theme.borderRadius.small};
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.text.secondary};
+    border-radius: ${props => props.theme.borderRadius.small};
+  }
+`
+
+const CategoryChip = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.round};
+  background: none;
+  border: 1px solid ${props => props.theme.colors.border};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  ${({ active, theme, color }) =>
+    active &&
+    `
+      background-color: ${color || theme.colors.primary}20;
+      border-color: ${color || theme.colors.primary};
+      color: ${color || theme.colors.primary};
+      font-weight: ${theme.typography.fontWeight.medium};
+    `}
+  
+  &:hover {
+    border-color: ${props => props.color || props.theme.colors.primary};
+  }
 `
 
 const FilterTab = styled.button`
@@ -72,6 +125,7 @@ const HabitCard = styled(Card)`
   padding: ${props => props.theme.spacing.lg};
   cursor: pointer;
   transition: all 0.2s ease;
+  border: ${props => props.selected ? `2px solid ${props.theme.colors.primary}` : 'none'};
   
   &:hover {
     transform: translateY(-2px);
@@ -129,6 +183,18 @@ const HabitFrequency = styled.span`
   color: ${props => props.theme.colors.text.secondary};
 `
 
+const CategoryBadge = styled.span`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.round};
+  background-color: ${props => props.color || props.theme.colors.primary}20;
+  color: ${props => props.color || props.theme.colors.primary};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+`
+
 const CheckButton = styled(motion.button)`
   width: 40px;
   height: 40px;
@@ -157,25 +223,6 @@ const CheckIcon = styled.svg`
   stroke-linejoin: round;
 `
 
-const EmptyState = styled.div`
-  text-align: center;
-  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.lg};
-`
-
-const EmptyStateIcon = styled.div`
-  font-size: 64px;
-  margin-bottom: ${props => props.theme.spacing.lg};
-`
-
-const EmptyStateTitle = styled.h3`
-  font-size: ${props => props.theme.typography.fontSize.headingMedium};
-  margin-bottom: ${props => props.theme.spacing.sm};
-`
-
-const EmptyStateText = styled.p`
-  color: ${props => props.theme.colors.text.secondary};
-  margin-bottom: ${props => props.theme.spacing.lg};
-`
 
 const FloatingActionButton = styled(motion.button)`
   position: fixed;
@@ -209,12 +256,14 @@ const PlusIcon = styled.svg`
   stroke-linejoin: round;
 `
 
-const HabitsList = () => {
+const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   const navigate = useNavigate()
   const { habits, toggleHabitCompletion, getTodayHabits } = useHabits()
+  const { showSuccessToast } = useToast()
   const [filter, setFilter] = useState('all')
   const [filteredHabits, setFilteredHabits] = useState([])
   const [todayHabits, setTodayHabits] = useState([])
+  const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
     setTodayHabits(getTodayHabits())
@@ -227,23 +276,53 @@ const HabitsList = () => {
       filtered = filtered.filter(habit => !habit.isArchived)
     } else if (filter === 'completed') {
       const today = new Date().toISOString().split('T')[0]
-      filtered = filtered.filter(habit => 
+      filtered = filtered.filter(habit =>
         habit.completions.some(completion => completion.date === today)
       )
     }
     
+    if (selectedCategory) {
+      filtered = filtered.filter(habit => habit.category === selectedCategory)
+    }
+    
     setFilteredHabits(filtered)
-  }, [habits, filter])
+  }, [habits, filter, selectedCategory])
 
   const handleToggleHabit = (habitId, e) => {
     e.stopPropagation()
+    const habit = habits.find(h => h.id === habitId)
+    const todayHabit = todayHabits.find(h => h.id === habitId)
+    const isCompleting = !todayHabit?.isCompleted
+    
     toggleHabitCompletion(habitId)
     setTodayHabits(getTodayHabits())
+    
+    if (isCompleting) {
+      showSuccessToast(`Great job! "${habit.name}" completed!`)
+      
+      // Show confetti for milestone completions
+      const completedCount = todayHabits.filter(h => h.id === habitId ? !h.isCompleted : h.isCompleted).length + 1
+      if (completedCount % 5 === 0) {
+        setShowConfetti(true)
+      }
+    }
+  }
+
+  const handleHabitClick = (habitId) => {
+    if (isTabletView && onHabitSelect) {
+      onHabitSelect(habitId)
+    } else {
+      navigate(`/habit/${habitId}`)
+    }
   }
 
   const getHabitStatus = (habit) => {
     const todayHabit = todayHabits.find(h => h.id === habit.id)
     return todayHabit ? todayHabit.isCompleted : false
+  }
+
+  const getCategoryInfo = (categoryId) => {
+    return categories.find(cat => cat.id === categoryId) || { id: 'other', name: 'Other', color: '#6B7280', icon: '📌' }
   }
 
   const getFrequencyText = (habit) => {
@@ -261,6 +340,7 @@ const HabitsList = () => {
 
   return (
     <HabitsListContainer>
+      <Confetti run={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Header>
         <Title>Habits</Title>
         <Button
@@ -292,32 +372,51 @@ const HabitsList = () => {
         </FilterTab>
       </FilterTabs>
 
+      <CategoryFilter>
+        <CategoryChip
+          active={!selectedCategory}
+          onClick={() => setSelectedCategory(null)}
+        >
+          All Categories
+        </CategoryChip>
+        {categories.map((category) => (
+          <CategoryChip
+            key={category.id}
+            active={selectedCategory === category.id}
+            color={category.color}
+            onClick={() => handleCategoryFilter(category.id)}
+          >
+            {category.icon}
+            {category.name}
+          </CategoryChip>
+        ))}
+      </CategoryFilter>
+
       {filteredHabits.length === 0 ? (
-        <EmptyState>
-          <EmptyStateIcon>📋</EmptyStateIcon>
-          <EmptyStateTitle>No habits found</EmptyStateTitle>
-          <EmptyStateText>
-            {filter === 'all' 
-              ? "Start building better habits by creating your first one."
-              : filter === 'active'
-              ? "All your habits are archived."
-              : "No habits completed today yet."
-            }
-          </EmptyStateText>
-          {filter === 'all' && (
-            <Button onClick={() => navigate('/add-habit')}>
-              Create Your First Habit
-            </Button>
-          )}
-        </EmptyState>
+        <EmptyState
+          type={filter === 'completed' ? 'progress' : 'habits'}
+          title={filter === 'all' ? "No Habits Yet" :
+                  filter === 'active' ? "No Active Habits" :
+                  "No Habits Completed Today"}
+          description={filter === 'all' ? "Start building better habits by creating your first one. Small steps lead to big changes!" :
+                      filter === 'active' ? "All your habits are archived. Unarchive some habits to see them here." :
+                      "No habits completed today yet. Keep going to build your streak!"}
+          actionText={filter === 'all' ? "Create Your First Habit" :
+                      filter === 'active' ? "View Archived Habits" :
+                      "Go to Habits"}
+          onAction={() => filter === 'all' ? navigate('/add-habit') :
+                     filter === 'active' ? navigate('/habits') :
+                     navigate('/habits')}
+        />
       ) : (
         <HabitsGrid>
           {filteredHabits.map((habit) => (
             <HabitCard
               key={habit.id}
               clickable
-              onClick={() => navigate(`/habit/${habit.id}`)}
+              onClick={() => handleHabitClick(habit.id)}
               elevated
+              selected={selectedHabitId === habit.id}
             >
               <HabitInfo>
                 <HabitIcon color={habit.color}>
@@ -332,6 +431,10 @@ const HabitsList = () => {
                     <HabitFrequency>
                       {getFrequencyText(habit)}
                     </HabitFrequency>
+                    <CategoryBadge color={getCategoryInfo(habit.category).color}>
+                      {getCategoryInfo(habit.category).icon}
+                      {getCategoryInfo(habit.category).name}
+                    </CategoryBadge>
                   </HabitMeta>
                 </HabitDetails>
               </HabitInfo>
