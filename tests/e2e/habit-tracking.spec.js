@@ -106,6 +106,26 @@ test('count habit persists daily logs through reloads and decrementing', async (
   expect(countCompletionsOnDate(persistedHabit, today)).toBe(2)
 })
 
+test('appearance picker stores expanded icon and distinct color choices', async ({ page, request }) => {
+  const habitName = 'E2E Appearance Choice'
+
+  await page.goto('/add-habit')
+  await waitForAppReady(page)
+  await expect(page.getByRole('heading', { name: 'New Habit' })).toBeVisible()
+
+  await page.getByPlaceholder('e.g., Drink 8 glasses of water').fill(habitName)
+  await page.getByRole('button', { name: 'Select color Teal' }).click()
+  await page.getByRole('tab', { name: 'Food' }).click()
+  await page.getByRole('button', { name: 'Select icon Coffee' }).click()
+  await page.getByRole('button', { name: 'Create Habit' }).click()
+
+  const createdHabit = await waitForHabitByName(request, habitName)
+  expect(createdHabit).toMatchObject({
+    color: '#14B8A6',
+    icon: '☕'
+  })
+})
+
 test('yes/no habit toggle persists one dated completion and toggles it off', async ({ page, request }) => {
   const habitName = 'E2E Yes No Persistence'
   const today = localDateKey()
