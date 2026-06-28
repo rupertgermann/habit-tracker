@@ -158,3 +158,4 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+.tmp/e2e/habit-tracker.db
