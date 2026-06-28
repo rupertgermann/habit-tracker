@@ -8,6 +8,7 @@ import CategorySelector from '../components/CategorySelector'
 import { useHabits } from '../context/HabitsContext'
 
 const FormContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -72,8 +73,8 @@ const FrequencyOption = styled.label`
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ selected, theme }) =>
-    selected &&
+  ${({ $selected, theme }) =>
+    $selected &&
     `
       border-color: ${theme.colors.primary};
       background-color: ${theme.colors.primary}10;
@@ -120,8 +121,8 @@ const DayButton = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ selected, theme }) =>
-    selected &&
+  ${({ $selected, theme }) =>
+    $selected &&
     `
       background-color: ${theme.colors.primary};
       color: ${theme.colors.white};
@@ -144,12 +145,12 @@ const ColorOption = styled.button`
   height: 40px;
   border-radius: ${props => props.theme.borderRadius.round};
   border: 2px solid ${props => props.theme.colors.border};
-  background-color: ${props => props.color};
+  background-color: ${props => props.$color};
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ selected, theme }) =>
-    selected &&
+  ${({ $selected, theme }) =>
+    $selected &&
     `
       border-color: ${theme.colors.text.primary};
       transform: scale(1.1);
@@ -176,8 +177,8 @@ const IconOption = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ selected, theme }) =>
-    selected &&
+  ${({ $selected, theme }) =>
+    $selected &&
     `
       background-color: ${theme.colors.primary}20;
       border-color: ${theme.colors.primary};
@@ -421,7 +422,7 @@ const AddEditHabit = () => {
           <FormCard elevated>
             <FrequencyOptions>
               <FrequencyOption
-                selected={formData.type === 'binary'}
+                $selected={formData.type === 'binary'}
                 onClick={() => handleInputChange('type', 'binary')}
               >
                 <RadioInput
@@ -437,7 +438,7 @@ const AddEditHabit = () => {
               </FrequencyOption>
 
               <FrequencyOption
-                selected={formData.type === 'count'}
+                $selected={formData.type === 'count'}
                 onClick={() => handleInputChange('type', 'count')}
               >
                 <RadioInput
@@ -474,6 +475,7 @@ const AddEditHabit = () => {
             <CategorySelector
               selectedCategory={formData.category}
               onCategoryChange={handleCategoryChange}
+              showLabel={false}
             />
           </FormCard>
         </FormSection>
@@ -483,7 +485,7 @@ const AddEditHabit = () => {
           <FormCard elevated>
             <FrequencyOptions>
               <FrequencyOption
-                selected={formData.frequency === 'daily'}
+                $selected={formData.frequency === 'daily'}
                 onClick={() => handleFrequencyChange('daily')}
               >
                 <RadioInput
@@ -499,7 +501,7 @@ const AddEditHabit = () => {
               </FrequencyOption>
               
               <FrequencyOption
-                selected={formData.frequency === 'weekly'}
+                $selected={formData.frequency === 'weekly'}
                 onClick={() => handleFrequencyChange('weekly')}
               >
                 <RadioInput
@@ -515,7 +517,7 @@ const AddEditHabit = () => {
               </FrequencyOption>
               
               <FrequencyOption
-                selected={formData.frequency === 'custom'}
+                $selected={formData.frequency === 'custom'}
                 onClick={() => handleFrequencyChange('custom')}
               >
                 <RadioInput
@@ -539,7 +541,7 @@ const AddEditHabit = () => {
                     <DayButton
                       key={index}
                       type="button"
-                      selected={formData.selectedDays[index]}
+                      $selected={formData.selectedDays[index]}
                       onClick={() => handleDayToggle(index)}
                     >
                       {day}
@@ -561,8 +563,8 @@ const AddEditHabit = () => {
                   <ColorOption
                     key={color}
                     type="button"
-                    color={color}
-                    selected={formData.color === color}
+                    $color={color}
+                    $selected={formData.color === color}
                     onClick={() => handleColorSelect(color)}
                     aria-label={`Select color ${color}`}
                   />
@@ -577,7 +579,7 @@ const AddEditHabit = () => {
                   <IconOption
                     key={icon}
                     type="button"
-                    selected={formData.icon === icon}
+                    $selected={formData.icon === icon}
                     onClick={() => handleIconSelect(icon)}
                     aria-label={`Select icon ${icon}`}
                   >

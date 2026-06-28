@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { format, isToday, subDays, isSameDay, parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import CircularProgress from '../components/CircularProgress'
 import Confetti from '../components/Confetti'
+import JournalEntry from '../components/JournalEntry'
+import CountStepper from '../components/CountStepper'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
+import { getRecentActivityDays, toDateKey } from '../domain/habitTracking'
 
 const HabitDetailContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -20,6 +24,8 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${props => props.theme.spacing.md};
+  flex-wrap: wrap;
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
@@ -28,23 +34,25 @@ const Title = styled.h1`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.md};
+  min-width: 0;
+  overflow-wrap: anywhere;
 `
 
 const HabitIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: ${props => props.theme.borderRadius.small};
-  background-color: ${props => props.color || props.theme.colors.primary}20;
+  background-color: ${props => props.$color || props.theme.colors.primary}20;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   font-size: 24px;
 `
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
@@ -57,7 +65,7 @@ const StatCard = styled(Card)`
 const StatValue = styled.div`
   font-size: ${props => props.theme.typography.fontSize.headingLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
@@ -76,25 +84,11 @@ const SectionTitle = styled.h2`
 `
 
 const TimelineContainer = styled.div`
-  display: flex;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  overflow-x: visible;
   padding: ${props => props.theme.spacing.md} 0;
   gap: ${props => props.theme.spacing.sm};
-  -webkit-overflow-scrolling: touch;
-  
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: ${props => props.theme.colors.border};
-    border-radius: ${props => props.theme.borderRadius.small};
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.colors.text.secondary};
-    border-radius: ${props => props.theme.borderRadius.small};
-  }
 `
 
 const TimelineItem = styled.div`
@@ -102,24 +96,24 @@ const TimelineItem = styled.div`
   flex-direction: column;
   align-items: center;
   gap: ${props => props.theme.spacing.xs};
-  min-width: 60px;
+  min-width: 0;
 `
 
 const DayCircle = styled.div`
   width: 32px;
   height: 32px;
   border-radius: ${props => props.theme.borderRadius.round};
-  background-color: ${props => props.completed ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${props => props.$completed ? props.theme.colors.primary : props.theme.colors.border};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.completed ? props.theme.colors.white : props.theme.colors.text.secondary};
+  color: ${props => props.$completed ? props.theme.colors.white : props.theme.colors.text.secondary};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   position: relative;
   
-  ${({ isToday, theme }) =>
-    isToday &&
+  ${({ $isToday, theme }) =>
+    $isToday &&
     `
       border: 2px solid ${theme.colors.primary};
     `}
@@ -183,10 +177,35 @@ const FireIcon = styled.span`
   font-size: 20px;
 `
 
+const CountActionPanel = styled(Card)`
+  padding: ${props => props.theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${props => props.theme.spacing.md};
+`
+
+const CountActionText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.xs};
+`
+
+const CountActionTitle = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodyLarge};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.text.primary};
+`
+
+const CountActionHint = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+`
+
 const HabitDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getHabitById, getHabitStreak, deleteHabit, toggleHabitCompletion } = useHabits()
+  const { habits, hasLoaded, getHabitById, getHabitStreak, getCountForDate, deleteHabit, toggleHabitCompletion } = useHabits()
   const { showSuccessToast } = useToast()
   const [habit, setHabit] = useState(null)
   const [streak, setStreak] = useState(0)
@@ -200,35 +219,18 @@ const HabitDetail = () => {
         setHabit(habitData)
         setStreak(getHabitStreak(habitData))
         
-        // Generate recent 30 days for timeline
-        const days = []
-        for (let i = 29; i >= 0; i--) {
-          const date = subDays(new Date(), i)
-          const dateStr = format(date, 'yyyy-MM-dd')
-          const isCompleted = habitData.completions.some(c => c.date === dateStr)
-          
-          days.push({
-            date,
-            dateStr,
-            isCompleted,
-            isToday: isToday(date),
-            day: format(date, 'EEE'),
-            dayNumber: format(date, 'd')
-          })
-        }
-        setRecentDays(days)
-      } else {
+        setRecentDays(getRecentActivityDays(habitData))
+      } else if (hasLoaded) {
         navigate('/habits')
       }
     }
-  }, [id, getHabitById, getHabitStreak, navigate])
+  }, [id, habits, hasLoaded, getHabitById, getHabitStreak, navigate])
 
   const handleToggleCompletion = () => {
     if (habit) {
       const isCompleting = !recentDays.find(day => day.isToday)?.isCompleted
       
-      toggleHabitCompletion(habit.id)
-      const updatedHabit = getHabitById(habit.id)
+      const updatedHabit = toggleHabitCompletion(habit.id)
       setHabit(updatedHabit)
       setStreak(getHabitStreak(updatedHabit))
       
@@ -300,14 +302,19 @@ const HabitDetail = () => {
   }
 
   const completionRate = getCompletionRate()
-  const isCompletedToday = recentDays.find(day => day.isToday)?.isCompleted || false
+  const isCountHabit = habit.type === 'count'
+  const todayDate = toDateKey()
+  const todayCount = getCountForDate(habit, todayDate)
+  const isCompletedToday = isCountHabit
+    ? todayCount > 0
+    : recentDays.find(day => day.isToday)?.isCompleted || false
 
   return (
     <HabitDetailContainer>
       <Confetti run={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Header>
         <Title>
-          <HabitIcon color={habit.color}>
+          <HabitIcon $color={habit.color}>
             {habit.icon || '✓'}
           </HabitIcon>
           {habit.name}
@@ -327,7 +334,7 @@ const HabitDetail = () => {
         </StatCard>
         <StatCard elevated>
           <StatValue>{habit.completions.length}</StatValue>
-          <StatLabel>Total Completions</StatLabel>
+          <StatLabel>{isCountHabit ? 'Total Logs' : 'Total Completions'}</StatLabel>
         </StatCard>
         <StatCard elevated>
           <StatValue>{completionRate}%</StatValue>
@@ -349,6 +356,7 @@ const HabitDetail = () => {
           <InfoValue>
             <StreakIndicator>
               {isCompletedToday ? 'Completed' : 'Not completed'}
+              {isCountHabit && ` (${todayCount} today)`}
               {isCompletedToday && <FireIcon>🔥</FireIcon>}
             </StreakIndicator>
           </InfoValue>
@@ -373,8 +381,8 @@ const HabitDetail = () => {
           {recentDays.map((day, index) => (
             <TimelineItem key={index}>
               <DayCircle
-                completed={day.isCompleted}
-                isToday={day.isToday}
+                $completed={day.isCompleted}
+                $isToday={day.isToday}
               >
                 {day.dayNumber}
               </DayCircle>
@@ -388,7 +396,7 @@ const HabitDetail = () => {
         <SectionTitle>Journal</SectionTitle>
         <JournalEntry
           habitId={habit.id}
-          date={format(new Date(), 'yyyy-MM-dd')}
+          date={todayDate}
           habitName={habit.name}
         />
       </Section>
@@ -396,14 +404,24 @@ const HabitDetail = () => {
       <Section>
         <SectionTitle>Actions</SectionTitle>
         <ActionButtons>
-          <Button
-            variant={isCompletedToday ? "secondary" : "primary"}
-            fullWidth
-            onClick={handleToggleCompletion}
-            bounceOnClick={true}
-          >
-            {isCompletedToday ? 'Mark as Incomplete' : 'Mark as Complete'}
-          </Button>
+          {isCountHabit ? (
+            <CountActionPanel elevated>
+              <CountActionText>
+                <CountActionTitle>Today's count</CountActionTitle>
+                <CountActionHint>Add or remove one log for today.</CountActionHint>
+              </CountActionText>
+              <CountStepper habit={habit} />
+            </CountActionPanel>
+          ) : (
+            <Button
+              variant={isCompletedToday ? "secondary" : "primary"}
+              fullWidth
+              onClick={handleToggleCompletion}
+              bounceOnClick={true}
+            >
+              {isCompletedToday ? 'Mark as Incomplete' : 'Mark as Complete'}
+            </Button>
+          )}
           <Button
             variant="ghost"
             fullWidth

@@ -6,8 +6,18 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Tooltip from '../components/Tooltip'
 import { useHabits } from '../context/HabitsContext'
+import { usePreferences } from '../context/PreferencesContext.jsx'
+
+const getDayHeaders = (weekStartsOn) =>
+  weekStartsOn === 1
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const getLeadingEmptyCellCount = (date, weekStartsOn) =>
+  (date.getDay() - weekStartsOn + 7) % 7
 
 const CalendarContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -18,6 +28,8 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${props => props.theme.spacing.md};
+  flex-wrap: wrap;
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
@@ -27,6 +39,7 @@ const Title = styled.h1`
 
 const ViewToggle = styled.div`
   display: flex;
+  flex-wrap: wrap;
   background-color: ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.small};
   padding: 4px;
@@ -39,12 +52,12 @@ const ToggleButton = styled.button`
   border-radius: ${props => props.theme.borderRadius.small};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.active ? props.theme.colors.text.primary : props.theme.colors.text.secondary};
+  color: ${props => props.$active ? props.theme.colors.text.primary : props.theme.colors.text.secondary};
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ active, theme }) =>
-    active &&
+  ${({ $active, theme }) =>
+    $active &&
     `
       background-color: ${theme.colors.white};
       box-shadow: ${theme.shadows.subtle};
@@ -55,12 +68,15 @@ const CalendarHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
 const MonthYear = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
+  min-width: 0;
+  text-align: center;
 `
 
 const NavButton = styled.button`
@@ -83,15 +99,15 @@ const NavButton = styled.button`
 
 const CalendarGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: ${props => props.theme.spacing.xs};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
 const WeekViewGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: ${props => props.theme.spacing.sm};
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: ${props => props.theme.spacing.xs};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
@@ -102,18 +118,25 @@ const WeekDayCard = styled(Card)`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.xs};
   position: relative;
   transition: all 0.2s ease;
   
-  ${({ isToday, theme }) =>
-    isToday &&
+  ${({ $isToday, theme }) =>
+    $isToday &&
     `
       border: 2px solid ${theme.colors.primary};
     `}
+
+  ${({ $isSelected, theme }) =>
+    $isSelected &&
+    `
+      outline: 3px solid ${theme.colors.secondary};
+      outline-offset: 2px;
+    `}
   
-  ${({ completionLevel, theme }) => {
-    switch (completionLevel) {
+  ${({ $completionLevel, theme }) => {
+    switch ($completionLevel) {
       case 0:
         return 'background-color: #F3F4F6;'
       case 1:
@@ -152,6 +175,7 @@ const WeekDayCompletion = styled.div`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
   margin-top: ${props => props.theme.spacing.xs};
+  line-height: ${props => props.theme.typography.lineHeight.tight};
 `
 
 const DayHeader = styled.div`
@@ -173,20 +197,27 @@ const DayCell = styled(Card)`
   position: relative;
   transition: all 0.2s ease;
   
-  ${({ isCurrentMonth, theme }) =>
-    !isCurrentMonth &&
+  ${({ $isCurrentMonth, theme }) =>
+    !$isCurrentMonth &&
     `
       opacity: 0.3;
     `}
   
-  ${({ isToday, theme }) =>
-    isToday &&
+  ${({ $isToday, theme }) =>
+    $isToday &&
     `
       border: 2px solid ${theme.colors.primary};
     `}
+
+  ${({ $isSelected, theme }) =>
+    $isSelected &&
+    `
+      outline: 3px solid ${theme.colors.secondary};
+      outline-offset: 2px;
+    `}
   
-  ${({ completionLevel, theme }) => {
-    switch (completionLevel) {
+  ${({ $completionLevel, theme }) => {
+    switch ($completionLevel) {
       case 0:
         return 'background-color: #F3F4F6;'
       case 1:
@@ -242,8 +273,8 @@ const LegendColor = styled.div`
   height: 16px;
   border-radius: ${props => props.theme.borderRadius.small};
   
-  ${({ color }) => {
-    switch (color) {
+  ${({ $level }) => {
+    switch ($level) {
       case 0:
         return 'background-color: #F3F4F6;'
       case 1:
@@ -266,8 +297,9 @@ const LegendText = styled.span`
 `
 
 const StatsCard = styled(Card)`
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${props => props.theme.spacing.md};
   padding: ${props => props.theme.spacing.lg};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
@@ -330,6 +362,50 @@ const HabitSelect = styled.select`
   }
 `
 
+const SelectedDateCard = styled(Card)`
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const SelectedDateHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+`
+
+const SelectedDateInfo = styled.div`
+  min-width: 0;
+`
+
+const SelectedDateTitle = styled.h3`
+  font-size: ${props => props.theme.typography.fontSize.bodyLarge};
+  margin-bottom: ${props => props.theme.spacing.xs};
+  overflow-wrap: anywhere;
+`
+
+const SelectedDateMeta = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  color: ${props => props.theme.colors.text.secondary};
+  overflow-wrap: anywhere;
+`
+
+const SelectedDateCount = styled.div`
+  flex-shrink: 0;
+  min-width: 64px;
+  text-align: right;
+  font-size: ${props => props.theme.typography.fontSize.headingMedium};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
+  color: ${props => props.theme.colors.primary};
+`
+
+const SelectedDateActions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: ${props => props.theme.spacing.sm};
+`
+
 const DayCount = styled.span`
   font-size: 11px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
@@ -365,10 +441,10 @@ const MiniGrid = styled.div`
 const MiniDay = styled.div`
   aspect-ratio: 1;
   border-radius: 2px;
-  border: ${props => props.isToday ? `1px solid ${props.theme.colors.primary}` : 'none'};
+  border: ${props => props.$isToday ? `1px solid ${props.theme.colors.primary}` : 'none'};
 
-  ${({ level }) => {
-    switch (level) {
+  ${({ $level }) => {
+    switch ($level) {
       case 0: return 'background-color: #F3F4F6;'
       case 1: return 'background-color: #E0F2E3;'
       case 2: return 'background-color: #A8E0B1;'
@@ -389,10 +465,21 @@ const getLevel = (count) => {
 
 const CalendarView = () => {
   const navigate = useNavigate()
-  const { habits, getCountForDate, getHabitRangeStats } = useHabits()
+  const { weekStartsOn } = usePreferences()
+  const {
+    habits,
+    getCountForDate,
+    getHabitRangeStats,
+    toggleHabitCompletion,
+    incrementCompletion,
+    decrementCompletion
+  } = useHabits()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewType, setViewType] = useState('month')
   const [selectedHabitId, setSelectedHabitId] = useState(null)
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const weekOptions = { weekStartsOn }
+  const dayHeaders = getDayHeaders(weekStartsOn)
 
   useEffect(() => {
     if (habits.length === 0) return
@@ -408,11 +495,43 @@ const CalendarView = () => {
 
   const rangeStats = selectedHabit
     ? getHabitRangeStats(selectedHabit.id, viewType, currentDate)
-    : { percentDaysSaid: 0, totalCount: 0, daysWithEntry: 0, bestCount: 0, bestDate: null }
+    : { percentDaysSaid: 0, percentDaysMissed: 0, totalCount: 0, daysWithEntry: 0, daysWithoutEntry: 0, bestCount: 0, bestDate: null }
 
   const targetLabel = selectedHabit && selectedHabit.dailyTarget
     ? ` / ${selectedHabit.dailyTarget}`
     : ''
+
+  const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
+  const selectedDateCount = selectedHabit ? getCountForDate(selectedHabit, selectedDateKey) : 0
+  const isCountHabit = selectedHabit?.type === 'count'
+  const selectedDateLabel = format(selectedDate, 'MMMM d, yyyy')
+
+  const isSelectedDate = (date) => format(date, 'yyyy-MM-dd') === selectedDateKey
+
+  const handleSelectDate = (date) => {
+    setSelectedDate(date)
+  }
+
+  const handleDateKeyDown = (event, date) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    handleSelectDate(date)
+  }
+
+  const handleToggleSelectedDate = () => {
+    if (!selectedHabit) return
+    toggleHabitCompletion(selectedHabit.id, selectedDate)
+  }
+
+  const handleIncrementSelectedDate = () => {
+    if (!selectedHabit) return
+    incrementCompletion(selectedHabit.id, selectedDate)
+  }
+
+  const handleDecrementSelectedDate = () => {
+    if (!selectedHabit || selectedDateCount === 0) return
+    decrementCompletion(selectedHabit.id, selectedDate)
+  }
 
   const getDayTooltipContent = (date) => {
     const count = getCount(date)
@@ -437,9 +556,9 @@ const CalendarView = () => {
     const monthEnd = endOfMonth(currentDate)
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
 
-    const firstDayOfMonth = monthStart.getDay()
+    const firstDayOfMonth = getLeadingEmptyCellCount(monthStart, weekStartsOn)
     const emptyCells = Array(firstDayOfMonth).fill(null)
-    const lastDayOfMonth = monthEnd.getDay()
+    const lastDayOfMonth = getLeadingEmptyCellCount(monthEnd, weekStartsOn)
     const endEmptyCells = Array(6 - lastDayOfMonth).fill(null)
 
     const allCells = [...emptyCells, ...days, ...endEmptyCells]
@@ -454,6 +573,7 @@ const CalendarView = () => {
       const count = getCount(date)
       const completionLevel = getLevel(count)
       const tooltipData = getDayTooltipContent(date)
+      const isSelected = isSelectedDate(date)
 
       return (
         <Tooltip
@@ -465,9 +585,16 @@ const CalendarView = () => {
           enabled={count > 0}
         >
           <DayCell
-            isCurrentMonth={isCurrentMonthDay}
-            isToday={isTodayDate}
-            completionLevel={completionLevel}
+            $isCurrentMonth={isCurrentMonthDay}
+            $isToday={isTodayDate}
+            $completionLevel={completionLevel}
+            $isSelected={isSelected}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            aria-label={`Select ${format(date, 'MMMM d, yyyy')}`}
+            onClick={() => handleSelectDate(date)}
+            onKeyDown={(event) => handleDateKeyDown(event, date)}
           >
             <DayNumber>{format(date, 'd')}</DayNumber>
             {count > 0 && <DayCount>{count}</DayCount>}
@@ -478,8 +605,8 @@ const CalendarView = () => {
   }
 
   const renderWeekView = () => {
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
-    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
+    const weekStart = startOfWeek(currentDate, weekOptions)
+    const weekEnd = endOfWeek(currentDate, weekOptions)
     const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd })
 
     return daysOfWeek.map((day) => {
@@ -487,6 +614,7 @@ const CalendarView = () => {
       const count = getCount(day)
       const completionLevel = getLevel(count)
       const tooltipData = getDayTooltipContent(day)
+      const isSelected = isSelectedDate(day)
 
       return (
         <Tooltip
@@ -498,8 +626,15 @@ const CalendarView = () => {
           enabled={count > 0}
         >
           <WeekDayCard
-            isToday={isTodayDate}
-            completionLevel={completionLevel}
+            $isToday={isTodayDate}
+            $completionLevel={completionLevel}
+            $isSelected={isSelected}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            aria-label={`Select ${format(day, 'MMMM d, yyyy')}`}
+            onClick={() => handleSelectDate(day)}
+            onKeyDown={(event) => handleDateKeyDown(event, day)}
           >
             <WeekDayName>{format(day, 'EEE')}</WeekDayName>
             <WeekDayNumber>{format(day, 'd')}</WeekDayNumber>
@@ -522,7 +657,7 @@ const CalendarView = () => {
       const monthStart = startOfMonth(monthDate)
       const monthEnd = endOfMonth(monthDate)
       const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-      const emptyCells = Array(monthStart.getDay()).fill(null)
+      const emptyCells = Array(getLeadingEmptyCellCount(monthStart, weekStartsOn)).fill(null)
       const cells = [...emptyCells, ...days]
 
       return (
@@ -535,8 +670,8 @@ const CalendarView = () => {
               return (
                 <MiniDay
                   key={date.toString()}
-                  level={getLevel(count)}
-                  isToday={isToday(date)}
+                  $level={getLevel(count)}
+                  $isToday={isToday(date)}
                   title={`${format(date, 'MMM d')} — ${count}`}
                 />
               )
@@ -560,13 +695,15 @@ const CalendarView = () => {
   }
 
   const goToToday = () => {
-    setCurrentDate(new Date())
+    const today = new Date()
+    setCurrentDate(today)
+    setSelectedDate(today)
   }
 
   const headerLabel = viewType === 'month'
     ? format(currentDate, 'MMMM yyyy')
     : viewType === 'week'
-      ? `${format(startOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d')} - ${format(endOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d, yyyy')}`
+      ? `${format(startOfWeek(currentDate, weekOptions), 'MMM d')} - ${format(endOfWeek(currentDate, weekOptions), 'MMM d, yyyy')}`
       : format(currentDate, 'yyyy')
 
   const periodLabel = viewType === 'year' ? 'This Year' : viewType === 'week' ? 'This Week' : 'This Month'
@@ -596,19 +733,19 @@ const CalendarView = () => {
         <Title>Calendar</Title>
         <ViewToggle>
           <ToggleButton
-            active={viewType === 'week'}
+            $active={viewType === 'week'}
             onClick={() => setViewType('week')}
           >
             Week
           </ToggleButton>
           <ToggleButton
-            active={viewType === 'month'}
+            $active={viewType === 'month'}
             onClick={() => setViewType('month')}
           >
             Month
           </ToggleButton>
           <ToggleButton
-            active={viewType === 'year'}
+            $active={viewType === 'year'}
             onClick={() => setViewType('year')}
           >
             Year
@@ -657,7 +794,7 @@ const CalendarView = () => {
 
       {viewType === 'month' && (
         <CalendarGrid>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          {dayHeaders.map(day => (
             <DayHeader key={day}>{day}</DayHeader>
           ))}
           {renderCalendar()}
@@ -676,25 +813,63 @@ const CalendarView = () => {
         </YearGrid>
       )}
 
+      <SelectedDateCard elevated>
+        <SelectedDateHeader>
+          <SelectedDateInfo>
+            <SelectedDateTitle>{selectedDateLabel}</SelectedDateTitle>
+            <SelectedDateMeta>
+              {(selectedHabit.icon ? `${selectedHabit.icon} ` : '') + selectedHabit.name}
+            </SelectedDateMeta>
+          </SelectedDateInfo>
+          <SelectedDateCount>
+            {selectedDateCount}{targetLabel}
+          </SelectedDateCount>
+        </SelectedDateHeader>
+
+        <SelectedDateActions>
+          {isCountHabit ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleDecrementSelectedDate}
+                disabled={selectedDateCount === 0}
+              >
+                Remove one
+              </Button>
+              <Button onClick={handleIncrementSelectedDate}>
+                Add log
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant={selectedDateCount > 0 ? 'secondary' : 'primary'}
+              onClick={handleToggleSelectedDate}
+            >
+              {selectedDateCount > 0 ? 'Mark Incomplete' : 'Mark Complete'}
+            </Button>
+          )}
+        </SelectedDateActions>
+      </SelectedDateCard>
+
       <Legend>
         <LegendItem>
-          <LegendColor color={0} />
+          <LegendColor $level={0} />
           <LegendText>0</LegendText>
         </LegendItem>
         <LegendItem>
-          <LegendColor color={1} />
+          <LegendColor $level={1} />
           <LegendText>1</LegendText>
         </LegendItem>
         <LegendItem>
-          <LegendColor color={2} />
+          <LegendColor $level={2} />
           <LegendText>2-3</LegendText>
         </LegendItem>
         <LegendItem>
-          <LegendColor color={3} />
+          <LegendColor $level={3} />
           <LegendText>4-6</LegendText>
         </LegendItem>
         <LegendItem>
-          <LegendColor color={4} />
+          <LegendColor $level={4} />
           <LegendText>7+</LegendText>
         </LegendItem>
       </Legend>
@@ -702,7 +877,11 @@ const CalendarView = () => {
       <StatsCard elevated>
         <StatItem>
           <StatValue>{rangeStats.percentDaysSaid}%</StatValue>
-          <StatLabel>{periodLabel}: Days Done</StatLabel>
+          <StatLabel>{periodLabel}: Days Said</StatLabel>
+        </StatItem>
+        <StatItem>
+          <StatValue>{rangeStats.percentDaysMissed}%</StatValue>
+          <StatLabel>{periodLabel}: Days Not Said</StatLabel>
         </StatItem>
         <StatItem>
           <StatValue>{rangeStats.totalCount}</StatValue>

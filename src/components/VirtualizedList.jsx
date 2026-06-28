@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import styled from 'styled-components'
 
 const VirtualizedListContainer = styled.div`
-  height: ${props => props.height || '500px'};
+  height: ${props => props.$height || '500px'};
   overflow-y: auto;
   position: relative;
-  border: ${props => props.border ? `1px solid ${props.theme.colors.border}` : 'none'};
-  border-radius: ${props => props.borderRadius || props.theme.borderRadius.small};
+  border: ${props => props.$border ? `1px solid ${props.theme.colors.border}` : 'none'};
+  border-radius: ${props => props.$borderRadius || props.theme.borderRadius.small};
 `
 
 const VirtualizedListContent = styled.div`
@@ -122,9 +122,9 @@ const VirtualizedList = ({
     return (
       <VirtualizedListContainer
         ref={containerRef}
-        height={height}
-        border={border}
-        borderRadius={borderRadius}
+        $height={height}
+        $border={border}
+        $borderRadius={borderRadius}
       >
         <LoadingIndicator>Loading...</LoadingIndicator>
       </VirtualizedListContainer>
@@ -135,9 +135,9 @@ const VirtualizedList = ({
     return (
       <VirtualizedListContainer
         ref={containerRef}
-        height={height}
-        border={border}
-        borderRadius={borderRadius}
+        $height={height}
+        $border={border}
+        $borderRadius={borderRadius}
       >
         <LoadingIndicator>{emptyMessage}</LoadingIndicator>
       </VirtualizedListContainer>
@@ -147,9 +147,9 @@ const VirtualizedList = ({
   return (
     <VirtualizedListContainer
       ref={containerRef}
-      height={height}
-      border={border}
-      borderRadius={borderRadius}
+      $height={height}
+      $border={border}
+      $borderRadius={borderRadius}
     >
       <VirtualizedListContent
         ref={contentRef}

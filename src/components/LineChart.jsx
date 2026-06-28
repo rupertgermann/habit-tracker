@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 const ChartContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: ${props => props.height || 200}px;
+  height: ${props => props.$height || 200}px;
   width: 100%;
   position: relative;
 `
@@ -13,7 +13,7 @@ const ChartContainer = styled.div`
 const SvgContainer = styled.svg`
   flex: 1;
   width: 100%;
-  height: ${props => props.height - 40}px;
+  height: ${props => props.$height - 40}px;
 `
 
 const GridLine = styled.line`
@@ -23,20 +23,20 @@ const GridLine = styled.line`
 `
 
 const Area = styled(motion.path)`
-  fill: ${props => props.color || props.theme.colors.primary};
-  fill-opacity: ${props => props.areaOpacity || 0.1};
+  fill: ${props => props.$color || props.theme.colors.primary};
+  fill-opacity: ${props => props.$areaOpacity || 0.1};
 `
 
 const Line = styled(motion.path)`
   fill: none;
-  stroke: ${props => props.color || props.theme.colors.primary};
+  stroke: ${props => props.$color || props.theme.colors.primary};
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 `
 
 const Dot = styled(motion.circle)`
-  fill: ${props => props.color || props.theme.colors.primary};
+  fill: ${props => props.$color || props.theme.colors.primary};
   stroke: ${props => props.theme.colors.white};
   stroke-width: 2;
   cursor: pointer;
@@ -63,7 +63,7 @@ const YAxis = styled.div`
   position: absolute;
   left: 0;
   top: 0;
-  height: ${props => props.height - 40}px;
+  height: ${props => props.$height - 40}px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -223,14 +223,14 @@ const LineChart = ({
   }
 
   if (!dimensions.width) {
-    return <ChartContainer height={height} className={className} {...props} />
+    return <ChartContainer $height={height} className={className} {...props} />
   }
 
   return (
-    <ChartContainer height={height} className={className} {...props}>
+    <ChartContainer $height={height} className={className} {...props}>
       <SvgContainer
         ref={svgRef}
-        height={height - 40}
+        $height={height}
         viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
       >
         {showGrid && generateGridLines()}
@@ -238,8 +238,8 @@ const LineChart = ({
         {showArea && (
           <Area
             d={generateAreaPath()}
-            color={color}
-            areaOpacity={areaOpacity}
+            $color={color}
+            $areaOpacity={areaOpacity}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 1, ease: 'easeInOut' }}
@@ -248,7 +248,7 @@ const LineChart = ({
         
         <Line
           d={generatePath()}
-          color={color}
+          $color={color}
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1, ease: 'easeInOut' }}
@@ -261,7 +261,7 @@ const LineChart = ({
                 cx={getXPosition(index)}
                 cy={getYPosition(point.value)}
                 r={4}
-                color={color}
+                $color={color}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -285,7 +285,7 @@ const LineChart = ({
       
       {showAxes && (
         <>
-          <YAxis height={height - 40}>
+          <YAxis $height={height}>
             {generateYAxisLabels()}
           </YAxis>
           

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import Card from '../components/Card'
@@ -6,9 +6,12 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 import EmptyState from '../components/EmptyState'
 import { useHabits } from '../context/HabitsContext'
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subWeeks, addWeeks } from 'date-fns'
+import { format, startOfWeek, subWeeks, addWeeks } from 'date-fns'
+import { getJournalTimeline } from '../domain/journalTimeline'
+import { usePreferences } from '../context/PreferencesContext.jsx'
 
 const JournalContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 800px;
@@ -118,7 +121,7 @@ const StatCard = styled(Card)`
 const StatValue = styled.div`
   font-size: ${props => props.theme.typography.fontSize.headingLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
@@ -129,65 +132,28 @@ const StatLabel = styled.div`
 
 const JournalView = () => {
   const navigate = useNavigate()
+  const { weekStartsOn } = usePreferences()
   const { 
     habits, 
     journalEntries, 
-    moodOptions, 
-    getJournalEntriesByDateRange 
+    moodOptions
   } = useHabits()
   
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }))
+  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn }))
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredEntries, setFilteredEntries] = useState([])
-  
-  useEffect(() => {
-    const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 0 })
-    const entries = getJournalEntriesByDateRange(
-      format(currentWeekStart, 'yyyy-MM-dd'),
-      format(weekEnd, 'yyyy-MM-dd')
-    )
-    
-    // Sort entries by date (newest first)
-    const sortedEntries = [...entries].sort((a, b) => 
-      new Date(b.createdAt) - new Date(a.createdAt)
-    )
-    
-    setFilteredEntries(sortedEntries)
-  }, [currentWeekStart, getJournalEntriesByDateRange])
-  
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 0 })
-      const entries = getJournalEntriesByDateRange(
-        format(currentWeekStart, 'yyyy-MM-dd'),
-        format(weekEnd, 'yyyy-MM-dd')
-      )
-      
-      // Sort entries by date (newest first)
-      const sortedEntries = [...entries].sort((a, b) => 
-        new Date(b.createdAt) - new Date(a.createdAt)
-      )
-      
-      setFilteredEntries(sortedEntries)
-      return
-    }
-    
-    const term = searchTerm.toLowerCase()
-    const filtered = journalEntries.filter(entry => {
-      const habit = habits.find(h => h.id === entry.habitId)
-      return (
-        entry.content.toLowerCase().includes(term) ||
-        (habit && habit.name.toLowerCase().includes(term))
-      )
-    })
-    
-    // Sort filtered entries by date (newest first)
-    const sortedFiltered = [...filtered].sort((a, b) => 
-      new Date(b.createdAt) - new Date(a.createdAt)
-    )
-    
-    setFilteredEntries(sortedFiltered)
-  }, [searchTerm, journalEntries, habits, currentWeekStart, getJournalEntriesByDateRange])
+
+  React.useEffect(() => {
+    setCurrentWeekStart(prev => startOfWeek(prev, { weekStartsOn }))
+  }, [weekStartsOn])
+
+  const timeline = useMemo(() => getJournalTimeline({
+    journalEntries,
+    habits,
+    moodOptions,
+    searchTerm,
+    weekStart: currentWeekStart,
+    weekStartsOn
+  }), [currentWeekStart, habits, journalEntries, moodOptions, searchTerm, weekStartsOn])
   
   const handlePrevWeek = () => {
     setCurrentWeekStart(prev => subWeeks(prev, 1))
@@ -198,40 +164,14 @@ const JournalView = () => {
   }
   
   const handleToday = () => {
-    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))
+    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn }))
   }
-  
-  const getHabitById = (habitId) => {
-    return habits.find(habit => habit.id === habitId)
-  }
-  
-  const getMoodById = (moodId) => {
-    return moodOptions.find(mood => mood.id === moodId)
-  }
-  
-  // Calculate mood statistics
-  const moodCounts = moodOptions.reduce((acc, mood) => {
-    acc[mood.id] = 0
-    return acc
-  }, {})
-  
-  filteredEntries.forEach(entry => {
-    if (entry.moodId && moodCounts[entry.moodId] !== undefined) {
-      moodCounts[entry.moodId]++
-    }
-  })
-  
-  const mostCommonMood = Object.entries(moodCounts).reduce((max, [moodId, count]) => {
-    return count > max.count ? { moodId, count } : max
-  }, { moodId: null, count: 0 })
-  
-  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 0 })
   
   return (
     <JournalContainer>
       <Header>
         <Title>Journal</Title>
-        <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+        <Button variant="ghost" onClick={() => navigate('/')}>
           Back to Dashboard
         </Button>
       </Header>
@@ -250,7 +190,7 @@ const JournalView = () => {
           ← Previous
         </NavButton>
         <WeekRange>
-          {format(currentWeekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
+          {format(currentWeekStart, 'MMM d')} - {format(timeline.weekEnd, 'MMM d, yyyy')}
         </WeekRange>
         <NavButton variant="ghost" onClick={handleNextWeek}>
           Next →
@@ -265,17 +205,17 @@ const JournalView = () => {
         Go to This Week
       </Button>
       
-      {filteredEntries.length > 0 && (
+      {timeline.entries.length > 0 && (
         <StatsContainer>
           <StatCard elevated>
-            <StatValue>{filteredEntries.length}</StatValue>
-            <StatLabel>Entries This Week</StatLabel>
+            <StatValue>{timeline.stats.entryCount}</StatValue>
+            <StatLabel>{timeline.stats.entryCountLabel}</StatLabel>
           </StatCard>
           
-          {mostCommonMood.moodId && (
+          {timeline.stats.mostCommonMood && (
             <StatCard elevated>
               <StatValue>
-                {getMoodById(mostCommonMood.moodId)?.emoji}
+                {timeline.stats.mostCommonMood.emoji}
               </StatValue>
               <StatLabel>Most Common Mood</StatLabel>
             </StatCard>
@@ -283,7 +223,7 @@ const JournalView = () => {
           
           <StatCard elevated>
             <StatValue>
-              {Math.round((filteredEntries.length / 7) * 10) / 10}
+              {timeline.stats.avgEntriesPerDay}
             </StatValue>
             <StatLabel>Avg Entries/Day</StatLabel>
           </StatCard>
@@ -291,7 +231,7 @@ const JournalView = () => {
       )}
       
       <JournalEntriesGrid>
-        {filteredEntries.length === 0 ? (
+        {timeline.entries.length === 0 ? (
           <NoEntries>
             {searchTerm ? (
               <EmptyState
@@ -308,10 +248,7 @@ const JournalView = () => {
             )}
           </NoEntries>
         ) : (
-          filteredEntries.map((entry) => {
-            const habit = getHabitById(entry.habitId)
-            const mood = getMoodById(entry.moodId)
-            
+          timeline.entries.map(({ entry, habit, mood }) => {
             return (
               <JournalEntryCard key={entry.id} elevated>
                 <EntryHeader>

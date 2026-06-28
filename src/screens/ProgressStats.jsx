@@ -8,6 +8,7 @@ import StreakVisualization from '../components/StreakVisualization'
 import { useHabits } from '../context/HabitsContext'
 
 const ProgressContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -36,12 +37,12 @@ const PeriodButton = styled.button`
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.text.secondary};
+  color: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.text.secondary};
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ active, theme }) =>
-    active &&
+  ${({ $active, theme }) =>
+    $active &&
     `
       background-color: ${theme.colors.primary};
       color: ${theme.colors.white};
@@ -86,7 +87,7 @@ const StatCard = styled(Card)`
 const StatValue = styled.div`
   font-size: ${props => props.theme.typography.fontSize.headingLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
@@ -127,11 +128,11 @@ const InsightIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: ${props => props.theme.borderRadius.small};
-  background-color: ${props => props.color || props.theme.colors.primary}20;
+  background-color: ${props => props.$color || props.theme.colors.primary}20;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   font-size: 20px;
   flex-shrink: 0;
 `
@@ -352,7 +353,7 @@ const ProgressStats = () => {
           <InsightsCard elevated>
             {insights.map((insight, index) => (
               <InsightItem key={index}>
-                <InsightIcon color={insight.color}>
+                <InsightIcon $color={insight.color}>
                   {insight.icon}
                 </InsightIcon>
                 <InsightContent>

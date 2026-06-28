@@ -1,6 +1,7 @@
 import React from 'react'
 import styled, { keyframes } from 'styled-components'
 import { motion } from 'framer-motion'
+import { lightTheme } from '../styles/theme'
 
 const slideUp = keyframes`
   from {
@@ -13,27 +14,45 @@ const slideUp = keyframes`
   }
 `
 
+const getColor = (theme, key, fallbackKey = key) =>
+  theme?.colors?.[key] ?? lightTheme.colors[fallbackKey]
+
+const getTextColor = (theme, key) =>
+  theme?.colors?.text?.[key] ?? lightTheme.colors.text[key]
+
+const getToastBackgroundColor = (theme, variant) => {
+  switch (variant) {
+    case 'success':
+      return getColor(theme, 'primary')
+    case 'error':
+    case 'destructive':
+      return getColor(theme, 'destructive')
+    case 'warning':
+      return getColor(theme, 'secondary')
+    case 'info':
+      return getTextColor(theme, 'secondary')
+    default:
+      return getColor(theme, 'primary')
+  }
+}
+
 const ToastContainer = styled(motion.div)`
   position: fixed;
   bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: ${props => {
-    switch (props.variant) {
-      case 'success': return props.theme.colors.primary
-      case 'error': return props.theme.colors.destructive
-      case 'warning': return props.theme.colors.secondary
-      default: return props.theme.colors.primary
-    }
+  background-color: ${props => getToastBackgroundColor(props.theme, props.$variant)};
+  color: ${props => getColor(props.theme, 'white')};
+  padding: ${props => {
+    const theme = props.theme?.spacing ? props.theme : lightTheme
+    return `${theme.spacing.md} ${theme.spacing.lg}`
   }};
-  color: ${props => props.theme.colors.white};
-  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
-  border-radius: ${props => props.theme.borderRadius.medium};
-  box-shadow: ${props => props.theme.shadows.strong};
+  border-radius: ${props => (props.theme?.borderRadius ? props.theme : lightTheme).borderRadius.medium};
+  box-shadow: ${props => (props.theme?.shadows ? props.theme : lightTheme).shadows.strong};
   z-index: 1000;
   display: flex;
   align-items: center;
-  gap: ${props => props.theme.spacing.sm};
+  gap: ${props => (props.theme?.spacing ? props.theme : lightTheme).spacing.sm};
   max-width: 90%;
   animation: ${slideUp} 0.3s ease-out;
 `
@@ -44,9 +63,9 @@ const ToastIcon = styled.span`
 `
 
 const ToastMessage = styled.div`
-  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  line-height: ${props => props.theme.typography.lineHeight.normal};
+  font-size: ${props => (props.theme?.typography ? props.theme : lightTheme).typography.fontSize.bodyMedium};
+  font-weight: ${props => (props.theme?.typography ? props.theme : lightTheme).typography.fontWeight.medium};
+  line-height: ${props => (props.theme?.typography ? props.theme : lightTheme).typography.lineHeight.normal};
 `
 
 const Toast = ({ 
@@ -79,7 +98,7 @@ const Toast = ({
 
   return (
     <ToastContainer
-      variant={variant}
+      $variant={variant}
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}

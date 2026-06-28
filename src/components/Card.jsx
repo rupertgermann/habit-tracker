@@ -6,16 +6,16 @@ const CardWrapper = styled(motion.div)`
   background-color: ${props => props.theme.colors.white};
   border-radius: ${props => props.theme.borderRadius.medium};
   box-shadow: ${props => {
-    if (props.elevated) return props.theme.shadows.medium
-    if (props.border) return 'none'
+    if (props.$elevated) return props.theme.shadows.medium
+    if (props.$border) return 'none'
     return props.theme.shadows.subtle
   }};
-  border: ${props => props.border ? `1px solid ${props.theme.colors.border}` : 'none'};
+  border: ${props => props.$border ? `1px solid ${props.theme.colors.border}` : 'none'};
   overflow: hidden;
   transition: all 0.2s ease;
   
-  ${({ padding, theme }) => {
-    switch (padding) {
+  ${({ $padding, theme }) => {
+    switch ($padding) {
       case 'none':
         return 'padding: 0;'
       case 'small':
@@ -27,8 +27,8 @@ const CardWrapper = styled(motion.div)`
     }
   }}
   
-  ${({ clickable, theme }) =>
-    clickable &&
+  ${({ $clickable, theme }) =>
+    $clickable &&
     `
       cursor: pointer;
       
@@ -54,10 +54,10 @@ const Card = ({
 }) => {
   return (
     <CardWrapper
-      padding={padding}
-      elevated={elevated}
-      clickable={clickable}
-      border={border}
+      $padding={padding}
+      $elevated={elevated}
+      $clickable={clickable}
+      $border={border}
       className={className}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}

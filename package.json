@@ -4,11 +4,14 @@
   "description": "A clean, minimalist mobile app UI for a habit tracker and goal planner",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n server,client -c blue,green \"npm run server\" \"npm run dev:client\"",
+    "dev:client": "vite",
     "build": "vite build",
+    "test": "npm run test:domain",
+    "test:domain": "node scripts/run-domain-tests.mjs",
     "preview": "vite preview",
     "server": "node server/index.js",
-    "dev:all": "concurrently -n server,client -c blue,green \"npm run server\" \"npm run dev\""
+    "dev:all": "npm run dev"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

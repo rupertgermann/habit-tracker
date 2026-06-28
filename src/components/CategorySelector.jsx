@@ -16,18 +16,19 @@ const CategoryLabel = styled.label`
 
 const CategoryGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: ${props => props.theme.spacing.sm};
 `
 
 const CategoryOption = styled.div`
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: ${props => props.theme.spacing.md};
-  border-radius: ${props => props.theme.borderRadius.medium};
-  border: 2px solid ${props => props.selected ? props.theme.colors.primary : props.theme.colors.border};
-  background-color: ${props => props.selected ? `${props.theme.colors.primary}10` : props.theme.colors.white};
+  gap: ${props => props.theme.spacing.sm};
+  min-height: 48px;
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.small};
+  border: 2px solid ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${props => props.$selected ? `${props.theme.colors.primary}10` : props.theme.colors.white};
   cursor: pointer;
   transition: all 0.2s ease;
   
@@ -39,27 +40,27 @@ const CategoryOption = styled.div`
 `
 
 const CategoryIcon = styled.div`
-  font-size: 24px;
-  margin-bottom: ${props => props.theme.spacing.xs};
+  font-size: 20px;
+  flex-shrink: 0;
 `
 
 const CategoryName = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  text-align: center;
+  text-align: left;
   color: ${props => props.theme.colors.text.primary};
 `
 
-const CategorySelector = ({ selectedCategory, onCategoryChange }) => {
+const CategorySelector = ({ selectedCategory, onCategoryChange, showLabel = true }) => {
   const { categories } = useHabits()
 
   return (
     <CategorySelectorContainer>
-      <CategoryLabel>Category</CategoryLabel>
+      {showLabel && <CategoryLabel>Category</CategoryLabel>}
       <CategoryGrid>
         {categories.map((category) => (
           <CategoryOption
             key={category.id}
-            selected={selectedCategory === category.id}
+            $selected={selectedCategory === category.id}
             onClick={() => onCategoryChange(category.id)}
           >
             <CategoryIcon>{category.icon}</CategoryIcon>

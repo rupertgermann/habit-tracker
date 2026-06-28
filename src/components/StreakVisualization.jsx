@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
-import { format, subDays, isSameDay, parseISO } from 'date-fns'
+import { getRecentActivityDays } from '../domain/habitTracking'
 
 const StreakContainer = styled.div`
   display: flex;
@@ -47,8 +47,8 @@ const StreakDay = styled(motion.div)`
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   position: relative;
   
-  ${({ completed, theme }) =>
-    completed
+  ${({ $completed, theme }) =>
+    $completed
       ? `
           background-color: ${theme.colors.primary};
           color: ${theme.colors.white};
@@ -58,8 +58,8 @@ const StreakDay = styled(motion.div)`
           color: ${theme.colors.text.secondary};
         `}
   
-  ${({ isToday, theme }) =>
-    isToday &&
+  ${({ $isToday, theme }) =>
+    $isToday &&
     `
       border: 2px solid ${theme.colors.primary};
     `}
@@ -103,25 +103,10 @@ const MilestoneDescription = styled.div`
 
 const StreakVisualization = ({ habit, streak, longestStreak }) => {
   const getRecentDays = () => {
-    const days = []
-    const today = new Date()
-    
-    // Show last 14 days
-    for (let i = 13; i >= 0; i--) {
-      const day = subDays(today, i)
-      const dayStr = format(day, 'yyyy-MM-dd')
-      const completed = habit.completions.some(c => c.date === dayStr)
-      
-      days.push({
-        date: day,
-        dayNumber: format(day, 'd'),
-        dayName: format(day, 'EEE'),
-        completed,
-        isToday: isSameDay(day, today)
-      })
-    }
-    
-    return days
+    return getRecentActivityDays(habit, 14).map(day => ({
+      ...day,
+      completed: day.isCompleted
+    }))
   }
 
   const getMilestone = () => {
@@ -182,8 +167,8 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
         {recentDays.map((day, index) => (
           <div key={day.date.toString()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <StreakDay
-              completed={day.completed}
-              isToday={day.isToday}
+              $completed={day.completed}
+              $isToday={day.isToday}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: index * 0.05 }}

@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import HabitsList from '../screens/HabitsList'
 import HabitDetail from '../screens/HabitDetail'
 import { useHabits } from '../context/HabitsContext'
 
 const SplitViewContainer = styled.div`
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 64px);
   overflow: hidden;
 `
 
@@ -55,7 +55,7 @@ const EmptyText = styled.p`
 const TabletSplitView = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { habits } = useHabits()
+  useHabits()
   const [selectedHabitId, setSelectedHabitId] = useState(null)
 
   // Check if we're currently viewing a habit detail
@@ -87,7 +87,7 @@ const TabletSplitView = () => {
       </ListPanel>
       <DetailPanel>
         {selectedHabitId ? (
-          <Outlet />
+          <HabitDetail />
         ) : (
           <EmptyDetailPanel>
             <EmptyIcon>📋</EmptyIcon>

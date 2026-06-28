@@ -138,7 +138,7 @@ const HabitName = styled.span`
 
 const CompletionStatus = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  color: ${props => props.completed ? props.theme.colors.primary : props.theme.colors.text.secondary};
+  color: ${props => props.$completed ? props.theme.colors.primary : props.theme.colors.text.secondary};
 `
 
 const Tooltip = ({ 
@@ -189,7 +189,7 @@ const Tooltip = ({
               <HabitStatus>
                 <HabitIcon>{item.icon || '✓'}</HabitIcon>
                 <HabitName>{item.name}</HabitName>
-                <CompletionStatus completed={item.completed}>
+                <CompletionStatus $completed={item.completed}>
                   {item.completed ? '✓' : '✗'}
                 </CompletionStatus>
               </HabitStatus>

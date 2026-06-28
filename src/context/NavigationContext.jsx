@@ -11,15 +11,19 @@ export const NavigationProvider = ({ children }) => {
   useEffect(() => {
     const path = location.pathname
     const navItems = [
-      { id: 'dashboard', path: '/' },
-      { id: 'habits', path: '/habits' },
-      { id: 'calendar', path: '/calendar' },
-      { id: 'journal', path: '/journal' },
-      { id: 'progress', path: '/progress' },
-      { id: 'settings', path: '/settings' }
+      { id: 'dashboard', paths: ['/'] },
+      { id: 'habits', paths: ['/habits', '/habit', '/add-habit', '/edit-habit'] },
+      { id: 'calendar', paths: ['/calendar'] },
+      { id: 'journal', paths: ['/journal'] },
+      { id: 'progress', paths: ['/progress'] },
+      { id: 'settings', paths: ['/settings'] }
     ]
     
-    const activeItem = navItems.find(item => path.startsWith(item.path))
+    const activeItem = navItems
+      .flatMap(item => item.paths.map(itemPath => ({ ...item, path: itemPath })))
+      .filter(item => item.path === '/' ? path === '/' : path.startsWith(item.path))
+      .sort((a, b) => b.path.length - a.path.length)[0]
+
     if (activeItem) {
       setActiveTab(activeItem.id)
     }

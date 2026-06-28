@@ -1,9 +1,9 @@
 import React from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
-import { format } from 'date-fns'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
+import { getCountForDate, toDateKey } from '../domain/habitTracking'
 
 const StepperWrapper = styled.div`
   display: flex;
@@ -17,8 +17,8 @@ const StepButton = styled(motion.button)`
   height: 32px;
   border-radius: ${props => props.theme.borderRadius.round};
   border: 2px solid ${props => props.theme.colors.primary};
-  background-color: ${props => props.variant === 'plus' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.variant === 'plus' ? props.theme.colors.white : props.theme.colors.primary};
+  background-color: ${props => props.$variant === 'plus' ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.$variant === 'plus' ? props.theme.colors.white : props.theme.colors.primary};
   font-size: 18px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   line-height: 1;
@@ -56,8 +56,8 @@ const CountStepper = ({ habit, onChange }) => {
   const { incrementCompletion, decrementCompletion } = useHabits()
   const { showSuccessToast } = useToast()
 
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const count = (habit.completions || []).filter(c => c.date === today).length
+  const today = toDateKey()
+  const count = getCountForDate(habit, today)
   const target = habit.dailyTarget
 
   const handleIncrement = (e) => {
@@ -83,7 +83,7 @@ const CountStepper = ({ habit, onChange }) => {
     <StepperWrapper onClick={(e) => e.stopPropagation()}>
       <StepButton
         type="button"
-        variant="minus"
+        $variant="minus"
         onClick={handleDecrement}
         disabled={count === 0}
         whileHover={{ scale: count === 0 ? 1 : 1.1 }}
@@ -98,7 +98,7 @@ const CountStepper = ({ habit, onChange }) => {
       </CountValue>
       <StepButton
         type="button"
-        variant="plus"
+        $variant="plus"
         onClick={handleIncrement}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}

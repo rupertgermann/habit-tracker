@@ -12,11 +12,23 @@ const NavContainer = styled.nav`
   height: 80px;
   background-color: ${props => props.theme.colors.white};
   box-shadow: ${props => props.theme.shadows.medium};
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: center;
+  gap: 0;
   padding-bottom: env(safe-area-inset-bottom, 0);
   z-index: 100;
+
+  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
+    top: 0;
+    bottom: auto;
+    height: 64px;
+    display: flex;
+    justify-content: center;
+    gap: ${props => props.theme.spacing.sm};
+    padding: 0 ${props => props.theme.spacing.lg};
+    border-bottom: 1px solid ${props => props.theme.colors.border};
+  }
 `
 
 const NavItem = styled(motion.button)`
@@ -27,13 +39,14 @@ const NavItem = styled(motion.button)`
   align-items: center;
   gap: ${props => props.theme.spacing.xs};
   cursor: pointer;
-  padding: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.xs};
   border-radius: ${props => props.theme.borderRadius.small};
   transition: all 0.2s ease;
-  min-width: 60px;
+  min-width: 0;
+  width: 100%;
   
-  ${({ active, theme }) =>
-    active
+  ${({ $active, theme }) =>
+    $active
       ? `
           color: ${theme.colors.primary};
         `
@@ -49,6 +62,14 @@ const NavItem = styled(motion.button)`
     outline: 2px solid ${props => props.theme.colors.primary};
     outline-offset: 2px;
   }
+
+  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
+    width: auto;
+    min-width: 92px;
+    flex-direction: row;
+    justify-content: center;
+    padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  }
 `
 
 const NavIcon = styled.div`
@@ -60,6 +81,14 @@ const NavLabel = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   line-height: 1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 360px) {
+    display: none;
+  }
 `
 
 const navItems = [
@@ -115,7 +144,7 @@ const BottomNavigation = () => {
       {navItems.map((item) => (
         <NavItem
           key={item.id}
-          active={activeTab === item.id}
+          $active={activeTab === item.id}
           onClick={() => handleTabClick(item)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

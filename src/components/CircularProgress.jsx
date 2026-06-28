@@ -1,7 +1,6 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import { motion } from 'framer-motion'
-import { keyframes } from 'styled-components'
 
 const ProgressContainer = styled.div`
   display: flex;
@@ -17,28 +16,28 @@ const SvgContainer = styled.svg`
 
 const BackgroundCircle = styled.circle`
   fill: none;
-  stroke: ${props => props.backgroundColor || props.theme.colors.border};
-  stroke-width: ${props => props.strokeWidth};
+  stroke: ${props => props.$backgroundColor || props.theme.colors.border};
+  stroke-width: ${props => props.$strokeWidth};
 `
 
 const ProgressCircle = styled(motion.circle)`
   fill: none;
-  stroke: ${props => props.color || props.theme.colors.primary};
-  stroke-width: ${props => props.strokeWidth};
+  stroke: ${props => props.$color || props.theme.colors.primary};
+  stroke-width: ${props => props.$strokeWidth};
   stroke-linecap: round;
   transform-origin: center;
   
-  ${({ animated }) =>
-    animated &&
+  ${({ $animated }) =>
+    $animated &&
     `
-      filter: drop-shadow(0 0 3px ${props => props.color || props.theme.colors.primary}40);
+      filter: drop-shadow(0 0 3px currentColor);
     `}
 `
 
 const DailyIndicator = styled(motion.circle)`
   fill: none;
   stroke: ${props => props.theme.colors.border};
-  stroke-width: ${props => props.strokeWidth / 2};
+  stroke-width: ${props => props.$strokeWidth / 2};
   stroke-linecap: round;
   stroke-dasharray: 5 5;
   transform-origin: center;
@@ -52,9 +51,9 @@ const ProgressText = styled.div`
   align-items: center;
   justify-content: center;
   
-  ${({ animated }) =>
-    animated &&
-    `
+  ${({ $animated }) =>
+    $animated &&
+    css`
       animation: ${pulse} 2s infinite;
     `}
 `
@@ -110,17 +109,18 @@ const CircularProgress = ({
           cx={size / 2}
           cy={size / 2}
           r={normalizedRadius}
-          strokeWidth={strokeWidth}
-          backgroundColor={backgroundColor}
+          $strokeWidth={strokeWidth}
+          $backgroundColor={backgroundColor}
         />
         <ProgressCircle
           cx={size / 2}
           cy={size / 2}
           r={normalizedRadius}
-          strokeWidth={strokeWidth}
+          $strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
-          color={color}
+          $color={color}
+          $animated={animated}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
           transition={{ duration: 0.8, ease: 'easeInOut' }}
@@ -131,6 +131,7 @@ const CircularProgress = ({
             cx={size / 2}
             cy={size / 2}
             r={normalizedRadius}
+            $strokeWidth={strokeWidth}
             strokeDasharray={circumference}
             strokeDashoffset={circumference - (1 / 7) * circumference}
             animate={{ strokeDashoffset: circumference - (1 / 7) * circumference }}
@@ -140,7 +141,7 @@ const CircularProgress = ({
       </SvgContainer>
       
       {(showPercentage || label) && (
-        <ProgressText animated={animated}>
+        <ProgressText $animated={animated}>
           {showPercentage && (
             <PercentageText>{Math.round(progress)}%</PercentageText>
           )}

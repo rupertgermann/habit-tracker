@@ -35,11 +35,10 @@ const JournalForm = styled(Card)`
 `
 
 const MoodSelector = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.md};
-  overflow-x: auto;
-  padding-bottom: ${props => props.theme.spacing.sm};
 `
 
 const MoodOption = styled.button`
@@ -47,12 +46,12 @@ const MoodOption = styled.button`
   flex-direction: column;
   align-items: center;
   padding: ${props => props.theme.spacing.sm};
-  border-radius: ${props => props.theme.borderRadius.medium};
-  border: 2px solid ${props => props.selected ? props.theme.colors.primary : props.theme.colors.border};
-  background-color: ${props => props.selected ? `${props.theme.colors.primary}10` : props.theme.colors.white};
+  border-radius: ${props => props.theme.borderRadius.small};
+  border: 2px solid ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${props => props.$selected ? `${props.theme.colors.primary}10` : props.theme.colors.white};
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 70px;
+  min-height: 72px;
   
   &:hover {
     border-color: ${props => props.theme.colors.primary};
@@ -103,12 +102,10 @@ const EntryTime = styled.span`
   color: ${props => props.theme.colors.text.secondary};
 `
 
-const EditButton = styled(Button)`
-  position: absolute;
-  top: ${props => props.theme.spacing.md};
-  right: ${props => props.theme.spacing.md};
-  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
-  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+const EntryActions = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.sm};
+  margin-top: ${props => props.theme.spacing.md};
 `
 
 const EmptyJournal = styled.div`
@@ -205,7 +202,8 @@ const JournalEntry = ({ habitId, date, habitName }) => {
             {moodOptions.map((mood) => (
               <MoodOption
                 key={mood.id}
-                selected={selectedMood === mood.id}
+                type="button"
+                $selected={selectedMood === mood.id}
                 onClick={() => setSelectedMood(mood.id)}
               >
                 <MoodEmoji>{mood.emoji}</MoodEmoji>
@@ -227,6 +225,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
           
           <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
             <Button
+              type="button"
               onClick={handleSaveEntry}
               disabled={!content.trim()}
               fullWidth
@@ -235,6 +234,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
             </Button>
             {existingEntry && (
               <Button
+                type="button"
                 variant="ghost"
                 onClick={() => setIsEditing(false)}
                 fullWidth
@@ -257,20 +257,24 @@ const JournalEntry = ({ habitId, date, habitName }) => {
           
           <EntryContent>{existingEntry.content}</EntryContent>
           
-          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-            <EditButton
+          <EntryActions>
+            <Button
+              type="button"
+              size="small"
               variant="ghost"
               onClick={handleEditEntry}
             >
               Edit
-            </EditButton>
-            <EditButton
+            </Button>
+            <Button
+              type="button"
+              size="small"
               variant="destructive"
               onClick={handleDeleteEntry}
             >
               Delete
-            </EditButton>
-          </div>
+            </Button>
+          </EntryActions>
         </JournalEntryCard>
       ) : (
         <EmptyJournal>

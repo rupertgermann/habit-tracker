@@ -6,7 +6,16 @@ const ToastContext = createContext()
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([])
 
-  const addToast = (message, options = {}) => {
+  const normalizeToastOptions = (variantOrOptions = {}, maybeOptions = {}) => {
+    if (typeof variantOrOptions === 'string') {
+      return { ...maybeOptions, variant: variantOrOptions }
+    }
+
+    return variantOrOptions || {}
+  }
+
+  const addToast = (message, variantOrOptions = {}, maybeOptions = {}) => {
+    const options = normalizeToastOptions(variantOrOptions, maybeOptions)
     const id = Date.now()
     const newToast = {
       id,

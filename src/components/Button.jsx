@@ -17,8 +17,8 @@ const ButtonWrapper = styled(motion.button)`
   position: relative;
   overflow: hidden;
   
-  ${({ variant, theme }) => {
-    switch (variant) {
+  ${({ $variant, theme }) => {
+    switch ($variant) {
       case 'primary':
         return `
           background-color: ${theme.colors.primary};
@@ -67,8 +67,8 @@ const ButtonWrapper = styled(motion.button)`
     }
   }}
   
-  ${({ size, theme }) => {
-    switch (size) {
+  ${({ $size, theme }) => {
+    switch ($size) {
       case 'small':
         return `
           height: 32px;
@@ -90,8 +90,8 @@ const ButtonWrapper = styled(motion.button)`
     }
   }}
   
-  ${({ fullWidth }) =>
-    fullWidth &&
+  ${({ $fullWidth }) =>
+    $fullWidth &&
     `
       width: 100%;
     `}
@@ -112,8 +112,8 @@ const ButtonWrapper = styled(motion.button)`
     transform: scale(0.98);
   }
   
-  ${({ isBouncing }) =>
-    isBouncing &&
+  ${({ $isBouncing }) =>
+    $isBouncing &&
     `
       animation: ${bounce} 0.6s ease;
     `}
@@ -174,11 +174,10 @@ const Button = ({
 
   return (
     <ButtonWrapper
-      variant={variant}
-      size={size}
+      $variant={variant}
+      $size={size}
       disabled={disabled || loading}
-      loading={loading ? true : undefined}
-      fullWidth={fullWidth}
+      $fullWidth={fullWidth}
       onClick={handleClick}
       className={className}
       aria-label={ariaLabel || (typeof children === 'string' ? children : undefined)}
@@ -186,7 +185,7 @@ const Button = ({
       aria-busy={loading}
       whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
       whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
-      isBouncing={isBouncing}
+      $isBouncing={isBouncing}
       {...props}
     >
       {loading ? (

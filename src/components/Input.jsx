@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 
 const InputWrapper = styled.div`
   display: flex;
@@ -7,16 +7,14 @@ const InputWrapper = styled.div`
   gap: ${props => props.theme.spacing.xs};
 `
 
-const StyledInput = styled.input`
+const controlStyles = css`
   width: 100%;
-  height: 48px;
   border: 1px solid ${props => {
-    if (props.error) return props.theme.colors.destructive
-    if (props.focused) return props.theme.colors.primary
+    if (props.$error) return props.theme.colors.destructive
+    if (props.$focused) return props.theme.colors.primary
     return props.theme.colors.border
   }};
   border-radius: ${props => props.theme.borderRadius.small};
-  padding: 0 ${props => props.theme.spacing.md};
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.bodyLarge};
   color: ${props => props.theme.colors.text.primary};
@@ -48,6 +46,49 @@ const StyledInput = styled.input`
     `}
 `
 
+const StyledInput = styled.input`
+  ${controlStyles}
+  height: 48px;
+  padding: 0 ${props => props.$clearable ? props.theme.spacing.xxl : props.theme.spacing.md} 0 ${props => props.theme.spacing.md};
+`
+
+const StyledTextarea = styled.textarea`
+  ${controlStyles}
+  min-height: 120px;
+  padding: ${props => props.theme.spacing.md};
+  padding-right: ${props => props.$clearable ? props.theme.spacing.xxl : props.theme.spacing.md};
+  line-height: ${props => props.theme.typography.lineHeight.normal};
+  resize: vertical;
+`
+
+const ControlFrame = styled.div`
+  position: relative;
+`
+
+const ClearButton = styled.button`
+  position: absolute;
+  top: ${props => props.theme.spacing.sm};
+  right: ${props => props.theme.spacing.sm};
+  width: 32px;
+  height: 32px;
+  border-radius: ${props => props.theme.borderRadius.small};
+  background-color: transparent;
+  color: ${props => props.theme.colors.text.secondary};
+  font-size: ${props => props.theme.typography.fontSize.bodyLarge};
+  line-height: 1;
+
+  &:hover {
+    background-color: ${props => props.theme.colors.background};
+    color: ${props => props.theme.colors.text.primary};
+  }
+`
+
+const InputLabel = styled.label`
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.$error ? props.theme.colors.destructive : props.theme.colors.text.primary};
+`
+
 const CharacterCount = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
@@ -70,6 +111,9 @@ const Input = ({
   type = 'text',
   maxLength,
   showCharacterCount = false,
+  multiline = false,
+  rows = 4,
+  clearable = false,
   className,
   ...props
 }) => {
@@ -96,34 +140,49 @@ const Input = ({
     setFocused(false)
   }
 
+  const handleClear = () => {
+    setInternalValue('')
+    if (onChange) {
+      onChange('')
+    }
+  }
+
   const remainingChars = maxLength ? maxLength - internalValue.length : 0
+  const Control = multiline ? StyledTextarea : StyledInput
 
   return (
     <InputWrapper className={className}>
       {label && (
-        <label
-          style={{
-            fontSize: '14px',
-            fontWeight: 500,
-            color: error ? '#F28A8A' : '#1A1A1A'
-          }}
-        >
+        <InputLabel $error={Boolean(error)}>
           {label}
-        </label>
+        </InputLabel>
       )}
-      <StyledInput
-        type={type}
-        placeholder={placeholder}
-        value={internalValue}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        error={error}
-        focused={focused}
-        disabled={disabled}
-        maxLength={maxLength}
-        {...props}
-      />
+      <ControlFrame>
+        <Control
+          type={multiline ? undefined : type}
+          placeholder={placeholder}
+          value={internalValue}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          $error={Boolean(error)}
+          $focused={focused}
+          $clearable={clearable}
+          disabled={disabled}
+          maxLength={maxLength}
+          rows={multiline ? rows : undefined}
+          {...props}
+        />
+        {clearable && internalValue && !disabled && (
+          <ClearButton
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear input"
+          >
+            ×
+          </ClearButton>
+        )}
+      </ControlFrame>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {showCharacterCount && maxLength && (
         <CharacterCount>

@@ -3,6 +3,7 @@ const cors = require('cors')
 const store = require('./db')
 
 const app = express()
+const HOST = process.env.HOST || '127.0.0.1'
 const PORT = process.env.PORT || 3001
 
 app.use(cors())
@@ -76,6 +77,6 @@ app.delete('/api/data', asyncWrap((req, res) => {
   res.json(store.getState())
 }))
 
-app.listen(PORT, () => {
-  console.log(`Habit Tracker API listening on http://localhost:${PORT}`)
+app.listen(PORT, HOST, () => {
+  console.log(`Habit Tracker API listening on http://${HOST}:${PORT}`)
 })

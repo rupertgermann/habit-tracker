@@ -11,6 +11,7 @@ import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
 
 const HabitsListContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -36,52 +37,39 @@ const FilterTabs = styled.div`
 `
 
 const CategoryFilter = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
-  overflow-x: auto;
-  padding-bottom: ${props => props.theme.spacing.sm};
-  
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: ${props => props.theme.colors.border};
-    border-radius: ${props => props.theme.borderRadius.small};
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.colors.text.secondary};
-    border-radius: ${props => props.theme.borderRadius.small};
-  }
 `
 
 const CategoryChip = styled.button`
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: ${props => props.theme.spacing.xs};
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
-  border-radius: ${props => props.theme.borderRadius.round};
+  min-height: 40px;
+  border-radius: ${props => props.theme.borderRadius.small};
   background: none;
   border: 1px solid ${props => props.theme.colors.border};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
-  white-space: nowrap;
+  line-height: ${props => props.theme.typography.lineHeight.tight};
   cursor: pointer;
   transition: all 0.2s ease;
   
-  ${({ active, theme, color }) =>
-    active &&
+  ${({ $active, theme, $color }) =>
+    $active &&
     `
-      background-color: ${color || theme.colors.primary}20;
-      border-color: ${color || theme.colors.primary};
-      color: ${color || theme.colors.primary};
+      background-color: ${$color || theme.colors.primary}20;
+      border-color: ${$color || theme.colors.primary};
+      color: ${$color || theme.colors.primary};
       font-weight: ${theme.typography.fontWeight.medium};
     `}
   
   &:hover {
-    border-color: ${props => props.color || props.theme.colors.primary};
+    border-color: ${props => props.$color || props.theme.colors.primary};
   }
 `
 
@@ -91,7 +79,7 @@ const FilterTab = styled.button`
   padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   font-size: ${props => props.theme.typography.fontSize.bodyMedium};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.text.secondary};
+  color: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.text.secondary};
   cursor: pointer;
   position: relative;
   transition: color 0.2s ease;
@@ -108,7 +96,7 @@ const FilterTab = styled.button`
     right: 0;
     height: 2px;
     background-color: ${props => props.theme.colors.primary};
-    transform: scaleX(${props => props.active ? 1 : 0});
+    transform: scaleX(${props => props.$active ? 1 : 0});
     transition: transform 0.2s ease;
   }
 `
@@ -126,7 +114,7 @@ const HabitCard = styled(Card)`
   padding: ${props => props.theme.spacing.lg};
   cursor: pointer;
   transition: all 0.2s ease;
-  border: ${props => props.selected ? `2px solid ${props.theme.colors.primary}` : 'none'};
+  border: ${props => props.$selected ? `2px solid ${props.theme.colors.primary}` : 'none'};
   
   &:hover {
     transform: translateY(-2px);
@@ -145,11 +133,11 @@ const HabitIcon = styled.div`
   width: 48px;
   height: 48px;
   border-radius: ${props => props.theme.borderRadius.small};
-  background-color: ${props => props.color || props.theme.colors.primary}20;
+  background-color: ${props => props.$color || props.theme.colors.primary}20;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   font-size: 24px;
 `
 
@@ -167,6 +155,7 @@ const HabitName = styled.h3`
 
 const HabitMeta = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: ${props => props.theme.spacing.md};
   align-items: center;
 `
@@ -190,8 +179,8 @@ const CategoryBadge = styled.span`
   gap: ${props => props.theme.spacing.xs};
   padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
   border-radius: ${props => props.theme.borderRadius.round};
-  background-color: ${props => props.color || props.theme.colors.primary}20;
-  color: ${props => props.color || props.theme.colors.primary};
+  background-color: ${props => props.$color || props.theme.colors.primary}20;
+  color: ${props => props.$color || props.theme.colors.primary};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
 `
@@ -200,8 +189,8 @@ const CheckButton = styled(motion.button)`
   width: 40px;
   height: 40px;
   border-radius: ${props => props.theme.borderRadius.round};
-  border: 2px solid ${props => props.checked ? props.theme.colors.primary : props.theme.colors.border};
-  background-color: ${props => props.checked ? props.theme.colors.primary : 'transparent'};
+  border: 2px solid ${props => props.$checked ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${props => props.$checked ? props.theme.colors.primary : 'transparent'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,7 +248,7 @@ const PlusIcon = styled.svg`
 
 const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   const navigate = useNavigate()
-  const { habits, categories, toggleHabitCompletion, getTodayHabits } = useHabits()
+  const { habits, categories, toggleHabitCompletion, getTodayHabits, getHabitStreak } = useHabits()
   const { showSuccessToast } = useToast()
   const [filter, setFilter] = useState('all')
   const [filteredHabits, setFilteredHabits] = useState([])
@@ -277,10 +266,8 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
     if (filter === 'active') {
       filtered = filtered.filter(habit => !habit.isArchived)
     } else if (filter === 'completed') {
-      const today = new Date().toISOString().split('T')[0]
-      filtered = filtered.filter(habit =>
-        habit.completions.some(completion => completion.date === today)
-      )
+      const completedIds = new Set(todayHabits.filter(habit => habit.isCompleted).map(habit => habit.id))
+      filtered = filtered.filter(habit => completedIds.has(habit.id))
     }
     
     if (selectedCategory) {
@@ -288,7 +275,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
     }
     
     setFilteredHabits(filtered)
-  }, [habits, filter, selectedCategory])
+  }, [habits, filter, selectedCategory, todayHabits])
 
   const handleCategoryFilter = (id) => {
     setSelectedCategory(prev => (prev === id ? null : id))
@@ -359,19 +346,19 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
 
       <FilterTabs>
         <FilterTab
-          active={filter === 'all'}
+          $active={filter === 'all'}
           onClick={() => setFilter('all')}
         >
           All ({habits.length})
         </FilterTab>
         <FilterTab
-          active={filter === 'active'}
+          $active={filter === 'active'}
           onClick={() => setFilter('active')}
         >
           Active ({habits.filter(h => !h.isArchived).length})
         </FilterTab>
         <FilterTab
-          active={filter === 'completed'}
+          $active={filter === 'completed'}
           onClick={() => setFilter('completed')}
         >
           Completed ({todayHabits.filter(h => h.isCompleted).length})
@@ -380,7 +367,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
 
       <CategoryFilter>
         <CategoryChip
-          active={!selectedCategory}
+          $active={!selectedCategory}
           onClick={() => setSelectedCategory(null)}
         >
           All Categories
@@ -388,8 +375,8 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
         {categories.map((category) => (
           <CategoryChip
             key={category.id}
-            active={selectedCategory === category.id}
-            color={category.color}
+            $active={selectedCategory === category.id}
+            $color={category.color}
             onClick={() => handleCategoryFilter(category.id)}
           >
             {category.icon}
@@ -422,22 +409,22 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
               clickable
               onClick={() => handleHabitClick(habit.id)}
               elevated
-              selected={selectedHabitId === habit.id}
+              $selected={selectedHabitId === habit.id}
             >
               <HabitInfo>
-                <HabitIcon color={habit.color}>
+                <HabitIcon $color={habit.color}>
                   {habit.icon || '✓'}
                 </HabitIcon>
                 <HabitDetails>
                   <HabitName>{habit.name}</HabitName>
                   <HabitMeta>
                     <HabitStreak>
-                      🔥 {habit.streak || 0} days
+                      🔥 {getHabitStreak(habit)} days
                     </HabitStreak>
                     <HabitFrequency>
                       {getFrequencyText(habit)}
                     </HabitFrequency>
-                    <CategoryBadge color={getCategoryInfo(habit.category).color}>
+                    <CategoryBadge $color={getCategoryInfo(habit.category).color}>
                       {getCategoryInfo(habit.category).icon}
                       {getCategoryInfo(habit.category).name}
                     </CategoryBadge>
@@ -448,7 +435,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
                 <CountStepper habit={habit} />
               ) : (
                 <CheckButton
-                  checked={getHabitStatus(habit)}
+                  $checked={getHabitStatus(habit)}
                   onClick={(e) => handleToggleHabit(habit.id, e)}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}

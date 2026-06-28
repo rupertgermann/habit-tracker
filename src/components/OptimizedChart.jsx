@@ -4,7 +4,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 
 const ChartContainer = styled.div`
   width: 100%;
-  height: ${props => props.height || '300px'};
+  height: ${props => props.$height || '300px'};
   position: relative;
 `
 
@@ -91,7 +91,7 @@ const OptimizedChart = ({
   
   if (error) {
     return (
-      <ChartContainer height={height} ref={containerRef}>
+      <ChartContainer $height={height} ref={containerRef}>
         <ErrorMessage>{error}</ErrorMessage>
       </ChartContainer>
     )
@@ -99,7 +99,7 @@ const OptimizedChart = ({
   
   if (loading) {
     return (
-      <ChartContainer height={height} ref={containerRef}>
+      <ChartContainer $height={height} ref={containerRef}>
         <LoadingOverlay>Loading chart data...</LoadingOverlay>
       </ChartContainer>
     )
@@ -107,7 +107,7 @@ const OptimizedChart = ({
   
   if (!data || data.length === 0) {
     return (
-      <ChartContainer height={height} ref={containerRef}>
+      <ChartContainer $height={height} ref={containerRef}>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -177,7 +177,7 @@ const OptimizedChart = ({
   }
   
   return (
-    <ChartContainer height={height} ref={containerRef}>
+    <ChartContainer $height={height} ref={containerRef}>
       {renderChart()}
       {showDataPointLimit && data.length > dataPointLimit && (
         <DataPointLimitMessage>

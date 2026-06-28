@@ -1,6 +1,19 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, differenceInCalendarDays } from 'date-fns'
 import { habitsApi } from '../api/habitsApi'
+import {
+  decrementCompletionForDate,
+  getCountForDate as getHabitCountForDate,
+  getDailyCountsForRange as getHabitDailyCountsForRange,
+  getHabitRangeStats as getTrackingRangeStats,
+  getHabitStreak as getTrackingHabitStreak,
+  getMonthlyCompletionData as getTrackingMonthlyCompletionData,
+  getTodayHabits as getTrackingTodayHabits,
+  getTrackingStats,
+  getWeeklyCompletionData as getTrackingWeeklyCompletionData,
+  incrementCompletionForDate,
+  toggleBinaryCompletionForDate
+} from '../domain/habitTracking'
+import { usePreferences } from './PreferencesContext.jsx'
 
 const HabitsContext = createContext()
 
@@ -16,6 +29,7 @@ const initialState = {
     { id: 'very-good', name: 'Very Good', emoji: '😄', color: '#34D399' }
   ],
   isLoading: false,
+  hasLoaded: false,
   error: null
 }
 
@@ -24,9 +38,9 @@ const habitsReducer = (state, action) => {
     case 'FETCH_HABITS_START':
       return { ...state, isLoading: true, error: null }
     case 'FETCH_HABITS_SUCCESS':
-      return { ...state, isLoading: false, habits: action.payload }
+      return { ...state, isLoading: false, hasLoaded: true, habits: action.payload }
     case 'FETCH_HABITS_ERROR':
-      return { ...state, isLoading: false, error: action.payload }
+      return { ...state, isLoading: false, hasLoaded: true, error: action.payload }
     case 'FETCH_JOURNAL_ENTRIES_SUCCESS':
       return { ...state, journalEntries: action.payload }
     case 'FETCH_CATEGORIES_SUCCESS':
@@ -44,29 +58,6 @@ const habitsReducer = (state, action) => {
       return {
         ...state,
         habits: state.habits.filter(habit => habit.id !== action.payload)
-      }
-    case 'TOGGLE_HABIT_COMPLETION':
-      return {
-        ...state,
-        habits: state.habits.map(habit => {
-          if (habit.id === action.payload.habitId) {
-            const today = format(new Date(), 'yyyy-MM-dd')
-            const existingCompletion = habit.completions.find(c => c.date === today)
-            
-            if (existingCompletion) {
-              return {
-                ...habit,
-                completions: habit.completions.filter(c => c.date !== today)
-              }
-            } else {
-              return {
-                ...habit,
-                completions: [...habit.completions, { date: today, completedAt: new Date().toISOString() }]
-              }
-            }
-          }
-          return habit
-        })
       }
     case 'ADD_CATEGORY':
       return { ...state, categories: [...state.categories, action.payload] }
@@ -103,6 +94,7 @@ const habitsReducer = (state, action) => {
 
 export const HabitsProvider = ({ children }) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
+  const { weekStartsOn } = usePreferences()
 
   // Load full state from the SQLite-backed API on mount
   useEffect(() => {
@@ -203,54 +195,35 @@ export const HabitsProvider = ({ children }) => {
     habitsApi.deleteHabit(id).catch(err => console.error('Failed to delete habit:', err))
   }
 
-  const toggleHabitCompletion = (habitId) => {
+  const toggleHabitCompletion = (habitId, date = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
     if (!habit) return
 
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const alreadyCompleted = habit.completions.some(c => c.date === today)
-    const completions = alreadyCompleted
-      ? habit.completions.filter(c => c.date !== today)
-      : [...habit.completions, { date: today, completedAt: new Date().toISOString() }]
-
-    const updatedHabit = { ...habit, completions }
+    const updatedHabit = toggleBinaryCompletionForDate(habit, date)
     dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
     habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to toggle habit completion:', err))
+    return updatedHabit
   }
 
-  // Append one occurrence for today (count-type habits log multiple per day)
-  const incrementCompletion = (habitId) => {
+  // Append one occurrence for a date (count-type habits log multiple per day)
+  const incrementCompletion = (habitId, date = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
     if (!habit) return
 
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const completions = [...(habit.completions || []), { date: today, completedAt: new Date().toISOString() }]
-    const updatedHabit = { ...habit, completions }
+    const updatedHabit = incrementCompletionForDate(habit, date)
     dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
     habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to increment completion:', err))
     return updatedHabit
   }
 
-  // Remove the most recent occurrence logged for today
-  const decrementCompletion = (habitId) => {
+  // Remove the most recent occurrence logged for a date
+  const decrementCompletion = (habitId, date = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
     if (!habit) return
 
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const todayEntries = (habit.completions || []).filter(c => c.date === today)
-    if (todayEntries.length === 0) return
+    const updatedHabit = decrementCompletionForDate(habit, date)
+    if (updatedHabit === habit) return
 
-    // Drop the last today-entry, keep everything else
-    const lastEntry = todayEntries[todayEntries.length - 1]
-    let removed = false
-    const completions = (habit.completions || []).filter(c => {
-      if (!removed && c === lastEntry) {
-        removed = true
-        return false
-      }
-      return true
-    })
-    const updatedHabit = { ...habit, completions }
     dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
     habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to decrement completion:', err))
     return updatedHabit
@@ -258,62 +231,19 @@ export const HabitsProvider = ({ children }) => {
 
   // Number of occurrences logged on a given yyyy-MM-dd date
   const getCountForDate = (habit, dateStr) => {
-    if (!habit || !habit.completions) return 0
-    return habit.completions.filter(c => c.date === dateStr).length
+    return getHabitCountForDate(habit, dateStr)
   }
 
   // Per-day counts for a habit across an inclusive date interval
   const getDailyCountsForRange = (habitId, start, end) => {
     const habit = state.habits.find(h => h.id === habitId)
-    const days = eachDayOfInterval({ start, end })
-    return days.map(day => {
-      const dateStr = format(day, 'yyyy-MM-dd')
-      return { date: dateStr, day, count: habit ? getCountForDate(habit, dateStr) : 0 }
-    })
+    return getHabitDailyCountsForRange(habit, start, end)
   }
 
   // Stats for a habit over a period: 'week' | 'month' | 'year'
   const getHabitRangeStats = (habitId, range, refDate = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
-    const empty = { totalCount: 0, daysWithEntry: 0, daysElapsed: 0, percentDaysSaid: 0, avgPerActiveDay: 0, bestCount: 0, bestDate: null }
-    if (!habit) return empty
-
-    let periodStart
-    let periodEnd
-    if (range === 'week') {
-      periodStart = startOfWeek(refDate, { weekStartsOn: 0 })
-      periodEnd = endOfWeek(refDate, { weekStartsOn: 0 })
-    } else if (range === 'year') {
-      periodStart = startOfYear(refDate)
-      periodEnd = endOfYear(refDate)
-    } else {
-      periodStart = startOfMonth(refDate)
-      periodEnd = endOfMonth(refDate)
-    }
-
-    // Window for "days elapsed": clamp to habit creation and to today
-    const today = new Date()
-    const createdAt = habit.createdAt ? parseISO(habit.createdAt) : periodStart
-    const windowStart = createdAt > periodStart ? createdAt : periodStart
-    const windowEnd = today < periodEnd ? today : periodEnd
-
-    if (windowEnd < windowStart) return empty
-
-    const days = getDailyCountsForRange(habitId, windowStart, windowEnd)
-    const totalCount = days.reduce((sum, d) => sum + d.count, 0)
-    const daysWithEntry = days.filter(d => d.count > 0).length
-    const daysElapsed = days.length
-    const best = days.reduce((acc, d) => (d.count > acc.count ? d : acc), { count: 0, date: null })
-
-    return {
-      totalCount,
-      daysWithEntry,
-      daysElapsed,
-      percentDaysSaid: daysElapsed > 0 ? Math.round((daysWithEntry / daysElapsed) * 100) : 0,
-      avgPerActiveDay: daysWithEntry > 0 ? Math.round((totalCount / daysWithEntry) * 10) / 10 : 0,
-      bestCount: best.count,
-      bestDate: best.date
-    }
+    return getTrackingRangeStats(habit, range, refDate, new Date(), weekStartsOn)
   }
 
   const getHabitById = (id) => {
@@ -321,105 +251,24 @@ export const HabitsProvider = ({ children }) => {
   }
 
   const getTodayHabits = () => {
-    const today = format(new Date(), 'yyyy-MM-dd')
-    return state.habits.map(habit => ({
-      ...habit,
-      isCompleted: habit.completions.some(c => c.date === today)
-    }))
+    return getTrackingTodayHabits(state.habits)
   }
 
   // Strict consecutive-day streak using UTC dates
   const getHabitStreak = (habit) => {
-    if (!habit.completions || habit.completions.length === 0) return 0
-
-    const completionSet = new Set(habit.completions.map(c => c.date))
-    let streak = 0
-    let cursor = new Date()
-    cursor.setUTCHours(0, 0, 0, 0)
-
-    while (completionSet.has(format(cursor, 'yyyy-MM-dd'))) {
-      streak += 1
-      cursor.setUTCDate(cursor.getUTCDate() - 1)
-    }
-
-    return streak
+    return getTrackingHabitStreak(habit)
   }
 
   const getWeeklyCompletionData = () => {
-    const today = new Date()
-    const weekStart = startOfWeek(today, { weekStartsOn: 0 }) // Sunday
-    const weekEnd = endOfWeek(today, { weekStartsOn: 0 })
-    const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd })
-
-    return daysOfWeek.map(day => {
-      const dayStr = format(day, 'yyyy-MM-dd')
-      const dayName = format(day, 'EEE')
-
-      const completed = state.habits.filter(habit =>
-        habit.completions.some(c => c.date === dayStr)
-      ).length
-
-      const missed = state.habits.length - completed
-
-      return {
-        day: dayName,
-        date: dayStr,
-        completed,
-        missed,
-        isToday: isToday(day)
-      }
-    });
+    return getTrackingWeeklyCompletionData(state.habits, new Date(), weekStartsOn)
   }
 
   const getMonthlyCompletionData = () => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = today.getMonth()
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    
-    const data = []
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = format(new Date(year, month, day), 'yyyy-MM-dd')
-      const completions = state.habits.filter(habit =>
-        habit.completions.some(c => c.date === dateStr)
-      ).length
-      
-      data.push({
-        date: dateStr,
-        day,
-        completions,
-        percentage: state.habits.length > 0 ? (completions / state.habits.length) * 100 : 0
-      })
-    }
-    
-    return data
+    return getTrackingMonthlyCompletionData(state.habits)
   }
 
   const getStats = () => {
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const todayCompletions = state.habits.filter(habit =>
-      habit.completions.some(c => c.date === today)
-    ).length
-    
-    const totalCompletions = state.habits.reduce((total, habit) => 
-      total + habit.completions.length, 0
-    )
-    
-    const currentStreaks = state.habits.map(getHabitStreak)
-    const maxStreak = Math.max(...currentStreaks, 0)
-    
-    const completionRate = state.habits.length > 0 
-      ? (todayCompletions / state.habits.length) * 100 
-      : 0
-    
-    return {
-      totalHabits: state.habits.length,
-      todayCompletions,
-      totalCompletions,
-      maxStreak,
-      completionRate: Math.round(completionRate)
-    }
+    return getTrackingStats(state.habits)
   }
 
   const addCategory = (categoryData) => {
@@ -468,6 +317,12 @@ export const HabitsProvider = ({ children }) => {
     addHabit,
     updateHabit,
     deleteHabit,
+    addJournalEntry,
+    updateJournalEntry,
+    deleteJournalEntry,
+    getJournalEntriesByDate,
+    getJournalEntriesByDateRange,
+    getJournalEntryForHabit,
     toggleHabitCompletion,
     incrementCompletion,
     decrementCompletion,

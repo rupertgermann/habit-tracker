@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 const ChartContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: ${props => props.height || 200}px;
+  height: ${props => props.$height || 200}px;
   width: 100%;
   position: relative;
 `
@@ -23,7 +23,7 @@ const BarGroup = styled.div`
   flex-direction: column;
   align-items: center;
   flex: 1;
-  max-width: ${props => props.barWidth + props.spacing}px;
+  max-width: ${props => props.$barWidth + props.$spacing}px;
 `
 
 const BarsWrapper = styled.div`
@@ -31,19 +31,19 @@ const BarsWrapper = styled.div`
   align-items: flex-end;
   justify-content: center;
   width: 100%;
-  height: ${props => props.height - 40}px;
+  height: ${props => props.$height - 40}px;
   position: relative;
 `
 
 const Bar = styled(motion.div)`
-  width: ${props => props.barWidth}px;
+  width: ${props => props.$barWidth}px;
   background-color: ${props => {
-    if (props.type === 'completed') return props.theme.colors.primary
-    if (props.type === 'missed') return props.theme.colors.destructive
+    if (props.$barType === 'completed') return props.theme.colors.primary
+    if (props.$barType === 'missed') return props.theme.colors.destructive
     return props.theme.colors.primary
   }};
   border-radius: ${props => props.theme.borderRadius.small} ${props => props.theme.borderRadius.small} 0 0;
-  margin: 0 ${props => props.spacing / 2}px;
+  margin: 0 ${props => props.$spacing / 2}px;
   position: relative;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -128,21 +128,20 @@ const BarChart = ({
   }
 
   return (
-    <ChartContainer height={height} className={className} {...props}>
+    <ChartContainer $height={height} className={className} {...props}>
       <BarsContainer>
         {data.map((item, index) => {
           const hasSeparateBars = item.completed !== undefined && item.missed !== undefined
           
           return (
-            <BarGroup key={index} barWidth={barWidth} spacing={spacing}>
-              <BarsWrapper height={height}>
+            <BarGroup key={index} $barWidth={barWidth} $spacing={spacing}>
+              <BarsWrapper $height={height}>
                 {hasSeparateBars ? (
                   <>
                     <Bar
-                      type="completed"
-                      barWidth={barWidth / 2 - spacing / 2}
-                      spacing={spacing}
-                      height={getBarHeight(item.completed)}
+                      $barType="completed"
+                      $barWidth={barWidth / 2 - spacing / 2}
+                      $spacing={spacing}
                       initial={{ height: 0 }}
                       animate={{ height: getBarHeight(item.completed) }}
                       transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -150,10 +149,9 @@ const BarChart = ({
                       onMouseLeave={handleBarLeave}
                     />
                     <Bar
-                      type="missed"
-                      barWidth={barWidth / 2 - spacing / 2}
-                      spacing={spacing}
-                      height={getBarHeight(item.missed)}
+                      $barType="missed"
+                      $barWidth={barWidth / 2 - spacing / 2}
+                      $spacing={spacing}
                       initial={{ height: 0 }}
                       animate={{ height: getBarHeight(item.missed) }}
                       transition={{ duration: 0.5, delay: index * 0.1 + 0.05 }}
@@ -174,9 +172,8 @@ const BarChart = ({
                 ) : (
                   <>
                     <Bar
-                      barWidth={barWidth}
-                      spacing={spacing}
-                      height={getBarHeight(item.value || 0)}
+                      $barWidth={barWidth}
+                      $spacing={spacing}
                       initial={{ height: 0 }}
                       animate={{ height: getBarHeight(item.value || 0) }}
                       transition={{ duration: 0.5, delay: index * 0.1 }}

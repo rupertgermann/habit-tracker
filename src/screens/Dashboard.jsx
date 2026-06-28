@@ -14,6 +14,7 @@ import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
 
 const DashboardContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -53,7 +54,7 @@ const StatCard = styled(Card)`
 const StatValue = styled.div`
   font-size: ${props => props.theme.typography.fontSize.headingLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.color || props.theme.colors.primary};
+  color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
@@ -140,7 +141,7 @@ const HabitIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: ${props => props.theme.borderRadius.small};
-  background-color: ${props => props.color || props.theme.colors.primary}20;
+  background-color: ${props => props.$color || props.theme.colors.primary}20;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -176,8 +177,8 @@ const CheckButton = styled(motion.button)`
   width: 32px;
   height: 32px;
   border-radius: ${props => props.theme.borderRadius.round};
-  border: 2px solid ${props => props.checked ? props.theme.colors.primary : props.theme.colors.border};
-  background-color: ${props => props.checked ? props.theme.colors.primary : 'transparent'};
+  border: 2px solid ${props => props.$checked ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${props => props.$checked ? props.theme.colors.primary : 'transparent'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,7 +203,7 @@ const CheckIcon = styled.svg`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { habits, getTodayHabits, getWeeklyCompletionData, getStats, toggleHabitCompletion } = useHabits()
+  const { habits, getTodayHabits, getWeeklyCompletionData, getStats, getHabitStreak, toggleHabitCompletion } = useHabits()
   const { showSuccessToast } = useToast()
   const [todayHabits, setTodayHabits] = useState([])
   const [weeklyData, setWeeklyData] = useState([])
@@ -364,14 +365,14 @@ const Dashboard = () => {
               elevated
             >
               <HabitInfo>
-                <HabitIcon color={habit.color}>
+                <HabitIcon $color={habit.color}>
                   {habit.icon || '✓'}
                 </HabitIcon>
                 <HabitDetails>
                   <HabitName>{habit.name}</HabitName>
                   <HabitMeta>
                     <HabitStreak>
-                      🔥 {habit.streak || 0} days
+                      🔥 {getHabitStreak(habits.find(h => h.id === habit.id) || habit)} days
                     </HabitStreak>
                   </HabitMeta>
                 </HabitDetails>
@@ -380,7 +381,7 @@ const Dashboard = () => {
                 <CountStepper habit={habits.find(h => h.id === habit.id) || habit} />
               ) : (
                 <CheckButton
-                  checked={habit.isCompleted}
+                  $checked={habit.isCompleted}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleToggleHabit(habit.id)

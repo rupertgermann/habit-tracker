@@ -7,8 +7,14 @@ import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useHabits } from '../context/HabitsContext'
 import { habitsApi } from '../api/habitsApi'
+import { isCompletedOnDate, toDateKey } from '../domain/habitTracking'
+import { usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
+
+const DEFAULT_PROFILE_NAME = 'User Name'
+const PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
 
 const SettingsContainer = styled.div`
+  width: 100%;
   padding: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
@@ -26,14 +32,21 @@ const Title = styled.h1`
 const ProfileSection = styled(Card)`
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: ${props => props.theme.spacing.lg};
   padding: ${props => props.theme.spacing.xl};
   margin-bottom: ${props => props.theme.spacing.xl};
+
+  @media (max-width: 360px) {
+    gap: ${props => props.theme.spacing.md};
+    padding: ${props => props.theme.spacing.lg};
+  }
 `
 
 const Avatar = styled.div`
   width: 80px;
   height: 80px;
+  flex: 0 0 80px;
   border-radius: ${props => props.theme.borderRadius.round};
   background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.secondary});
   display: flex;
@@ -42,20 +55,53 @@ const Avatar = styled.div`
   color: ${props => props.theme.colors.white};
   font-size: 32px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
+  line-height: 1;
+
+  @media (max-width: 360px) {
+    width: 64px;
+    height: 64px;
+    flex-basis: 64px;
+    font-size: 28px;
+  }
 `
 
 const ProfileInfo = styled.div`
   flex: 1;
+  min-width: 0;
 `
 
 const ProfileName = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   margin-bottom: ${props => props.theme.spacing.xs};
+  overflow-wrap: anywhere;
 `
 
 const ProfileEmail = styled.p`
   color: ${props => props.theme.colors.text.secondary};
   font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+`
+
+const ProfileNameInput = styled(Input)`
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: ${props => props.theme.spacing.xs};
+`
+
+const ProfileActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  flex: 0 0 auto;
+  margin-left: auto;
+`
+
+const ProfileEditActions = styled(ProfileActions)`
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: ${props => props.theme.spacing.sm};
+  margin-left: 0;
 `
 
 const SettingsGroup = styled.div`
@@ -134,6 +180,23 @@ const SettingRight = styled.div`
 const SettingValue = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodyMedium};
   color: ${props => props.theme.colors.text.secondary};
+`
+
+const SettingSelect = styled.select`
+  height: 40px;
+  min-width: 112px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.small};
+  padding: 0 ${props => props.theme.spacing.md};
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  color: ${props => props.theme.colors.text.primary};
+  background-color: ${props => props.theme.colors.white};
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+  }
 `
 
 const ChevronIcon = styled.svg`
@@ -226,8 +289,15 @@ const DangerButton = styled(Button)`
 
 const Settings = () => {
   const { isDarkMode, toggleTheme } = useTheme()
+  const { weekStartsOn, setWeekStartsOn } = usePreferences()
   const { showToast } = useToast()
   const { habits, categories, journalEntries } = useHabits()
+  const [profileName, setProfileName] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_PROFILE_NAME
+    return window.localStorage.getItem(PROFILE_NAME_STORAGE_KEY) || DEFAULT_PROFILE_NAME
+  })
+  const [draftProfileName, setDraftProfileName] = useState(profileName)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [reminderTime, setReminderTime] = useState('09:00')
 
@@ -268,8 +338,7 @@ const Settings = () => {
     }
   }
 
-  const handleReminderTimeChange = (e) => {
-    const time = e.target.value
+  const handleReminderTimeChange = (time) => {
     setReminderTime(time)
     
     // Schedule reminder
@@ -299,10 +368,8 @@ const Settings = () => {
     // Schedule the reminder
     window.reminderTimeout = setTimeout(() => {
       if (Notification.permission === 'granted') {
-        const incompleteHabits = habits.filter(habit => {
-          const today = new Date().toISOString().split('T')[0]
-          return !habit.completions.some(c => c.date === today)
-        })
+        const today = toDateKey()
+        const incompleteHabits = habits.filter(habit => !isCompletedOnDate(habit, today))
 
         new Notification('Habit Tracker Reminder', {
           body: `You have ${incompleteHabits.length} habits to complete today!`,
@@ -326,7 +393,7 @@ const Settings = () => {
       const dataStr = JSON.stringify(data, null, 2)
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
       
-      const exportFileDefaultName = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.json`
+      const exportFileDefaultName = `habit-tracker-export-${toDateKey()}.json`
       
       const linkElement = document.createElement('a')
       linkElement.setAttribute('href', dataUri)
@@ -352,7 +419,7 @@ const Settings = () => {
       })
       
       const dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(csvContent)
-      const exportFileDefaultName = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.csv`
+      const exportFileDefaultName = `habit-tracker-export-${toDateKey()}.csv`
       
       const linkElement = document.createElement('a')
       linkElement.setAttribute('href', dataUri)
@@ -382,7 +449,7 @@ const Settings = () => {
       const dataStr = JSON.stringify(data, null, 2)
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
       
-      const exportFileDefaultName = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`
+      const exportFileDefaultName = `habit-tracker-backup-${toDateKey()}.json`
       
       const linkElement = document.createElement('a')
       linkElement.setAttribute('href', dataUri)
@@ -460,6 +527,41 @@ const Settings = () => {
     }
   }
 
+  const handleEditProfile = () => {
+    setDraftProfileName(profileName)
+    setIsEditingProfile(true)
+  }
+
+  const handleCancelProfileEdit = () => {
+    setDraftProfileName(profileName)
+    setIsEditingProfile(false)
+  }
+
+  const handleSaveProfile = () => {
+    const nextProfileName = draftProfileName.trim()
+
+    if (!nextProfileName) {
+      showToast('Please enter a username', 'error')
+      return
+    }
+
+    setProfileName(nextProfileName)
+    setDraftProfileName(nextProfileName)
+    window.localStorage.setItem(PROFILE_NAME_STORAGE_KEY, nextProfileName)
+    setIsEditingProfile(false)
+    showToast('Username updated', 'success')
+  }
+
+  const handleProfileNameKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      handleSaveProfile()
+    } else if (event.key === 'Escape') {
+      handleCancelProfileEdit()
+    }
+  }
+
+  const avatarInitial = profileName.trim().charAt(0).toUpperCase() || 'U'
+
   const settings = [
     {
       icon: '🔔',
@@ -478,6 +580,15 @@ const Settings = () => {
       onChange: handleReminderTimeChange
     },
     {
+      icon: '📅',
+      title: 'Week Starts On',
+      description: 'First day used in calendar and journal weeks',
+      type: 'select',
+      value: weekStartsOn,
+      options: WEEK_START_OPTIONS,
+      onChange: setWeekStartsOn
+    },
+    {
       icon: '🌙',
       title: 'Dark Mode',
       description: 'Easier on the eyes at night',
@@ -494,12 +605,53 @@ const Settings = () => {
       </Header>
 
       <ProfileSection elevated>
-        <Avatar>U</Avatar>
+        <Avatar>{avatarInitial}</Avatar>
         <ProfileInfo>
-          <ProfileName>User Name</ProfileName>
+          {isEditingProfile ? (
+            <ProfileNameInput
+              aria-label="Username"
+              value={draftProfileName}
+              onChange={setDraftProfileName}
+              onKeyDown={handleProfileNameKeyDown}
+              maxLength={40}
+              autoFocus
+            />
+          ) : (
+            <ProfileName>{profileName}</ProfileName>
+          )}
           <ProfileEmail>user@example.com</ProfileEmail>
+          {isEditingProfile && (
+            <ProfileEditActions>
+              <Button
+                type="button"
+                size="small"
+                onClick={handleSaveProfile}
+                disabled={!draftProfileName.trim()}
+              >
+                Save
+              </Button>
+              <Button
+                type="button"
+                size="small"
+                variant="ghost"
+                onClick={handleCancelProfileEdit}
+              >
+                Cancel
+              </Button>
+            </ProfileEditActions>
+          )}
         </ProfileInfo>
-        <Button variant="ghost">Edit</Button>
+        {!isEditingProfile && (
+          <ProfileActions>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleEditProfile}
+            >
+              Edit
+            </Button>
+          </ProfileActions>
+        )}
       </ProfileSection>
 
       <SettingsGroup>
@@ -525,12 +677,24 @@ const Settings = () => {
                     <ToggleSlider />
                   </ToggleSwitch>
                 ) : setting.type === 'time' ? (
-                  <Input
-                    type="time"
+                    <Input
+                      type="time"
+                      value={setting.value}
+                      onChange={setting.onChange}
+                      style={{ width: '100px' }}
+                    />
+                ) : setting.type === 'select' ? (
+                  <SettingSelect
                     value={setting.value}
-                    onChange={setting.onChange}
-                    style={{ width: '100px' }}
-                  />
+                    onChange={(event) => setting.onChange(Number(event.target.value))}
+                    aria-label={setting.title}
+                  >
+                    {setting.options.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SettingSelect>
                 ) : (
                   <>
                     {setting.value && <SettingValue>{setting.value}</SettingValue>}

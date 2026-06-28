@@ -156,11 +156,11 @@ const EmptyState = ({
     }
   }
 
+  const defaultContent = getDefaultContent()
   const content = {
-    title,
-    description,
-    actionText,
-    ...getDefaultContent()
+    title: title ?? defaultContent.title,
+    description: description ?? defaultContent.description,
+    actionText: actionText ?? defaultContent.actionText
   }
 
   return (
