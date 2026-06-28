@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, isSameDay } from 'date-fns'
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, differenceInCalendarDays } from 'date-fns'
 import { habitsApi } from '../api/habitsApi'
 
 const HabitsContext = createContext()
@@ -218,6 +218,104 @@ export const HabitsProvider = ({ children }) => {
     habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to toggle habit completion:', err))
   }
 
+  // Append one occurrence for today (count-type habits log multiple per day)
+  const incrementCompletion = (habitId) => {
+    const habit = state.habits.find(h => h.id === habitId)
+    if (!habit) return
+
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const completions = [...(habit.completions || []), { date: today, completedAt: new Date().toISOString() }]
+    const updatedHabit = { ...habit, completions }
+    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
+    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to increment completion:', err))
+    return updatedHabit
+  }
+
+  // Remove the most recent occurrence logged for today
+  const decrementCompletion = (habitId) => {
+    const habit = state.habits.find(h => h.id === habitId)
+    if (!habit) return
+
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const todayEntries = (habit.completions || []).filter(c => c.date === today)
+    if (todayEntries.length === 0) return
+
+    // Drop the last today-entry, keep everything else
+    const lastEntry = todayEntries[todayEntries.length - 1]
+    let removed = false
+    const completions = (habit.completions || []).filter(c => {
+      if (!removed && c === lastEntry) {
+        removed = true
+        return false
+      }
+      return true
+    })
+    const updatedHabit = { ...habit, completions }
+    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
+    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to decrement completion:', err))
+    return updatedHabit
+  }
+
+  // Number of occurrences logged on a given yyyy-MM-dd date
+  const getCountForDate = (habit, dateStr) => {
+    if (!habit || !habit.completions) return 0
+    return habit.completions.filter(c => c.date === dateStr).length
+  }
+
+  // Per-day counts for a habit across an inclusive date interval
+  const getDailyCountsForRange = (habitId, start, end) => {
+    const habit = state.habits.find(h => h.id === habitId)
+    const days = eachDayOfInterval({ start, end })
+    return days.map(day => {
+      const dateStr = format(day, 'yyyy-MM-dd')
+      return { date: dateStr, day, count: habit ? getCountForDate(habit, dateStr) : 0 }
+    })
+  }
+
+  // Stats for a habit over a period: 'week' | 'month' | 'year'
+  const getHabitRangeStats = (habitId, range, refDate = new Date()) => {
+    const habit = state.habits.find(h => h.id === habitId)
+    const empty = { totalCount: 0, daysWithEntry: 0, daysElapsed: 0, percentDaysSaid: 0, avgPerActiveDay: 0, bestCount: 0, bestDate: null }
+    if (!habit) return empty
+
+    let periodStart
+    let periodEnd
+    if (range === 'week') {
+      periodStart = startOfWeek(refDate, { weekStartsOn: 0 })
+      periodEnd = endOfWeek(refDate, { weekStartsOn: 0 })
+    } else if (range === 'year') {
+      periodStart = startOfYear(refDate)
+      periodEnd = endOfYear(refDate)
+    } else {
+      periodStart = startOfMonth(refDate)
+      periodEnd = endOfMonth(refDate)
+    }
+
+    // Window for "days elapsed": clamp to habit creation and to today
+    const today = new Date()
+    const createdAt = habit.createdAt ? parseISO(habit.createdAt) : periodStart
+    const windowStart = createdAt > periodStart ? createdAt : periodStart
+    const windowEnd = today < periodEnd ? today : periodEnd
+
+    if (windowEnd < windowStart) return empty
+
+    const days = getDailyCountsForRange(habitId, windowStart, windowEnd)
+    const totalCount = days.reduce((sum, d) => sum + d.count, 0)
+    const daysWithEntry = days.filter(d => d.count > 0).length
+    const daysElapsed = days.length
+    const best = days.reduce((acc, d) => (d.count > acc.count ? d : acc), { count: 0, date: null })
+
+    return {
+      totalCount,
+      daysWithEntry,
+      daysElapsed,
+      percentDaysSaid: daysElapsed > 0 ? Math.round((daysWithEntry / daysElapsed) * 100) : 0,
+      avgPerActiveDay: daysWithEntry > 0 ? Math.round((totalCount / daysWithEntry) * 10) / 10 : 0,
+      bestCount: best.count,
+      bestDate: best.date
+    }
+  }
+
   const getHabitById = (id) => {
     return state.habits.find(habit => habit.id === id)
   }
@@ -371,6 +469,11 @@ export const HabitsProvider = ({ children }) => {
     updateHabit,
     deleteHabit,
     toggleHabitCompletion,
+    incrementCompletion,
+    decrementCompletion,
+    getCountForDate,
+    getDailyCountsForRange,
+    getHabitRangeStats,
     getHabitById,
     getTodayHabits,
     getHabitStreak,

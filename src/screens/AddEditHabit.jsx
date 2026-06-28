@@ -255,6 +255,8 @@ const AddEditHabit = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    type: 'binary',
+    dailyTarget: '',
     frequency: 'daily',
     daysPerWeek: 3,
     selectedDays: [false, false, false, false, false, false, false],
@@ -271,6 +273,8 @@ const AddEditHabit = () => {
         setFormData({
           name: habit.name,
           description: habit.description || '',
+          type: habit.type || 'binary',
+          dailyTarget: habit.dailyTarget != null ? String(habit.dailyTarget) : '',
           frequency: habit.frequency,
           daysPerWeek: habit.daysPerWeek || 3,
           selectedDays: habit.selectedDays || [false, false, false, false, false, false, false],
@@ -355,6 +359,9 @@ const AddEditHabit = () => {
     
     const habitData = {
       ...formData,
+      dailyTarget: formData.type === 'count' && formData.dailyTarget !== ''
+        ? Number(formData.dailyTarget)
+        : null,
       createdAt: isEditing ? formData.createdAt : new Date().toISOString()
     }
 
@@ -406,6 +413,58 @@ const AddEditHabit = () => {
                 showCharacterCount
               />
             </FormGroup>
+          </FormCard>
+        </FormSection>
+
+        <FormSection>
+          <SectionTitle>Tracking Type</SectionTitle>
+          <FormCard elevated>
+            <FrequencyOptions>
+              <FrequencyOption
+                selected={formData.type === 'binary'}
+                onClick={() => handleInputChange('type', 'binary')}
+              >
+                <RadioInput
+                  type="radio"
+                  name="type"
+                  checked={formData.type === 'binary'}
+                  onChange={() => handleInputChange('type', 'binary')}
+                />
+                <FrequencyInfo>
+                  <FrequencyTitle>Yes / No</FrequencyTitle>
+                  <FrequencyDescription>Mark done once per day</FrequencyDescription>
+                </FrequencyInfo>
+              </FrequencyOption>
+
+              <FrequencyOption
+                selected={formData.type === 'count'}
+                onClick={() => handleInputChange('type', 'count')}
+              >
+                <RadioInput
+                  type="radio"
+                  name="type"
+                  checked={formData.type === 'count'}
+                  onChange={() => handleInputChange('type', 'count')}
+                />
+                <FrequencyInfo>
+                  <FrequencyTitle>Count</FrequencyTitle>
+                  <FrequencyDescription>Log how many times per day (e.g. how often you say “love you”)</FrequencyDescription>
+                </FrequencyInfo>
+              </FrequencyOption>
+            </FrequencyOptions>
+
+            {formData.type === 'count' && (
+              <FormGroup style={{ marginTop: '16px', marginBottom: 0 }}>
+                <Label>Daily Goal (Optional)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 3 times per day"
+                  value={formData.dailyTarget}
+                  onChange={(value) => handleInputChange('dailyTarget', value)}
+                  min={1}
+                />
+              </FormGroup>
+            )}
           </FormCard>
         </FormSection>
 

@@ -8,6 +8,7 @@ import Button from '../components/Button'
 import CircularProgress from '../components/CircularProgress'
 import BarChart from '../components/BarChart'
 import Confetti from '../components/Confetti'
+import CountStepper from '../components/CountStepper'
 import EmptyState from '../components/EmptyState'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
@@ -375,21 +376,25 @@ const Dashboard = () => {
                   </HabitMeta>
                 </HabitDetails>
               </HabitInfo>
-              <CheckButton
-                checked={habit.isCompleted}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleToggleHabit(habit.id)
-                }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                {habit.isCompleted && (
-                  <CheckIcon>
-                    <polyline points="20 6 9 17 4 12" />
-                  </CheckIcon>
-                )}
-              </CheckButton>
+              {(habits.find(h => h.id === habit.id) || habit).type === 'count' ? (
+                <CountStepper habit={habits.find(h => h.id === habit.id) || habit} />
+              ) : (
+                <CheckButton
+                  checked={habit.isCompleted}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleToggleHabit(habit.id)
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {habit.isCompleted && (
+                    <CheckIcon>
+                      <polyline points="20 6 9 17 4 12" />
+                    </CheckIcon>
+                  )}
+                </CheckButton>
+              )}
             </HabitItem>
           ))}
         </HabitsList>

@@ -28,14 +28,24 @@ This document summarizes the features and technical implementation of the habit 
 
 ### 2. Calendar View Enhancements
 
-#### Week Toggle Functionality
-- **Implementation**: Added week view to the calendar component
+#### Week / Month / Year Views
+- **Implementation**: Per-habit calendar with week, month, and year views
 - **Location**: `src/screens/CalendarView.jsx`
 - **Features**:
-  - Toggle between month and week views
-  - Week navigation controls (previous/next week)
-  - Adapted data display for week view
-  - Maintains all existing functionality in both views
+  - Toggle between week, month, and year views
+  - Habit selector to focus the calendar on a single habit
+  - Period navigation controls (previous/next week, month, or year)
+  - Count heatmap intensity (0, 1, 2-3, 4-6, 7+) per day
+  - Year view renders a 12-month contribution-style heatmap
+  - Stats card with percentage of days completed, total count, and best day
+
+#### Count Tracking
+- **Implementation**: Habits can be Yes/No or Count type
+- **Location**: `src/screens/AddEditHabit.jsx`, `src/components/CountStepper.jsx`, `src/context/HabitsContext.jsx`
+- **Features**:
+  - Count habits log multiple occurrences per day with an optional daily goal
+  - Increment/decrement stepper on the dashboard and habits list
+  - Per-habit range statistics (week/month/year): percentage of days with at least one entry, total count, average per active day, and best day
 
 #### Tooltips on Tap for Calendar Details
 - **Implementation**: Created a reusable tooltip component

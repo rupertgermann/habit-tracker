@@ -4,10 +4,11 @@ A clean, minimalist mobile-first web app for tracking habits, building streaks, 
 
 ## Features
 
-- **Dashboard** — daily overview of habits, completion progress, and quick check-off actions.
+- **Dashboard** — daily overview of habits, completion progress, and quick check-off / count-logging actions.
 - **Habit management** — create, edit, and delete habits with categories, icons, colors, and custom schedules.
+- **Tracking types** — habits are either **Yes/No** (done once per day) or **Count** (log how many times per day, with an optional daily goal).
 - **Categories & tags** — organize habits by category with filtering, icons, and colors.
-- **Calendar view** — month and week toggles with per-day tooltips showing completed and missed habits plus daily completion percentage.
+- **Calendar view** — per-habit week, month, and year views with a count heatmap, per-day tooltips, and a stats card showing the percentage of days completed, total count, and best day.
 - **Progress & stats** — animated circular progress rings and bar/line charts for weekly and monthly completion.
 - **Streak visualization** — current and longest streaks, streak history timeline, and milestone celebrations.
 - **Journaling** — daily notes and reflections per habit with mood tracking and note search.

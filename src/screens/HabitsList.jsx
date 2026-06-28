@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Confetti from '../components/Confetti'
+import CountStepper from '../components/CountStepper'
 import EmptyState from '../components/EmptyState'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
@@ -443,18 +444,22 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
                   </HabitMeta>
                 </HabitDetails>
               </HabitInfo>
-              <CheckButton
-                checked={getHabitStatus(habit)}
-                onClick={(e) => handleToggleHabit(habit.id, e)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                {getHabitStatus(habit) && (
-                  <CheckIcon>
-                    <polyline points="20 6 9 17 4 12" />
-                  </CheckIcon>
-                )}
-              </CheckButton>
+              {habit.type === 'count' ? (
+                <CountStepper habit={habit} />
+              ) : (
+                <CheckButton
+                  checked={getHabitStatus(habit)}
+                  onClick={(e) => handleToggleHabit(habit.id, e)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {getHabitStatus(habit) && (
+                    <CheckIcon>
+                      <polyline points="20 6 9 17 4 12" />
+                    </CheckIcon>
+                  )}
+                </CheckButton>
+              )}
             </HabitCard>
           ))}
         </HabitsGrid>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval, addWeeks, subWeeks } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterval, isSameMonth, isToday, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks, startOfYear, endOfYear, addYears, subYears } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Tooltip from '../components/Tooltip'
@@ -91,7 +91,7 @@ const CalendarGrid = styled.div`
 const WeekViewGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: ${props => props.theme.theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
@@ -308,84 +308,127 @@ const EmptyStateText = styled.p`
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
+const HabitSelectRow = styled.div`
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const HabitSelect = styled.select`
+  width: 100%;
+  height: 48px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.small};
+  padding: 0 ${props => props.theme.spacing.md};
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  color: ${props => props.theme.colors.text.primary};
+  background-color: ${props => props.theme.colors.white};
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+  }
+`
+
+const DayCount = styled.span`
+  font-size: 11px;
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
+  color: ${props => props.theme.colors.text.primary};
+`
+
+const YearGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
+`
+
+const MiniMonth = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.xs};
+`
+
+const MiniMonthTitle = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.text.secondary};
+  text-align: center;
+`
+
+const MiniGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+`
+
+const MiniDay = styled.div`
+  aspect-ratio: 1;
+  border-radius: 2px;
+  border: ${props => props.isToday ? `1px solid ${props.theme.colors.primary}` : 'none'};
+
+  ${({ level }) => {
+    switch (level) {
+      case 0: return 'background-color: #F3F4F6;'
+      case 1: return 'background-color: #E0F2E3;'
+      case 2: return 'background-color: #A8E0B1;'
+      case 3: return 'background-color: #6CC47C;'
+      case 4: return 'background-color: #4A9F5A;'
+      default: return 'background-color: transparent;'
+    }
+  }}
+`
+
+const getLevel = (count) => {
+  if (!count) return 0
+  if (count === 1) return 1
+  if (count <= 3) return 2
+  if (count <= 6) return 3
+  return 4
+}
+
 const CalendarView = () => {
   const navigate = useNavigate()
-  const { habits, getMonthlyCompletionData, getWeeklyCompletionData } = useHabits()
+  const { habits, getCountForDate, getHabitRangeStats } = useHabits()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewType, setViewType] = useState('month')
-  const [monthlyData, setMonthlyData] = useState([])
-  const [weeklyData, setWeeklyData] = useState([])
+  const [selectedHabitId, setSelectedHabitId] = useState(null)
 
   useEffect(() => {
-    setMonthlyData(getMonthlyCompletionData())
-    setWeeklyData(getWeeklyCompletionData())
-  }, [getMonthlyCompletionData, getWeeklyCompletionData])
-
-  const getCompletionLevel = (date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    const dayData = monthlyData.find(d => d.date === dateStr)
-    
-    if (!dayData || dayData.completions === 0) return 0
-    if (dayData.percentage <= 25) return 1
-    if (dayData.percentage <= 50) return 2
-    if (dayData.percentage <= 75) return 3
-    return 4
-  }
-
-  const getMonthStats = () => {
-    const totalDays = monthlyData.length
-    const completedDays = monthlyData.filter(d => d.completions > 0).length
-    const perfectDays = monthlyData.filter(d => d.percentage === 100).length
-    const totalCompletions = monthlyData.reduce((sum, d) => sum + d.completions, 0)
-    
-    return {
-      totalDays,
-      completedDays,
-      perfectDays,
-      totalCompletions,
-      completionRate: totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0
+    if (habits.length === 0) return
+    if (!selectedHabitId || !habits.some(h => h.id === selectedHabitId)) {
+      setSelectedHabitId(habits[0].id)
     }
-  }
+  }, [habits, selectedHabitId])
 
-  const getWeekStats = () => {
-    const totalDays = weeklyData.length
-    const completedDays = weeklyData.filter(d => d.completed > 0).length
-    const perfectDays = weeklyData.filter(d => d.completed === habits.length).length
-    const totalCompletions = weeklyData.reduce((sum, d) => sum + d.completed, 0)
-    
-    return {
-      totalDays,
-      completedDays,
-      perfectDays,
-      totalCompletions,
-      completionRate: totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0
-    }
-  }
+  const selectedHabit = habits.find(h => h.id === selectedHabitId) || habits[0] || null
 
-  const monthStats = getMonthStats()
-  const weekStats = getWeekStats()
+  const getCount = (date) =>
+    selectedHabit ? getCountForDate(selectedHabit, format(date, 'yyyy-MM-dd')) : 0
+
+  const rangeStats = selectedHabit
+    ? getHabitRangeStats(selectedHabit.id, viewType, currentDate)
+    : { percentDaysSaid: 0, totalCount: 0, daysWithEntry: 0, bestCount: 0, bestDate: null }
+
+  const targetLabel = selectedHabit && selectedHabit.dailyTarget
+    ? ` / ${selectedHabit.dailyTarget}`
+    : ''
 
   const getDayTooltipContent = (date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    const dayData = monthlyData.find(d => d.date === dateStr)
-    
-    if (!dayData || dayData.completions === 0) {
-      return `No habits completed on ${format(date, 'MMMM d, yyyy')}`
+    const count = getCount(date)
+    const label = format(date, 'MMMM d, yyyy')
+
+    if (count === 0) {
+      return { title: `${label} — none`, content: [] }
     }
-    
-    const completedHabits = habits.filter(habit =>
-      habit.completions.some(c => c.date === dateStr)
-    )
-    
-    const tooltipContent = completedHabits.map(habit => ({
-      name: habit.name,
-      icon: habit.icon || '✓',
-      completed: true
-    }))
-    
+
     return {
-      title: `${format(date, 'MMMM d, yyyy')} - ${dayData.completions}/${habits.length} habits`,
-      content: tooltipContent
+      title: `${label} — ${count}${targetLabel}`,
+      content: [{
+        name: selectedHabit ? selectedHabit.name : '',
+        icon: selectedHabit && selectedHabit.icon ? selectedHabit.icon : '✓',
+        completed: true
+      }]
     }
   }
 
@@ -393,27 +436,25 @@ const CalendarView = () => {
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(currentDate)
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-    
-    // Add empty cells for days before the first day of the month
+
     const firstDayOfMonth = monthStart.getDay()
     const emptyCells = Array(firstDayOfMonth).fill(null)
-    
-    // Add empty cells for days after the last day of the month
     const lastDayOfMonth = monthEnd.getDay()
     const endEmptyCells = Array(6 - lastDayOfMonth).fill(null)
-    
+
     const allCells = [...emptyCells, ...days, ...endEmptyCells]
-    
+
     return allCells.map((date, index) => {
       if (!date) {
         return <div key={`empty-${index}`} />
       }
-      
+
       const isCurrentMonthDay = isSameMonth(date, currentDate)
       const isTodayDate = isToday(date)
-      const completionLevel = getCompletionLevel(date)
+      const count = getCount(date)
+      const completionLevel = getLevel(count)
       const tooltipData = getDayTooltipContent(date)
-      
+
       return (
         <Tooltip
           key={date.toString()}
@@ -421,7 +462,7 @@ const CalendarView = () => {
           content={tooltipData.content}
           position="top"
           trigger="click"
-          enabled={completionLevel > 0}
+          enabled={count > 0}
         >
           <DayCell
             isCurrentMonth={isCurrentMonthDay}
@@ -429,69 +470,24 @@ const CalendarView = () => {
             completionLevel={completionLevel}
           >
             <DayNumber>{format(date, 'd')}</DayNumber>
-            {completionLevel > 0 && <CompletionIndicator />}
+            {count > 0 && <DayCount>{count}</DayCount>}
           </DayCell>
         </Tooltip>
       )
     })
   }
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1))
-  }
-
-  const goToNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1))
-  }
-
-  const goToPreviousWeek = () => {
-    setCurrentDate(subWeeks(currentDate, 1))
-  }
-
-  const goToNextWeek = () => {
-    setCurrentDate(addWeeks(currentDate, 1))
-  }
-
-  const goToToday = () => {
-    setCurrentDate(new Date())
-  }
-
-  const getWeekDayTooltipContent = (date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    const dayData = weeklyData.find(d => d.date === dateStr)
-    
-    if (!dayData || dayData.completed === 0) {
-      return `No habits completed on ${format(date, 'EEEE, MMMM d')}`
-    }
-    
-    const completedHabits = habits.filter(habit =>
-      habit.completions.some(c => c.date === dateStr)
-    )
-    
-    const tooltipContent = completedHabits.map(habit => ({
-      name: habit.name,
-      icon: habit.icon || '✓',
-      completed: true
-    }))
-    
-    return {
-      title: `${format(date, 'EEEE, MMMM d')} - ${dayData.completed}/${habits.length} habits`,
-      content: tooltipContent
-    }
-  }
-
   const renderWeekView = () => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
     const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd })
-    
-    return daysOfWeek.map((day, index) => {
+
+    return daysOfWeek.map((day) => {
       const isTodayDate = isToday(day)
-      const dayStr = format(day, 'yyyy-MM-dd')
-      const dayData = weeklyData.find(d => d.date === dayStr)
-      const completionLevel = dayData ? Math.floor((dayData.completed / habits.length) * 4) : 0
-      const tooltipData = getWeekDayTooltipContent(day)
-      
+      const count = getCount(day)
+      const completionLevel = getLevel(count)
+      const tooltipData = getDayTooltipContent(day)
+
       return (
         <Tooltip
           key={day.toString()}
@@ -499,7 +495,7 @@ const CalendarView = () => {
           content={tooltipData.content}
           position="top"
           trigger="click"
-          enabled={completionLevel > 0}
+          enabled={count > 0}
         >
           <WeekDayCard
             isToday={isTodayDate}
@@ -507,16 +503,73 @@ const CalendarView = () => {
           >
             <WeekDayName>{format(day, 'EEE')}</WeekDayName>
             <WeekDayNumber>{format(day, 'd')}</WeekDayNumber>
-            {dayData && (
-              <WeekDayCompletion>
-                {dayData.completed}/{habits.length}
-              </WeekDayCompletion>
-            )}
+            <WeekDayCompletion>
+              {count}{targetLabel}
+            </WeekDayCompletion>
           </WeekDayCard>
         </Tooltip>
       )
     })
   }
+
+  const renderYearView = () => {
+    const months = eachMonthOfInterval({
+      start: startOfYear(currentDate),
+      end: endOfYear(currentDate)
+    })
+
+    return months.map((monthDate) => {
+      const monthStart = startOfMonth(monthDate)
+      const monthEnd = endOfMonth(monthDate)
+      const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
+      const emptyCells = Array(monthStart.getDay()).fill(null)
+      const cells = [...emptyCells, ...days]
+
+      return (
+        <MiniMonth key={monthDate.toString()}>
+          <MiniMonthTitle>{format(monthDate, 'MMM')}</MiniMonthTitle>
+          <MiniGrid>
+            {cells.map((date, index) => {
+              if (!date) return <div key={`empty-${index}`} />
+              const count = getCount(date)
+              return (
+                <MiniDay
+                  key={date.toString()}
+                  level={getLevel(count)}
+                  isToday={isToday(date)}
+                  title={`${format(date, 'MMM d')} — ${count}`}
+                />
+              )
+            })}
+          </MiniGrid>
+        </MiniMonth>
+      )
+    })
+  }
+
+  const goToPrevious = () => {
+    if (viewType === 'month') setCurrentDate(subMonths(currentDate, 1))
+    else if (viewType === 'week') setCurrentDate(subWeeks(currentDate, 1))
+    else setCurrentDate(subYears(currentDate, 1))
+  }
+
+  const goToNext = () => {
+    if (viewType === 'month') setCurrentDate(addMonths(currentDate, 1))
+    else if (viewType === 'week') setCurrentDate(addWeeks(currentDate, 1))
+    else setCurrentDate(addYears(currentDate, 1))
+  }
+
+  const goToToday = () => {
+    setCurrentDate(new Date())
+  }
+
+  const headerLabel = viewType === 'month'
+    ? format(currentDate, 'MMMM yyyy')
+    : viewType === 'week'
+      ? `${format(startOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d')} - ${format(endOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d, yyyy')}`
+      : format(currentDate, 'yyyy')
+
+  const periodLabel = viewType === 'year' ? 'This Year' : viewType === 'week' ? 'This Week' : 'This Month'
 
   if (habits.length === 0) {
     return (
@@ -543,34 +596,50 @@ const CalendarView = () => {
         <Title>Calendar</Title>
         <ViewToggle>
           <ToggleButton
+            active={viewType === 'week'}
+            onClick={() => setViewType('week')}
+          >
+            Week
+          </ToggleButton>
+          <ToggleButton
             active={viewType === 'month'}
             onClick={() => setViewType('month')}
           >
             Month
           </ToggleButton>
           <ToggleButton
-            active={viewType === 'week'}
-            onClick={() => setViewType('week')}
+            active={viewType === 'year'}
+            onClick={() => setViewType('year')}
           >
-            Week
+            Year
           </ToggleButton>
         </ViewToggle>
       </Header>
 
+      <HabitSelectRow>
+        <HabitSelect
+          value={selectedHabitId || ''}
+          onChange={(e) => setSelectedHabitId(e.target.value)}
+          aria-label="Select habit to view"
+        >
+          {habits.map(habit => (
+            <option key={habit.id} value={habit.id}>
+              {(habit.icon ? `${habit.icon} ` : '') + habit.name}
+            </option>
+          ))}
+        </HabitSelect>
+      </HabitSelectRow>
+
       <CalendarHeader>
-        <NavButton onClick={viewType === 'month' ? goToPreviousMonth : goToPreviousWeek}>
+        <NavButton onClick={goToPrevious} aria-label="Previous period">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </NavButton>
-        
-        <MonthYear>
-          {viewType === 'month'
-            ? format(currentDate, 'MMMM yyyy')
-            : `${format(startOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d')} - ${format(endOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d, yyyy')}`}
-        </MonthYear>
-        
-        <NavButton onClick={viewType === 'month' ? goToNextMonth : goToNextWeek}>
+
+        <MonthYear>{headerLabel}</MonthYear>
+
+        <NavButton onClick={goToNext} aria-label="Next period">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
@@ -586,54 +655,62 @@ const CalendarView = () => {
         Go to Today
       </Button>
 
-      {viewType === 'month' ? (
+      {viewType === 'month' && (
         <CalendarGrid>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <DayHeader key={day}>{day}</DayHeader>
           ))}
           {renderCalendar()}
         </CalendarGrid>
-      ) : (
+      )}
+
+      {viewType === 'week' && (
         <WeekViewGrid>
           {renderWeekView()}
         </WeekViewGrid>
       )}
 
+      {viewType === 'year' && (
+        <YearGrid>
+          {renderYearView()}
+        </YearGrid>
+      )}
+
       <Legend>
         <LegendItem>
           <LegendColor color={0} />
-          <LegendText>No habits</LegendText>
+          <LegendText>0</LegendText>
         </LegendItem>
         <LegendItem>
           <LegendColor color={1} />
-          <LegendText>0-25%</LegendText>
+          <LegendText>1</LegendText>
         </LegendItem>
         <LegendItem>
           <LegendColor color={2} />
-          <LegendText>26-50%</LegendText>
+          <LegendText>2-3</LegendText>
         </LegendItem>
         <LegendItem>
           <LegendColor color={3} />
-          <LegendText>51-75%</LegendText>
+          <LegendText>4-6</LegendText>
         </LegendItem>
         <LegendItem>
           <LegendColor color={4} />
-          <LegendText>76-100%</LegendText>
+          <LegendText>7+</LegendText>
         </LegendItem>
       </Legend>
 
       <StatsCard elevated>
         <StatItem>
-          <StatValue>{viewType === 'month' ? monthStats.completionRate : weekStats.completionRate}%</StatValue>
-          <StatLabel>Completion Rate</StatLabel>
+          <StatValue>{rangeStats.percentDaysSaid}%</StatValue>
+          <StatLabel>{periodLabel}: Days Done</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{viewType === 'month' ? monthStats.perfectDays : weekStats.perfectDays}</StatValue>
-          <StatLabel>Perfect Days</StatLabel>
+          <StatValue>{rangeStats.totalCount}</StatValue>
+          <StatLabel>Total Count</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{viewType === 'month' ? monthStats.totalCompletions : weekStats.totalCompletions}</StatValue>
-          <StatLabel>Total Completions</StatLabel>
+          <StatValue>{rangeStats.bestCount}</StatValue>
+          <StatLabel>Best Day</StatLabel>
         </StatItem>
       </StatsCard>
     </CalendarContainer>
