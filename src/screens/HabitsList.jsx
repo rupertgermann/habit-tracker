@@ -258,10 +258,11 @@ const PlusIcon = styled.svg`
 
 const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   const navigate = useNavigate()
-  const { habits, toggleHabitCompletion, getTodayHabits } = useHabits()
+  const { habits, categories, toggleHabitCompletion, getTodayHabits } = useHabits()
   const { showSuccessToast } = useToast()
   const [filter, setFilter] = useState('all')
   const [filteredHabits, setFilteredHabits] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState(null)
   const [todayHabits, setTodayHabits] = useState([])
   const [showConfetti, setShowConfetti] = useState(false)
 
@@ -287,6 +288,10 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
     
     setFilteredHabits(filtered)
   }, [habits, filter, selectedCategory])
+
+  const handleCategoryFilter = (id) => {
+    setSelectedCategory(prev => (prev === id ? null : id))
+  }
 
   const handleToggleHabit = (habitId, e) => {
     e.stopPropagation()

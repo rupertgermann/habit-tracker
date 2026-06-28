@@ -6,6 +6,7 @@ import Input from '../components/Input'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useHabits } from '../context/HabitsContext'
+import { habitsApi } from '../api/habitsApi'
 
 const SettingsContainer = styled.div`
   padding: ${props => props.theme.spacing.lg};
@@ -226,14 +227,23 @@ const DangerButton = styled(Button)`
 const Settings = () => {
   const { isDarkMode, toggleTheme } = useTheme()
   const { showToast } = useToast()
-  const { habits } = useHabits()
+  const { habits, categories, journalEntries } = useHabits()
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [reminderTime, setReminderTime] = useState('09:00')
 
-  // Check if notifications are supported and enabled
+  // Check notification permission & (re) schedule on mount
   useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted')
+    if (!('Notification' in window)) return
+
+    setNotificationsEnabled(Notification.permission === 'granted')
+
+    if (Notification.permission === 'granted') {
+      scheduleReminder(reminderTime)
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (window.reminderTimeout) clearTimeout(window.reminderTimeout)
     }
   }, [])
 
@@ -333,9 +343,11 @@ const Settings = () => {
     try {
       let csvContent = "Habit Name,Date,Completed\n"
       
+      const escape = (str) => `"${str.replace(/"/g, '""')}"`
+
       habits.forEach(habit => {
         habit.completions.forEach(completion => {
-          csvContent += `"${habit.name}",${completion.date},Yes\n`
+          csvContent += `${escape(habit.name)},${completion.date},Yes\n`
         })
       })
       
@@ -357,6 +369,8 @@ const Settings = () => {
     try {
       const data = {
         habits,
+        categories,
+        journalEntries,
         settings: {
           theme: localStorage.getItem('theme'),
           notifications: localStorage.getItem('notifications')
@@ -397,23 +411,29 @@ const Settings = () => {
           
           if (data.habits && Array.isArray(data.habits)) {
             if (window.confirm('This will replace all your current data. Are you sure you want to continue?')) {
-              // Restore habits
-              localStorage.setItem('habits', JSON.stringify(data.habits))
-              
-              // Restore settings if available
-              if (data.settings) {
-                if (data.settings.theme) {
-                  localStorage.setItem('theme', data.settings.theme)
-                }
-                if (data.settings.notifications) {
-                  localStorage.setItem('notifications', data.settings.notifications)
-                }
-              }
-              
-              showToast('Data restored successfully', 'success')
-              setTimeout(() => {
-                window.location.reload()
-              }, 1500)
+              // Restore data to the SQLite-backed API
+              habitsApi.restore({
+                habits: data.habits,
+                categories: Array.isArray(data.categories) ? data.categories : [],
+                journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : []
+              })
+                .then(() => {
+                  // Restore UI preferences if available
+                  if (data.settings) {
+                    if (data.settings.theme) {
+                      localStorage.setItem('theme', data.settings.theme)
+                    }
+                    if (data.settings.notifications) {
+                      localStorage.setItem('notifications', data.settings.notifications)
+                    }
+                  }
+
+                  showToast('Data restored successfully', 'success')
+                  setTimeout(() => {
+                    window.location.reload()
+                  }, 1500)
+                })
+                .catch(() => showToast('Failed to restore data', 'error'))
             }
           } else {
             showToast('Invalid backup file', 'error')
@@ -431,8 +451,12 @@ const Settings = () => {
 
   const handleClearData = () => {
     if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      localStorage.clear()
-      window.location.reload()
+      habitsApi.clearAll()
+        .then(() => {
+          localStorage.clear()
+          window.location.reload()
+        })
+        .catch(() => showToast('Failed to clear data', 'error'))
     }
   }
 

@@ -8,6 +8,9 @@ yarn-error.log*
 dist/
 build/
 
+# SQLite database (local data)
+server/data/
+
 # Environment variables
 .env
 .env.local

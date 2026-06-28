@@ -19,7 +19,7 @@ export const NavigationProvider = ({ children }) => {
       { id: 'settings', path: '/settings' }
     ]
     
-    const activeItem = navItems.find(item => item.path === path)
+    const activeItem = navItems.find(item => path.startsWith(item.path))
     if (activeItem) {
       setActiveTab(activeItem.id)
     }

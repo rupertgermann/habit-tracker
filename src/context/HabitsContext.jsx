@@ -1,19 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, isSameDay } from 'date-fns'
+import { habitsApi } from '../api/habitsApi'
 
 const HabitsContext = createContext()
 
 const initialState = {
   habits: [],
-  categories: [
-    { id: 'health', name: 'Health & Fitness', color: '#6CC47C', icon: '💪' },
-    { id: 'productivity', name: 'Productivity', color: '#F6D860', icon: '📝' },
-    { id: 'mindfulness', name: 'Mindfulness', color: '#8B5CF6', icon: '🧘' },
-    { id: 'learning', name: 'Learning', color: '#0EA5E9', icon: '📚' },
-    { id: 'social', name: 'Social', color: '#F28A8A', icon: '👥' },
-    { id: 'creativity', name: 'Creativity', color: '#EC4899', icon: '🎨' },
-    { id: 'other', name: 'Other', color: '#6B7280', icon: '📌' }
-  ],
+  categories: [],
   journalEntries: [],
   moodOptions: [
     { id: 'very-bad', name: 'Very Bad', emoji: '😔', color: '#F28A8A' },
@@ -36,6 +29,8 @@ const habitsReducer = (state, action) => {
       return { ...state, isLoading: false, error: action.payload }
     case 'FETCH_JOURNAL_ENTRIES_SUCCESS':
       return { ...state, journalEntries: action.payload }
+    case 'FETCH_CATEGORIES_SUCCESS':
+      return { ...state, categories: action.payload }
     case 'ADD_HABIT':
       return { ...state, habits: [...state.habits, action.payload] }
     case 'UPDATE_HABIT':
@@ -109,25 +104,24 @@ const habitsReducer = (state, action) => {
 export const HabitsProvider = ({ children }) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
 
-  // Load habits from localStorage on mount
+  // Load full state from the SQLite-backed API on mount
   useEffect(() => {
-    const savedHabits = localStorage.getItem('habits')
-    if (savedHabits) {
-      try {
-        const habits = JSON.parse(savedHabits)
-        dispatch({ type: 'FETCH_HABITS_SUCCESS', payload: habits })
-      } catch (error) {
-        console.error('Failed to load habits from localStorage:', error)
-      }
-    }
+    let cancelled = false
+    dispatch({ type: 'FETCH_HABITS_START' })
+    habitsApi.getState()
+      .then(data => {
+        if (cancelled) return
+        dispatch({ type: 'FETCH_HABITS_SUCCESS', payload: data.habits || [] })
+        dispatch({ type: 'FETCH_CATEGORIES_SUCCESS', payload: data.categories || [] })
+        dispatch({ type: 'FETCH_JOURNAL_ENTRIES_SUCCESS', payload: data.journalEntries || [] })
+      })
+      .catch(error => {
+        if (cancelled) return
+        console.error('Failed to load data from API:', error)
+        dispatch({ type: 'FETCH_HABITS_ERROR', payload: error.message })
+      })
+    return () => { cancelled = true }
   }, [])
-
-  // Save habits to localStorage whenever they change
-  useEffect(() => {
-    if (state.habits.length > 0) {
-      localStorage.setItem('habits', JSON.stringify(state.habits))
-    }
-  }, [state.habits])
 
   const addHabit = (habitData) => {
     const newHabit = {
@@ -140,6 +134,7 @@ export const HabitsProvider = ({ children }) => {
       longestStreak: 0
     }
     dispatch({ type: 'ADD_HABIT', payload: newHabit })
+    habitsApi.createHabit(newHabit).catch(err => console.error('Failed to create habit:', err))
     return newHabit
   }
 
@@ -150,6 +145,7 @@ export const HabitsProvider = ({ children }) => {
       createdAt: new Date().toISOString()
     }
     dispatch({ type: 'ADD_JOURNAL_ENTRY', payload: newEntry })
+    habitsApi.createJournalEntry(newEntry).catch(err => console.error('Failed to create journal entry:', err))
     return newEntry
   }
 
@@ -160,11 +156,13 @@ export const HabitsProvider = ({ children }) => {
       updatedAt: new Date().toISOString()
     }
     dispatch({ type: 'UPDATE_JOURNAL_ENTRY', payload: updatedEntry })
+    habitsApi.updateJournalEntry(updatedEntry).catch(err => console.error('Failed to update journal entry:', err))
     return updatedEntry
   }
 
   const deleteJournalEntry = (id) => {
     dispatch({ type: 'DELETE_JOURNAL_ENTRY', payload: id })
+    habitsApi.deleteJournalEntry(id).catch(err => console.error('Failed to delete journal entry:', err))
   }
 
   const getJournalEntriesByDate = (date) => {
@@ -190,15 +188,34 @@ export const HabitsProvider = ({ children }) => {
       updatedAt: new Date().toISOString()
     }
     dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
+    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to update habit:', err))
     return updatedHabit
   }
 
   const deleteHabit = (id) => {
     dispatch({ type: 'DELETE_HABIT', payload: id })
+
+    // Remove any journal entries linked to this habit to prevent orphan data
+    const updatedEntries = state.journalEntries.filter(entry => entry.habitId !== id)
+    dispatch({ type: 'FETCH_JOURNAL_ENTRIES_SUCCESS', payload: updatedEntries })
+
+    // Server cascades journal-entry deletion for this habit
+    habitsApi.deleteHabit(id).catch(err => console.error('Failed to delete habit:', err))
   }
 
   const toggleHabitCompletion = (habitId) => {
-    dispatch({ type: 'TOGGLE_HABIT_COMPLETION', payload: { habitId } })
+    const habit = state.habits.find(h => h.id === habitId)
+    if (!habit) return
+
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const alreadyCompleted = habit.completions.some(c => c.date === today)
+    const completions = alreadyCompleted
+      ? habit.completions.filter(c => c.date !== today)
+      : [...habit.completions, { date: today, completedAt: new Date().toISOString() }]
+
+    const updatedHabit = { ...habit, completions }
+    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
+    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to toggle habit completion:', err))
   }
 
   const getHabitById = (id) => {
@@ -213,34 +230,20 @@ export const HabitsProvider = ({ children }) => {
     }))
   }
 
+  // Strict consecutive-day streak using UTC dates
   const getHabitStreak = (habit) => {
     if (!habit.completions || habit.completions.length === 0) return 0
-    
-    const sortedCompletions = habit.completions
-      .map(c => new Date(c.date))
-      .sort((a, b) => b - a)
-    
+
+    const completionSet = new Set(habit.completions.map(c => c.date))
     let streak = 0
-    let currentDate = new Date()
-    currentDate.setHours(0, 0, 0, 0)
-    
-    for (const completionDate of sortedCompletions) {
-      const compDate = new Date(completionDate)
-      compDate.setHours(0, 0, 0, 0)
-      
-      const diffDays = Math.floor((currentDate - compDate) / (1000 * 60 * 60 * 24))
-      
-      if (diffDays === streak) {
-        streak++
-      } else if (diffDays === streak + 1) {
-        // Allow for one day gap (yesterday)
-        streak++
-        currentDate = compDate
-      } else {
-        break
-      }
+    let cursor = new Date()
+    cursor.setUTCHours(0, 0, 0, 0)
+
+    while (completionSet.has(format(cursor, 'yyyy-MM-dd'))) {
+      streak += 1
+      cursor.setUTCDate(cursor.getUTCDate() - 1)
     }
-    
+
     return streak
   }
 
@@ -249,17 +252,17 @@ export const HabitsProvider = ({ children }) => {
     const weekStart = startOfWeek(today, { weekStartsOn: 0 }) // Sunday
     const weekEnd = endOfWeek(today, { weekStartsOn: 0 })
     const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd })
-    
+
     return daysOfWeek.map(day => {
       const dayStr = format(day, 'yyyy-MM-dd')
       const dayName = format(day, 'EEE')
-      
+
       const completed = state.habits.filter(habit =>
         habit.completions.some(c => c.date === dayStr)
       ).length
-      
+
       const missed = state.habits.length - completed
-      
+
       return {
         day: dayName,
         date: dayStr,
@@ -267,7 +270,7 @@ export const HabitsProvider = ({ children }) => {
         missed,
         isToday: isToday(day)
       }
-    })
+    });
   }
 
   const getMonthlyCompletionData = () => {
@@ -328,6 +331,7 @@ export const HabitsProvider = ({ children }) => {
       createdAt: new Date().toISOString()
     }
     dispatch({ type: 'ADD_CATEGORY', payload: newCategory })
+    habitsApi.createCategory(newCategory).catch(err => console.error('Failed to create category:', err))
     return newCategory
   }
 
@@ -338,6 +342,7 @@ export const HabitsProvider = ({ children }) => {
       updatedAt: new Date().toISOString()
     }
     dispatch({ type: 'UPDATE_CATEGORY', payload: updatedCategory })
+    habitsApi.updateCategory(updatedCategory).catch(err => console.error('Failed to update category:', err))
     return updatedCategory
   }
 
@@ -347,8 +352,9 @@ export const HabitsProvider = ({ children }) => {
     habitsToUpdate.forEach(habit => {
       updateHabit(habit.id, { category: 'other' })
     })
-    
+
     dispatch({ type: 'DELETE_CATEGORY', payload: id })
+    habitsApi.deleteCategory(id).catch(err => console.error('Failed to delete category:', err))
   }
 
   const getHabitsByCategory = (categoryId) => {

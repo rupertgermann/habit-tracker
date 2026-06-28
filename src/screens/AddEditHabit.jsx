@@ -233,7 +233,7 @@ const colorOptions = [
   '#34D399', // Emerald
   '#FBBF24', // Amber
   '#F87171', // Red
-  '#60A5FA', // Light blue
+  '#38BDF8', // Light blue
   '#C084FC', // Violet
   '#FB7185'  // Rose
 ]

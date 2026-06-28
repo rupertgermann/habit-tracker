@@ -1,10 +1,10 @@
-# Habit Tracker App - Implementation Summary
+# Habit Tracker App - Feature Overview
 
 ## Overview
 
-This document summarizes the implementation of the habit tracker app according to the implementation plan outlined in `docs/implementation-plan.md`. All features specified in the initial prompt have been successfully implemented.
+This document summarizes the features and technical implementation of the habit tracker app. The original design brief lives in `docs/prompt.md` and the UI/UX specification in `design-specifications.md`.
 
-## Completed Features
+## Features
 
 ### 1. Animation and Interaction Enhancements
 
@@ -99,13 +99,22 @@ This document summarizes the implementation of the habit tracker app according t
   - Export format options
 
 #### Backup/Restore System
-- **Implementation**: Local backup/restore functionality
-- **Location**: `src/screens/Settings.jsx`
+- **Implementation**: Backup/restore against the SQLite-backed API
+- **Location**: `src/screens/Settings.jsx`, `server/index.js`
 - **Features**:
-  - Local backup/restore functionality
-  - Data migration system
-  - Data integrity checks
-  - Settings backup included
+  - JSON backup of habits, categories, and journal entries
+  - Restore replaces all data via `POST /api/restore`
+  - Clear-all wipes the database and re-seeds default categories
+  - UI preferences (theme, notifications) included in the backup file
+
+#### Persistent SQLite Storage
+- **Implementation**: Express REST API backed by a SQLite database
+- **Location**: `server/index.js`, `server/db.js`, `src/api/habitsApi.js`
+- **Features**:
+  - Habits, categories, and journal entries persisted in `server/data/habit-tracker.db`
+  - `HabitsContext` loads from `GET /api/state` and persists mutations with optimistic updates
+  - Default categories seeded automatically on first run
+  - Vite proxies `/api` to the API server (port 3001) in development
 
 ### 6. Accessibility Improvements
 
@@ -223,13 +232,16 @@ The app uses styled-components for styling:
 
 The app uses the following key dependencies:
 
-1. **React**: UI library
-2. **React Router**: Navigation
-3. **Styled Components**: Styling
-4. **Framer Motion**: Animations
-5. **Recharts**: Data visualization
-6. **Date-fns**: Date manipulation
-7. **React Confetti**: Celebration effects
+1. **React 19**: UI library
+2. **Vite 8**: Build tool and dev server (requires Node.js 20.19+)
+3. **React Router 7**: Navigation
+4. **styled-components 6**: Styling
+5. **Framer Motion 12**: Animations
+6. **Recharts 3**: Data visualization
+7. **date-fns 4**: Date manipulation
+8. **react-confetti 6**: Celebration effects
+9. **Express 5**: REST API server
+10. **better-sqlite3**: SQLite database driver
 
 ## Testing
 
@@ -243,6 +255,4 @@ All features have been tested for:
 
 ## Conclusion
 
-The habit tracker app has been successfully implemented according to the implementation plan. All features specified in the initial prompt have been implemented, and the app provides a comprehensive habit tracking experience with animations, visualizations, and a polished user interface.
-
-The app is now ready for use and provides users with a powerful tool to build habits, track streaks, and visualize progress in a motivating and distraction-free way.
+The app provides a comprehensive habit tracking experience with animations, visualizations, and a polished user interface, giving users a powerful tool to build habits, track streaks, and visualize progress in a motivating and distraction-free way.
