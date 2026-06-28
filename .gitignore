@@ -94,6 +94,11 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+.tmp/
+
+# Browser test output
+playwright-report/
+test-results/
 
 # Storybook build outputs
 .out

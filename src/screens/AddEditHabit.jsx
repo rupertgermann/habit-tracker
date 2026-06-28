@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import Card from '../components/Card'
@@ -136,8 +136,8 @@ const DayButton = styled.button`
 
 const ColorGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: ${props => props.theme.spacing.sm};
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: ${props => props.theme.spacing.md};
 `
 
 const ColorOption = styled.button`
@@ -148,12 +148,14 @@ const ColorOption = styled.button`
   background-color: ${props => props.$color};
   cursor: pointer;
   transition: all 0.2s ease;
+  justify-self: center;
   
   ${({ $selected, theme }) =>
     $selected &&
     `
       border-color: ${theme.colors.text.primary};
       transform: scale(1.1);
+      box-shadow: 0 0 0 3px ${theme.colors.primary}40;
     `}
   
   &:hover {
@@ -161,10 +163,62 @@ const ColorOption = styled.button`
   }
 `
 
+const IconPickerControls = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
+`
+
+const IconSearch = styled.input`
+  width: 100%;
+  height: 40px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.small};
+  padding: 0 ${props => props.theme.spacing.md};
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  color: ${props => props.theme.colors.text.primary};
+  background-color: ${props => props.theme.colors.white};
+
+  &::placeholder {
+    color: ${props => props.theme.colors.text.secondary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}20;
+  }
+`
+
+const IconGroupTabs = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.xs};
+  overflow-x: auto;
+  padding-bottom: ${props => props.theme.spacing.xs};
+`
+
+const IconGroupTab = styled.button`
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.small};
+  border: 1px solid ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${props => props.$selected ? `${props.theme.colors.primary}20` : 'transparent'};
+  color: ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.text.secondary};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: ${props => props.$selected ? props.theme.typography.fontWeight.medium : props.theme.typography.fontWeight.regular};
+  cursor: pointer;
+`
+
 const IconGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
   gap: ${props => props.theme.spacing.sm};
+  max-height: 280px;
+  overflow-y: auto;
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.xs} ${props => props.theme.spacing.xs} 0;
 `
 
 const IconOption = styled.button`
@@ -176,6 +230,7 @@ const IconOption = styled.button`
   font-size: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+  justify-self: center;
   
   ${({ $selected, theme }) =>
     $selected &&
@@ -187,6 +242,13 @@ const IconOption = styled.button`
   &:hover {
     background-color: ${props => props.theme.colors.background};
   }
+`
+
+const NoIconResults = styled.div`
+  grid-column: 1 / -1;
+  color: ${props => props.theme.colors.text.secondary};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  padding: ${props => props.theme.spacing.sm} 0;
 `
 
 const ReminderList = styled.div`
@@ -225,24 +287,209 @@ const ActionButtons = styled.div`
 `
 
 const colorOptions = [
-  '#6CC47C', // Primary green
-  '#F6D860', // Secondary yellow
-  '#F28A8A', // Destructive red
-  '#60A5FA', // Blue
-  '#A78BFA', // Purple
-  '#F472B6', // Pink
-  '#34D399', // Emerald
-  '#FBBF24', // Amber
-  '#F87171', // Red
-  '#38BDF8', // Light blue
-  '#C084FC', // Violet
-  '#FB7185'  // Rose
+  { name: 'Leaf', value: '#6CC47C' },
+  { name: 'Lime', value: '#84CC16' },
+  { name: 'Yellow', value: '#EAB308' },
+  { name: 'Amber', value: '#F59E0B' },
+  { name: 'Orange', value: '#F97316' },
+  { name: 'Coral', value: '#FF6B6B' },
+  { name: 'Red', value: '#EF4444' },
+  { name: 'Rose', value: '#E11D48' },
+  { name: 'Pink', value: '#EC4899' },
+  { name: 'Fuchsia', value: '#D946EF' },
+  { name: 'Purple', value: '#8B5CF6' },
+  { name: 'Violet', value: '#7C3AED' },
+  { name: 'Indigo', value: '#6366F1' },
+  { name: 'Blue', value: '#3B82F6' },
+  { name: 'Sky', value: '#0EA5E9' },
+  { name: 'Cyan', value: '#06B6D4' },
+  { name: 'Teal', value: '#14B8A6' },
+  { name: 'Emerald', value: '#10B981' },
+  { name: 'Slate', value: '#64748B' },
+  { name: 'Graphite', value: '#374151' }
 ]
 
-const iconOptions = [
-  '✓', '💧', '🏃', '📚', '🧘', '🎯',
-  '💪', '🧠', '🌱', '⏰', '🔥', '⭐',
-  '🎨', '🎵', '🍎', '💤', '🌞', '🌙'
+const iconGroups = [
+  {
+    id: 'essentials',
+    name: 'Essentials',
+    icons: [
+      { icon: '✓', label: 'Check', tags: ['done', 'complete'] },
+      { icon: '⭐', label: 'Star', tags: ['favorite', 'priority'] },
+      { icon: '🎯', label: 'Target', tags: ['goal', 'focus'] },
+      { icon: '🔥', label: 'Fire', tags: ['streak', 'energy'] },
+      { icon: '⏰', label: 'Alarm', tags: ['time', 'routine'] },
+      { icon: '📅', label: 'Calendar', tags: ['schedule', 'date'] },
+      { icon: '📌', label: 'Pin', tags: ['remember', 'important'] },
+      { icon: '🏆', label: 'Trophy', tags: ['win', 'achievement'] },
+      { icon: '💎', label: 'Diamond', tags: ['quality', 'premium'] },
+      { icon: '🚀', label: 'Rocket', tags: ['launch', 'progress'] },
+      { icon: '⚡', label: 'Lightning', tags: ['fast', 'energy'] },
+      { icon: '🔁', label: 'Repeat', tags: ['recurring', 'loop'] }
+    ]
+  },
+  {
+    id: 'health',
+    name: 'Health',
+    icons: [
+      { icon: '💪', label: 'Strength', tags: ['fitness', 'workout'] },
+      { icon: '🏃', label: 'Running', tags: ['run', 'cardio'] },
+      { icon: '🚶', label: 'Walking', tags: ['walk', 'steps'] },
+      { icon: '🚴', label: 'Cycling', tags: ['bike', 'cardio'] },
+      { icon: '🏊', label: 'Swimming', tags: ['swim', 'sport'] },
+      { icon: '🏋️', label: 'Weightlifting', tags: ['gym', 'lift'] },
+      { icon: '🤸', label: 'Stretching', tags: ['mobility', 'movement'] },
+      { icon: '🧘', label: 'Meditation', tags: ['mindfulness', 'calm'] },
+      { icon: '🧠', label: 'Brain', tags: ['mental', 'focus'] },
+      { icon: '❤️', label: 'Heart', tags: ['health', 'love'] },
+      { icon: '🩺', label: 'Checkup', tags: ['doctor', 'health'] },
+      { icon: '💊', label: 'Medicine', tags: ['medication', 'pill'] },
+      { icon: '🦷', label: 'Teeth', tags: ['dental', 'brush'] },
+      { icon: '🧼', label: 'Soap', tags: ['wash', 'clean'] },
+      { icon: '🧴', label: 'Skincare', tags: ['care', 'lotion'] },
+      { icon: '🛌', label: 'Bed', tags: ['sleep', 'rest'] },
+      { icon: '💤', label: 'Sleep', tags: ['rest', 'bed'] },
+      { icon: '🌞', label: 'Sun', tags: ['morning', 'daylight'] },
+      { icon: '🌙', label: 'Moon', tags: ['night', 'evening'] },
+      { icon: '⚖️', label: 'Balance', tags: ['weight', 'measure'] }
+    ]
+  },
+  {
+    id: 'food',
+    name: 'Food',
+    icons: [
+      { icon: '💧', label: 'Water', tags: ['hydrate', 'drink'] },
+      { icon: '☕', label: 'Coffee', tags: ['caffeine', 'drink'] },
+      { icon: '🍵', label: 'Tea', tags: ['drink', 'calm'] },
+      { icon: '🥤', label: 'Drink', tags: ['beverage', 'water'] },
+      { icon: '🍎', label: 'Apple', tags: ['fruit', 'healthy'] },
+      { icon: '🍌', label: 'Banana', tags: ['fruit', 'snack'] },
+      { icon: '🍓', label: 'Strawberry', tags: ['fruit', 'snack'] },
+      { icon: '🥑', label: 'Avocado', tags: ['healthy', 'food'] },
+      { icon: '🥗', label: 'Salad', tags: ['healthy', 'meal'] },
+      { icon: '🥦', label: 'Broccoli', tags: ['vegetables', 'food'] },
+      { icon: '🥕', label: 'Carrot', tags: ['vegetables', 'food'] },
+      { icon: '🥚', label: 'Egg', tags: ['protein', 'food'] },
+      { icon: '🍞', label: 'Bread', tags: ['meal', 'food'] },
+      { icon: '🍚', label: 'Rice', tags: ['meal', 'food'] },
+      { icon: '🍽️', label: 'Meal', tags: ['plate', 'food'] },
+      { icon: '🧃', label: 'Juice', tags: ['drink', 'beverage'] }
+    ]
+  },
+  {
+    id: 'learning',
+    name: 'Learning',
+    icons: [
+      { icon: '📚', label: 'Books', tags: ['read', 'study'] },
+      { icon: '📖', label: 'Reading', tags: ['book', 'learn'] },
+      { icon: '✍️', label: 'Writing', tags: ['journal', 'notes'] },
+      { icon: '📝', label: 'Notes', tags: ['write', 'todo'] },
+      { icon: '📓', label: 'Notebook', tags: ['journal', 'study'] },
+      { icon: '🧮', label: 'Abacus', tags: ['math', 'practice'] },
+      { icon: '🔬', label: 'Science', tags: ['lab', 'study'] },
+      { icon: '🔭', label: 'Astronomy', tags: ['science', 'space'] },
+      { icon: '💻', label: 'Laptop', tags: ['code', 'work'] },
+      { icon: '⌨️', label: 'Keyboard', tags: ['typing', 'code'] },
+      { icon: '🧑‍💻', label: 'Coding', tags: ['developer', 'programming'] },
+      { icon: '🗣️', label: 'Speaking', tags: ['language', 'practice'] },
+      { icon: '🎧', label: 'Listening', tags: ['audio', 'language'] },
+      { icon: '🧩', label: 'Puzzle', tags: ['thinking', 'problem'] },
+      { icon: '💡', label: 'Idea', tags: ['learn', 'insight'] },
+      { icon: '🧪', label: 'Experiment', tags: ['test', 'science'] }
+    ]
+  },
+  {
+    id: 'work',
+    name: 'Work',
+    icons: [
+      { icon: '📋', label: 'Clipboard', tags: ['plan', 'tasks'] },
+      { icon: '✅', label: 'Checklist', tags: ['todo', 'done'] },
+      { icon: '📈', label: 'Growth Chart', tags: ['progress', 'stats'] },
+      { icon: '📊', label: 'Bar Chart', tags: ['metrics', 'stats'] },
+      { icon: '📁', label: 'Folder', tags: ['organize', 'files'] },
+      { icon: '📬', label: 'Inbox', tags: ['email', 'messages'] },
+      { icon: '📞', label: 'Call', tags: ['phone', 'contact'] },
+      { icon: '💬', label: 'Message', tags: ['chat', 'communication'] },
+      { icon: '🤝', label: 'Handshake', tags: ['meeting', 'agreement'] },
+      { icon: '🧾', label: 'Receipt', tags: ['admin', 'finance'] },
+      { icon: '💰', label: 'Money', tags: ['budget', 'finance'] },
+      { icon: '🏦', label: 'Bank', tags: ['finance', 'money'] },
+      { icon: '🧹', label: 'Clean Up', tags: ['tidy', 'organize'] },
+      { icon: '🗂️', label: 'Files', tags: ['archive', 'organize'] },
+      { icon: '🔒', label: 'Lock', tags: ['security', 'privacy'] },
+      { icon: '🛠️', label: 'Tools', tags: ['repair', 'maintenance'] }
+    ]
+  },
+  {
+    id: 'home',
+    name: 'Home',
+    icons: [
+      { icon: '🏠', label: 'Home', tags: ['house', 'routine'] },
+      { icon: '🛏️', label: 'Bedroom', tags: ['bed', 'sleep'] },
+      { icon: '🧺', label: 'Laundry', tags: ['clothes', 'wash'] },
+      { icon: '🧽', label: 'Sponge', tags: ['clean', 'chores'] },
+      { icon: '🪥', label: 'Toothbrush', tags: ['brush', 'teeth'] },
+      { icon: '🚿', label: 'Shower', tags: ['wash', 'bathroom'] },
+      { icon: '🪴', label: 'Plant', tags: ['garden', 'water'] },
+      { icon: '🌱', label: 'Seedling', tags: ['grow', 'plant'] },
+      { icon: '🌿', label: 'Herb', tags: ['plant', 'garden'] },
+      { icon: '🛒', label: 'Shopping Cart', tags: ['groceries', 'errands'] },
+      { icon: '🧑‍🍳', label: 'Cooking', tags: ['cook', 'meal'] },
+      { icon: '🔑', label: 'Key', tags: ['home', 'security'] },
+      { icon: '🧯', label: 'Safety', tags: ['fire', 'home'] },
+      { icon: '🚗', label: 'Car', tags: ['drive', 'commute'] },
+      { icon: '🚌', label: 'Transit', tags: ['bus', 'commute'] }
+    ]
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    icons: [
+      { icon: '🎨', label: 'Palette', tags: ['art', 'paint'] },
+      { icon: '✏️', label: 'Pencil', tags: ['draw', 'sketch'] },
+      { icon: '🖌️', label: 'Brush', tags: ['paint', 'art'] },
+      { icon: '🎵', label: 'Music', tags: ['song', 'practice'] },
+      { icon: '🎸', label: 'Guitar', tags: ['music', 'instrument'] },
+      { icon: '🎹', label: 'Piano', tags: ['music', 'instrument'] },
+      { icon: '🎤', label: 'Singing', tags: ['voice', 'music'] },
+      { icon: '📷', label: 'Camera', tags: ['photo', 'creative'] },
+      { icon: '🎥', label: 'Video', tags: ['film', 'camera'] },
+      { icon: '🎬', label: 'Clapperboard', tags: ['film', 'video'] },
+      { icon: '🧵', label: 'Sewing', tags: ['craft', 'thread'] },
+      { icon: '🧶', label: 'Yarn', tags: ['knit', 'craft'] },
+      { icon: '🎲', label: 'Dice', tags: ['game', 'play'] },
+      { icon: '♟️', label: 'Chess', tags: ['strategy', 'game'] },
+      { icon: '🎮', label: 'Game', tags: ['play', 'controller'] },
+      { icon: '🎭', label: 'Theater', tags: ['acting', 'creative'] }
+    ]
+  },
+  {
+    id: 'social',
+    name: 'Social',
+    icons: [
+      { icon: '👥', label: 'People', tags: ['social', 'group'] },
+      { icon: '👨‍👩‍👧', label: 'Family', tags: ['home', 'people'] },
+      { icon: '💌', label: 'Letter', tags: ['message', 'kindness'] },
+      { icon: '🎁', label: 'Gift', tags: ['giving', 'birthday'] },
+      { icon: '🙏', label: 'Gratitude', tags: ['thanks', 'reflect'] },
+      { icon: '😊', label: 'Smile', tags: ['mood', 'happy'] },
+      { icon: '🌈', label: 'Rainbow', tags: ['joy', 'mood'] },
+      { icon: '🌍', label: 'World', tags: ['community', 'travel'] },
+      { icon: '🕯️', label: 'Candle', tags: ['reflect', 'calm'] },
+      { icon: '☮️', label: 'Peace', tags: ['calm', 'mindful'] },
+      { icon: '💐', label: 'Flowers', tags: ['gift', 'kindness'] },
+      { icon: '🎉', label: 'Celebration', tags: ['party', 'milestone'] }
+    ]
+  }
+]
+
+const allIconOptions = Array.from(
+  new Map(iconGroups.flatMap(group => group.icons).map(option => [option.icon, option])).values()
+)
+
+const iconGroupTabs = [
+  { id: 'all', name: 'All' },
+  ...iconGroups.map(group => ({ id: group.id, name: group.name }))
 ]
 
 const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -266,6 +513,47 @@ const AddEditHabit = () => {
     category: 'other',
     reminders: []
   })
+  const [activeIconGroup, setActiveIconGroup] = useState('all')
+  const [iconSearchTerm, setIconSearchTerm] = useState('')
+
+  const visibleColorOptions = useMemo(() => {
+    const hasSelectedColor = colorOptions.some(option => option.value === formData.color)
+    if (hasSelectedColor || !formData.color) {
+      return colorOptions
+    }
+
+    return [
+      { name: 'Current', value: formData.color },
+      ...colorOptions
+    ]
+  }, [formData.color])
+
+  const visibleIconOptions = useMemo(() => {
+    const source = activeIconGroup === 'all'
+      ? allIconOptions
+      : iconGroups.find(group => group.id === activeIconGroup)?.icons || allIconOptions
+    const normalizedTerm = iconSearchTerm.trim().toLowerCase()
+    const filteredOptions = normalizedTerm
+      ? source.filter(option => {
+          const haystack = [
+            option.icon,
+            option.label,
+            ...(option.tags || [])
+          ].join(' ').toLowerCase()
+          return haystack.includes(normalizedTerm)
+        })
+      : source
+
+    const selectedIconIsAvailable = allIconOptions.some(option => option.icon === formData.icon)
+    if (selectedIconIsAvailable || !formData.icon || activeIconGroup !== 'all' || normalizedTerm) {
+      return filteredOptions
+    }
+
+    return [
+      { icon: formData.icon, label: 'Current icon', tags: ['current'] },
+      ...filteredOptions
+    ]
+  }, [activeIconGroup, formData.icon, iconSearchTerm])
 
   useEffect(() => {
     if (isEditing && id) {
@@ -559,14 +847,15 @@ const AddEditHabit = () => {
             <FormGroup>
               <Label>Color</Label>
               <ColorGrid>
-                {colorOptions.map((color) => (
+                {visibleColorOptions.map((color) => (
                   <ColorOption
-                    key={color}
+                    key={color.value}
                     type="button"
-                    $color={color}
-                    $selected={formData.color === color}
-                    onClick={() => handleColorSelect(color)}
-                    aria-label={`Select color ${color}`}
+                    $color={color.value}
+                    $selected={formData.color === color.value}
+                    onClick={() => handleColorSelect(color.value)}
+                    aria-label={`Select color ${color.name}`}
+                    aria-pressed={formData.color === color.value}
                   />
                 ))}
               </ColorGrid>
@@ -574,18 +863,47 @@ const AddEditHabit = () => {
             
             <FormGroup>
               <Label>Icon</Label>
+              <IconPickerControls>
+                <IconSearch
+                  type="search"
+                  placeholder="Search icons"
+                  value={iconSearchTerm}
+                  onChange={(event) => setIconSearchTerm(event.target.value)}
+                  aria-label="Search icons"
+                />
+                <IconGroupTabs role="tablist" aria-label="Icon groups">
+                  {iconGroupTabs.map((group) => (
+                    <IconGroupTab
+                      key={group.id}
+                      type="button"
+                      role="tab"
+                      $selected={activeIconGroup === group.id}
+                      aria-selected={activeIconGroup === group.id}
+                      onClick={() => setActiveIconGroup(group.id)}
+                    >
+                      {group.name}
+                    </IconGroupTab>
+                  ))}
+                </IconGroupTabs>
+              </IconPickerControls>
               <IconGrid>
-                {iconOptions.map((icon) => (
-                  <IconOption
-                    key={icon}
-                    type="button"
-                    $selected={formData.icon === icon}
-                    onClick={() => handleIconSelect(icon)}
-                    aria-label={`Select icon ${icon}`}
-                  >
-                    {icon}
-                  </IconOption>
-                ))}
+                {visibleIconOptions.length > 0 ? (
+                  visibleIconOptions.map((icon) => (
+                    <IconOption
+                      key={icon.icon}
+                      type="button"
+                      $selected={formData.icon === icon.icon}
+                      onClick={() => handleIconSelect(icon.icon)}
+                      aria-label={`Select icon ${icon.label}`}
+                      aria-pressed={formData.icon === icon.icon}
+                      title={icon.label}
+                    >
+                      {icon.icon}
+                    </IconOption>
+                  ))
+                ) : (
+                  <NoIconResults>No matching icons</NoIconResults>
+                )}
               </IconGrid>
             </FormGroup>
           </FormCard>

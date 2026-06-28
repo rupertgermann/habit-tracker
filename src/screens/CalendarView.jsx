@@ -16,6 +16,49 @@ const getDayHeaders = (weekStartsOn) =>
 const getLeadingEmptyCellCount = (date, weekStartsOn) =>
   (date.getDay() - weekStartsOn + 7) % 7
 
+const filledTileTextColor = '#102016'
+
+const getCompletionLevelStyles = (level, theme) => {
+  switch (level) {
+    case 0:
+      return `
+        background-color: ${theme.colors.white};
+        border-color: ${theme.colors.border};
+      `
+    case 1:
+      return `
+        background-color: ${theme.colors.primary}20;
+        border-color: ${theme.colors.primary}40;
+      `
+    case 2:
+      return `
+        background-color: ${theme.colors.primary}50;
+        border-color: ${theme.colors.primary}70;
+      `
+    case 3:
+      return `
+        background-color: ${theme.colors.primary}90;
+        border-color: ${theme.colors.primary};
+      `
+    case 4:
+      return `
+        background-color: ${theme.colors.primary};
+        border-color: ${theme.colors.primary};
+      `
+    default:
+      return `
+        background-color: ${theme.colors.white};
+        border-color: ${theme.colors.border};
+      `
+  }
+}
+
+const getHeatmapTextColor = (level, theme) =>
+  level >= 4 ? filledTileTextColor : theme.colors.text.primary
+
+const getHeatmapMutedTextColor = (level, theme) =>
+  level >= 4 ? filledTileTextColor : theme.colors.text.secondary
+
 const CalendarContainer = styled.div`
   width: 100%;
   padding: ${props => props.theme.spacing.lg};
@@ -120,8 +163,11 @@ const WeekDayCard = styled(Card)`
   cursor: pointer;
   padding: ${props => props.theme.spacing.xs};
   position: relative;
+  border: 1px solid transparent;
   transition: all 0.2s ease;
-  
+
+  ${({ $completionLevel, theme }) => getCompletionLevelStyles($completionLevel, theme)}
+
   ${({ $isToday, theme }) =>
     $isToday &&
     `
@@ -134,24 +180,7 @@ const WeekDayCard = styled(Card)`
       outline: 3px solid ${theme.colors.secondary};
       outline-offset: 2px;
     `}
-  
-  ${({ $completionLevel, theme }) => {
-    switch ($completionLevel) {
-      case 0:
-        return 'background-color: #F3F4F6;'
-      case 1:
-        return 'background-color: #E0F2E3;'
-      case 2:
-        return 'background-color: #A8E0B1;'
-      case 3:
-        return 'background-color: #6CC47C;'
-      case 4:
-        return 'background-color: #4A9F5A;'
-      default:
-        return 'background-color: #F3F4F6;'
-    }
-  }}
-  
+
   &:hover {
     transform: scale(1.05);
     box-shadow: ${props => props.theme.shadows.medium};
@@ -161,19 +190,19 @@ const WeekDayCard = styled(Card)`
 const WeekDayName = styled.div`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.theme.colors.text.secondary};
+  color: ${props => getHeatmapMutedTextColor(props.$completionLevel, props.theme)};
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
 const WeekDayNumber = styled.div`
   font-size: ${props => props.theme.typography.fontSize.bodyLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.theme.colors.text.primary};
+  color: ${props => getHeatmapTextColor(props.$completionLevel, props.theme)};
 `
 
 const WeekDayCompletion = styled.div`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  color: ${props => props.theme.colors.text.secondary};
+  color: ${props => getHeatmapMutedTextColor(props.$completionLevel, props.theme)};
   margin-top: ${props => props.theme.spacing.xs};
   line-height: ${props => props.theme.typography.lineHeight.tight};
 `
@@ -195,8 +224,11 @@ const DayCell = styled(Card)`
   cursor: pointer;
   padding: ${props => props.theme.spacing.xs};
   position: relative;
+  border: 1px solid transparent;
   transition: all 0.2s ease;
-  
+
+  ${({ $completionLevel, theme }) => getCompletionLevelStyles($completionLevel, theme)}
+
   ${({ $isCurrentMonth, theme }) =>
     !$isCurrentMonth &&
     `
@@ -215,24 +247,7 @@ const DayCell = styled(Card)`
       outline: 3px solid ${theme.colors.secondary};
       outline-offset: 2px;
     `}
-  
-  ${({ $completionLevel, theme }) => {
-    switch ($completionLevel) {
-      case 0:
-        return 'background-color: #F3F4F6;'
-      case 1:
-        return 'background-color: #E0F2E3;'
-      case 2:
-        return 'background-color: #A8E0B1;'
-      case 3:
-        return 'background-color: #6CC47C;'
-      case 4:
-        return 'background-color: #4A9F5A;'
-      default:
-        return 'background-color: #F3F4F6;'
-    }
-  }}
-  
+
   &:hover {
     transform: scale(1.05);
     box-shadow: ${props => props.theme.shadows.medium};
@@ -242,7 +257,7 @@ const DayCell = styled(Card)`
 const DayNumber = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.theme.colors.text.primary};
+  color: ${props => getHeatmapTextColor(props.$completionLevel, props.theme)};
 `
 
 const CompletionIndicator = styled.div`
@@ -272,23 +287,9 @@ const LegendColor = styled.div`
   width: 16px;
   height: 16px;
   border-radius: ${props => props.theme.borderRadius.small};
-  
-  ${({ $level }) => {
-    switch ($level) {
-      case 0:
-        return 'background-color: #F3F4F6;'
-      case 1:
-        return 'background-color: #E0F2E3;'
-      case 2:
-        return 'background-color: #A8E0B1;'
-      case 3:
-        return 'background-color: #6CC47C;'
-      case 4:
-        return 'background-color: #4A9F5A;'
-      default:
-        return 'background-color: #F3F4F6;'
-    }
-  }}
+  border: 1px solid transparent;
+
+  ${({ $level, theme }) => getCompletionLevelStyles($level, theme)}
 `
 
 const LegendText = styled.span`
@@ -409,7 +410,7 @@ const SelectedDateActions = styled.div`
 const DayCount = styled.span`
   font-size: 11px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.theme.colors.text.primary};
+  color: ${props => getHeatmapTextColor(props.$completionLevel, props.theme)};
 `
 
 const YearGrid = styled.div`
@@ -441,18 +442,15 @@ const MiniGrid = styled.div`
 const MiniDay = styled.div`
   aspect-ratio: 1;
   border-radius: 2px;
-  border: ${props => props.$isToday ? `1px solid ${props.theme.colors.primary}` : 'none'};
+  border: 1px solid transparent;
 
-  ${({ $level }) => {
-    switch ($level) {
-      case 0: return 'background-color: #F3F4F6;'
-      case 1: return 'background-color: #E0F2E3;'
-      case 2: return 'background-color: #A8E0B1;'
-      case 3: return 'background-color: #6CC47C;'
-      case 4: return 'background-color: #4A9F5A;'
-      default: return 'background-color: transparent;'
-    }
-  }}
+  ${({ $level, theme }) => getCompletionLevelStyles($level, theme)}
+
+  ${({ $isToday, theme }) =>
+    $isToday &&
+    `
+      border-color: ${theme.colors.primary};
+    `}
 `
 
 const getLevel = (count) => {
@@ -596,8 +594,8 @@ const CalendarView = () => {
             onClick={() => handleSelectDate(date)}
             onKeyDown={(event) => handleDateKeyDown(event, date)}
           >
-            <DayNumber>{format(date, 'd')}</DayNumber>
-            {count > 0 && <DayCount>{count}</DayCount>}
+            <DayNumber $completionLevel={completionLevel}>{format(date, 'd')}</DayNumber>
+            {count > 0 && <DayCount $completionLevel={completionLevel}>{count}</DayCount>}
           </DayCell>
         </Tooltip>
       )
@@ -636,9 +634,9 @@ const CalendarView = () => {
             onClick={() => handleSelectDate(day)}
             onKeyDown={(event) => handleDateKeyDown(event, day)}
           >
-            <WeekDayName>{format(day, 'EEE')}</WeekDayName>
-            <WeekDayNumber>{format(day, 'd')}</WeekDayNumber>
-            <WeekDayCompletion>
+            <WeekDayName $completionLevel={completionLevel}>{format(day, 'EEE')}</WeekDayName>
+            <WeekDayNumber $completionLevel={completionLevel}>{format(day, 'd')}</WeekDayNumber>
+            <WeekDayCompletion $completionLevel={completionLevel}>
               {count}{targetLabel}
             </WeekDayCompletion>
           </WeekDayCard>

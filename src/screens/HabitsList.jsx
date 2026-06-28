@@ -73,6 +73,17 @@ const CategoryChip = styled.button`
   }
 `
 
+const CategoryIconText = styled.span`
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  flex-shrink: 0;
+`
+
+const CategoryLabelText = styled.span`
+  min-width: 0;
+`
+
 const FilterTab = styled.button`
   background: none;
   border: none;
@@ -379,8 +390,8 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
             $color={category.color}
             onClick={() => handleCategoryFilter(category.id)}
           >
-            {category.icon}
-            {category.name}
+            <CategoryIconText aria-hidden="true">{category.icon}</CategoryIconText>
+            <CategoryLabelText>{category.name}</CategoryLabelText>
           </CategoryChip>
         ))}
       </CategoryFilter>
@@ -425,8 +436,12 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
                       {getFrequencyText(habit)}
                     </HabitFrequency>
                     <CategoryBadge $color={getCategoryInfo(habit.category).color}>
-                      {getCategoryInfo(habit.category).icon}
-                      {getCategoryInfo(habit.category).name}
+                      <CategoryIconText aria-hidden="true">
+                        {getCategoryInfo(habit.category).icon}
+                      </CategoryIconText>
+                      <CategoryLabelText>
+                        {getCategoryInfo(habit.category).name}
+                      </CategoryLabelText>
                     </CategoryBadge>
                   </HabitMeta>
                 </HabitDetails>
