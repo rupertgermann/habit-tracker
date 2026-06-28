@@ -55,13 +55,18 @@ npm install
 |---|---|
 | `npm run dev` | Start the API server and the Vite dev server together at `http://localhost:3000`. |
 | `npm run dev:client` | Start only the Vite dev server at `http://localhost:3000` (requires the API server separately). |
+| `npm run dev:e2e` | Start the API and client against a temporary `.tmp/e2e` SQLite database for browser regression tests. |
 | `npm run server` | Start only the Express API server at `http://127.0.0.1:3001`. |
 | `npm run dev:all` | Alias for `npm run dev`. |
-| `npm run test` | Run domain regression tests for habit tracking and journal timeline rules. |
+| `npm run test` | Run domain regression tests and browser regression tests. |
+| `npm run test:domain` | Run domain regression tests for habit tracking and journal timeline rules. |
+| `npm run test:e2e` | Run Playwright browser regression tests for persisted habit flows, journal flows, and responsive smoke coverage. |
 | `npm run build` | Build the production bundle to `dist/` (with source maps). |
 | `npm run preview` | Serve the production build locally for preview. |
 
 The frontend needs the API server running to load and persist data. Use `npm run dev` to run both at once, or run `npm run server` and `npm run dev:client` in separate terminals. The API binds to `127.0.0.1` by default; override `HOST` only when you explicitly need another bind address.
+
+Browser regression tests use Playwright through `npm run test:e2e`. The test server uses `HABIT_TRACKER_DB_PATH=.tmp/e2e/habit-tracker.db`, so each spec can seed and clean temporary Habit, Completion, and Journal Entry data without touching the normal local database under `server/data/`.
 
 ## Project Structure
 

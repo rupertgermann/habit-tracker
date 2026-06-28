@@ -10,7 +10,10 @@ const testModules = [
 const server = await createServer({
   appType: 'custom',
   logLevel: 'error',
-  server: { middlewareMode: true }
+  server: {
+    middlewareMode: true,
+    hmr: false
+  }
 })
 
 let passed = 0
