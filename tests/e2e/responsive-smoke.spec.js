@@ -90,6 +90,32 @@ const expectCalendarMode = async (page, modeName, periodLabel) => {
   await expectNoRootOverflow(page)
 }
 
+const relativeLuminance = ({ r, g, b }) => {
+  const toLinear = channel => {
+    const value = channel / 255
+    return value <= 0.03928
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4
+  }
+
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
+}
+
+const contrastRatio = (foreground, background) => {
+  const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background))
+  const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background))
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+const parseRgb = value => {
+  const [, r, g, b] = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/) || []
+  return {
+    r: Number(r),
+    g: Number(g),
+    b: Number(b)
+  }
+}
+
 test.describe('responsive smoke coverage', () => {
   test.afterEach(async ({ request }) => {
     await resetAppData(request)
@@ -130,4 +156,31 @@ test.describe('responsive smoke coverage', () => {
       await assertNoConsoleErrors()
     })
   }
+
+  test('calendar heatmap cells keep readable contrast in dark mode', async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    await resetAppData(request, smokeState)
+    await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
+    await page.goto('/calendar')
+    await waitForAppReady(page)
+    await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
+
+    const dayCell = page.locator('[role="button"][aria-label^="Select "]').first()
+    await expect(dayCell).toBeVisible()
+
+    const colors = await dayCell.evaluate(element => {
+      const label = element.querySelector('span')
+      return {
+        background: getComputedStyle(element).backgroundColor,
+        text: getComputedStyle(label).color
+      }
+    })
+
+    const background = parseRgb(colors.background)
+    const text = parseRgb(colors.text)
+
+    expect(relativeLuminance(background)).toBeLessThan(0.12)
+    expect(contrastRatio(text, background)).toBeGreaterThanOrEqual(4.5)
+    await expectNoRootOverflow(page)
+  })
 })
