@@ -475,8 +475,11 @@ const AddEditHabit = () => {
       ...formData,
       dailyTarget: formData.type === 'count' && formData.dailyTarget !== ''
         ? Number(formData.dailyTarget)
-        : null,
-      createdAt: isEditing ? formData.createdAt : new Date().toISOString()
+        : null
+    }
+
+    if (!isEditing) {
+      habitData.createdAt = new Date().toISOString()
     }
 
     if (isEditing) {

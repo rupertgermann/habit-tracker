@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import {
   addDays,
+  installConsoleErrorGuard,
   localDateKey,
   makeCompletion,
   makeHabit,
@@ -174,6 +175,63 @@ test('legacy string icons continue to render safely', async ({ page, request }) 
   await expect(page.getByText('Legacy Category')).toBeVisible()
   await expect(page.getByText('Y', { exact: true })).toBeVisible()
   await expect(page.getByText('L', { exact: true })).toBeVisible()
+})
+
+test('mobile editing preserves created date and keeps detail route usable', async ({ page, request }) => {
+  const assertNoConsoleErrors = installConsoleErrorGuard(page)
+  const createdAt = '2026-06-01T09:00:00.000Z'
+  const habitName = 'E2E Mobile Edit Date'
+  const updatedName = 'E2E Mobile Edit Date Updated'
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await resetAppData(request, {
+    habits: [
+      makeHabit({
+        id: 'e2e-mobile-edit-created-date',
+        name: habitName,
+        icon: 'check',
+        createdAt
+      })
+    ]
+  })
+
+  await page.goto('/edit-habit/e2e-mobile-edit-created-date')
+  await waitForAppReady(page)
+  await expect(page.getByRole('heading', { name: 'Edit Habit' })).toBeVisible()
+  await expect(page.getByPlaceholder('e.g., Drink 8 glasses of water')).toHaveValue(habitName)
+
+  await page.getByPlaceholder('e.g., Drink 8 glasses of water').fill(updatedName)
+  await page.getByRole('button', { name: 'Update Habit' }).click()
+
+  const updatedHabit = await waitForHabitByName(request, updatedName)
+  expect(updatedHabit.createdAt).toBe(createdAt)
+
+  await page.goto('/habit/e2e-mobile-edit-created-date')
+  await waitForAppReady(page)
+
+  await expect(page.getByRole('heading', { level: 1, name: /E2E Mobile Edit Date Updated/ })).toBeVisible()
+  await expect(page.getByText('June 1, 2026')).toBeVisible()
+  await assertNoConsoleErrors()
+})
+
+test('mobile habit detail renders records without a created date', async ({ page, request }) => {
+  const assertNoConsoleErrors = installConsoleErrorGuard(page)
+  const legacyHabit = makeHabit({
+    id: 'e2e-missing-created-date',
+    name: 'E2E Missing Created Date',
+    icon: 'check'
+  })
+  delete legacyHabit.createdAt
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await resetAppData(request, { habits: [legacyHabit] })
+
+  await page.goto('/habit/e2e-missing-created-date')
+  await waitForAppReady(page)
+
+  await expect(page.getByRole('heading', { level: 1, name: /E2E Missing Created Date/ })).toBeVisible()
+  await expect(page.getByText('Not recorded')).toBeVisible()
+  await assertNoConsoleErrors()
 })
 
 test('yes/no habit toggle persists one dated completion and toggles it off', async ({ page, request }) => {

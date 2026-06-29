@@ -296,8 +296,12 @@ const HabitDetail = () => {
   }
 
   const getCreatedDate = () => {
-    if (!habit) return ''
-    return format(parseISO(habit.createdAt), 'MMMM d, yyyy')
+    if (!habit?.createdAt) return 'Not recorded'
+
+    const createdDate = parseISO(habit.createdAt)
+    if (Number.isNaN(createdDate.getTime())) return 'Not recorded'
+
+    return format(createdDate, 'MMMM d, yyyy')
   }
 
   if (!habit) {
