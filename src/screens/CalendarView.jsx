@@ -5,8 +5,10 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterva
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Tooltip from '../components/Tooltip'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
+import { DEFAULT_HABIT_ICON, getLegacyIconText } from '../domain/iconCatalog'
 
 const getDayHeaders = (weekStartsOn) =>
   weekStartsOn === 1
@@ -327,7 +329,9 @@ const EmptyState = styled.div`
 `
 
 const EmptyStateIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  justify-content: center;
+  color: ${props => props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
@@ -387,9 +391,17 @@ const SelectedDateTitle = styled.h3`
 `
 
 const SelectedDateMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
   overflow-wrap: anywhere;
+`
+
+const SelectedHabitIcon = styled.span`
+  display: inline-flex;
+  color: ${props => props.$color || props.theme.colors.primary};
 `
 
 const SelectedDateCount = styled.div`
@@ -543,7 +555,7 @@ const CalendarView = () => {
       title: `${label} — ${count}${targetLabel}`,
       content: [{
         name: selectedHabit ? selectedHabit.name : '',
-        icon: selectedHabit && selectedHabit.icon ? selectedHabit.icon : '✓',
+        icon: selectedHabit && selectedHabit.icon ? selectedHabit.icon : DEFAULT_HABIT_ICON,
         completed: true
       }]
     }
@@ -714,7 +726,9 @@ const CalendarView = () => {
         </Header>
         
         <EmptyState>
-          <EmptyStateIcon>📅</EmptyStateIcon>
+          <EmptyStateIcon>
+            <AppIcon name="calendar" size={64} />
+          </EmptyStateIcon>
           <EmptyStateTitle>No habits to track</EmptyStateTitle>
           <EmptyStateText>Create your first habit to see your progress on the calendar.</EmptyStateText>
           <Button onClick={() => navigate('/add-habit')}>
@@ -759,7 +773,7 @@ const CalendarView = () => {
         >
           {habits.map(habit => (
             <option key={habit.id} value={habit.id}>
-              {(habit.icon ? `${habit.icon} ` : '') + habit.name}
+              {(getLegacyIconText(habit.icon) ? `${getLegacyIconText(habit.icon)} ` : '') + habit.name}
             </option>
           ))}
         </HabitSelect>
@@ -767,17 +781,13 @@ const CalendarView = () => {
 
       <CalendarHeader>
         <NavButton onClick={goToPrevious} aria-label="Previous period">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+          <AppIcon name="chevron-left" size={24} />
         </NavButton>
 
         <MonthYear>{headerLabel}</MonthYear>
 
         <NavButton onClick={goToNext} aria-label="Next period">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+          <AppIcon name="chevron-right" size={24} />
         </NavButton>
       </CalendarHeader>
 
@@ -816,7 +826,10 @@ const CalendarView = () => {
           <SelectedDateInfo>
             <SelectedDateTitle>{selectedDateLabel}</SelectedDateTitle>
             <SelectedDateMeta>
-              {(selectedHabit.icon ? `${selectedHabit.icon} ` : '') + selectedHabit.name}
+              <SelectedHabitIcon $color={selectedHabit.color}>
+                <AppIcon name={selectedHabit.icon} fallbackName={DEFAULT_HABIT_ICON} size={16} />
+              </SelectedHabitIcon>
+              {selectedHabit.name}
             </SelectedDateMeta>
           </SelectedDateInfo>
           <SelectedDateCount>

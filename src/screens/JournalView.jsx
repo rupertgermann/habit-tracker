@@ -5,10 +5,12 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import EmptyState from '../components/EmptyState'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { format, startOfWeek, subWeeks, addWeeks } from 'date-fns'
 import { getJournalTimeline } from '../domain/journalTimeline'
 import { usePreferences } from '../context/PreferencesContext.jsx'
+import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const JournalContainer = styled.div`
   width: 100%;
@@ -97,7 +99,8 @@ const EntryHabit = styled.div`
 `
 
 const HabitIcon = styled.span`
-  font-size: 18px;
+  display: inline-flex;
+  color: ${props => props.$color || props.theme.colors.primary};
 `
 
 const NoEntries = styled.div`
@@ -187,13 +190,15 @@ const JournalView = () => {
       
       <WeekNavigation>
         <NavButton variant="ghost" onClick={handlePrevWeek}>
-          ← Previous
+          <AppIcon name="chevron-left" size={16} />
+          Previous
         </NavButton>
         <WeekRange>
           {format(currentWeekStart, 'MMM d')} - {format(timeline.weekEnd, 'MMM d, yyyy')}
         </WeekRange>
         <NavButton variant="ghost" onClick={handleNextWeek}>
-          Next →
+          Next
+          <AppIcon name="chevron-right" size={16} />
         </NavButton>
       </WeekNavigation>
       
@@ -235,13 +240,13 @@ const JournalView = () => {
           <NoEntries>
             {searchTerm ? (
               <EmptyState
-                icon="🔍"
+                icon={<AppIcon name="search" size={64} />}
                 title="No matching entries"
                 description="Try adjusting your search terms."
               />
             ) : (
               <EmptyState
-                icon="📔"
+                icon={<AppIcon name="notebook" size={64} />}
                 title="No journal entries this week"
                 description="Start reflecting on your habits to see your entries here."
               />
@@ -266,7 +271,9 @@ const JournalView = () => {
                 
                 {habit && (
                   <EntryHabit>
-                    <HabitIcon>{habit.icon || '✓'}</HabitIcon>
+                    <HabitIcon $color={habit.color}>
+                      <AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={18} />
+                    </HabitIcon>
                     {habit.name}
                   </EntryHabit>
                 )}

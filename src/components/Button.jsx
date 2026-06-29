@@ -2,6 +2,7 @@ import React from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { keyframes } from 'styled-components'
+import AppIcon from './AppIcon'
 
 const ButtonWrapper = styled(motion.button)`
   display: inline-flex;
@@ -161,6 +162,12 @@ const Button = ({
   ...props
 }) => {
   const [isBouncing, setIsBouncing] = React.useState(false)
+
+  const renderIcon = () => {
+    if (!icon) return null
+    if (React.isValidElement(icon)) return icon
+    return <AppIcon name={icon} size={16} />
+  }
   
   const handleClick = (e) => {
     if (!disabled && !loading && onClick) {
@@ -192,7 +199,7 @@ const Button = ({
         <LoadingSpinner aria-label="Loading" />
       ) : (
         <>
-          {icon && <span className="button-icon" aria-hidden="true">{icon}</span>}
+          {icon && <span className="button-icon" aria-hidden="true">{renderIcon()}</span>}
           {children}
         </>
       )}

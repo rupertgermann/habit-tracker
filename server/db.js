@@ -34,14 +34,24 @@ db.exec(`
 `)
 
 const DEFAULT_CATEGORIES = [
-  { id: 'health', name: 'Health & Fitness', color: '#6CC47C', icon: '💪' },
-  { id: 'productivity', name: 'Productivity', color: '#F6D860', icon: '📝' },
-  { id: 'mindfulness', name: 'Mindfulness', color: '#8B5CF6', icon: '🧘' },
-  { id: 'learning', name: 'Learning', color: '#0EA5E9', icon: '📚' },
-  { id: 'social', name: 'Social', color: '#F28A8A', icon: '👥' },
-  { id: 'creativity', name: 'Creativity', color: '#EC4899', icon: '🎨' },
-  { id: 'other', name: 'Other', color: '#6B7280', icon: '📌' }
+  { id: 'health', name: 'Health & Fitness', color: '#6CC47C', icon: 'dumbbell' },
+  { id: 'productivity', name: 'Productivity', color: '#F6D860', icon: 'notes' },
+  { id: 'mindfulness', name: 'Mindfulness', color: '#8B5CF6', icon: 'yoga' },
+  { id: 'learning', name: 'Learning', color: '#0EA5E9', icon: 'books' },
+  { id: 'social', name: 'Social', color: '#F28A8A', icon: 'users' },
+  { id: 'creativity', name: 'Creativity', color: '#EC4899', icon: 'palette' },
+  { id: 'other', name: 'Other', color: '#6B7280', icon: 'pin' }
 ]
+
+const DEFAULT_CATEGORY_LEGACY_ICONS = {
+  health: '💪',
+  productivity: '📝',
+  mindfulness: '🧘',
+  learning: '📚',
+  social: '👥',
+  creativity: '🎨',
+  other: '📌'
+}
 
 // Seed default categories on first run so the UI has its baseline set.
 function seedCategories() {
@@ -52,7 +62,23 @@ function seedCategories() {
       for (const item of items) insert.run(item.id, JSON.stringify(item))
     })
     tx(DEFAULT_CATEGORIES)
+    return
   }
+
+  const select = db.prepare('SELECT data FROM categories WHERE id = ?')
+  const update = db.prepare('UPDATE categories SET data = ? WHERE id = ?')
+  const tx = db.transaction(items => {
+    for (const item of items) {
+      const row = select.get(item.id)
+      if (!row) continue
+
+      const current = JSON.parse(row.data)
+      if (current.icon !== DEFAULT_CATEGORY_LEGACY_ICONS[item.id]) continue
+
+      update.run(JSON.stringify({ ...current, icon: item.icon }), item.id)
+    }
+  })
+  tx(DEFAULT_CATEGORIES)
 }
 seedCategories()
 
@@ -131,8 +157,9 @@ function replaceAll({ habits = [], categories = [], journalEntries = [], setting
     const insertHabit = db.prepare('INSERT INTO habits (id, data) VALUES (?, ?)')
     for (const h of habits) insertHabit.run(h.id, JSON.stringify(h))
 
+    const categoryItems = categories.length > 0 ? categories : DEFAULT_CATEGORIES
     const insertCategory = db.prepare('INSERT INTO categories (id, data) VALUES (?, ?)')
-    for (const c of categories) insertCategory.run(c.id, JSON.stringify(c))
+    for (const c of categoryItems) insertCategory.run(c.id, JSON.stringify(c))
 
     const insertEntry = db.prepare('INSERT INTO journal_entries (id, data) VALUES (?, ?)')
     for (const e of journalEntries) insertEntry.run(e.id, JSON.stringify(e))
@@ -146,7 +173,7 @@ function replaceAll({ habits = [], categories = [], journalEntries = [], setting
     }
   })
   tx()
-  // Re-seed categories if the backup contained none.
+  // Upgrade old built-in category icons when restoring older backups.
   seedCategories()
 }
 

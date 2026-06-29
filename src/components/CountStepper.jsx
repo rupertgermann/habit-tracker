@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
 import { getCountForDate, toDateKey } from '../domain/habitTracking'
+import AppIcon from './AppIcon'
 
 const StepperWrapper = styled.div`
   display: flex;
@@ -19,9 +20,6 @@ const StepButton = styled(motion.button)`
   border: 2px solid ${props => props.theme.colors.primary};
   background-color: ${props => props.$variant === 'plus' ? props.theme.colors.primary : 'transparent'};
   color: ${props => props.$variant === 'plus' ? props.theme.colors.white : props.theme.colors.primary};
-  font-size: 18px;
-  font-weight: ${props => props.theme.typography.fontWeight.bold};
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,9 +63,9 @@ const CountStepper = ({ habit, onChange }) => {
     incrementCompletion(habit.id)
     const next = count + 1
     if (target && next === target) {
-      showSuccessToast(`Daily goal reached for "${habit.name}"! 🎉`)
+      showSuccessToast(`Daily goal reached for "${habit.name}"!`)
     } else {
-      showSuccessToast(`"${habit.name}" logged — ${next} today`)
+      showSuccessToast(`"${habit.name}" logged - ${next} today`)
     }
     if (onChange) onChange(next)
   }
@@ -90,7 +88,7 @@ const CountStepper = ({ habit, onChange }) => {
         whileTap={{ scale: count === 0 ? 1 : 0.9 }}
         aria-label={`Remove one from ${habit.name}`}
       >
-        −
+        <AppIcon name="minus" size={18} stroke={3} />
       </StepButton>
       <CountValue>
         <CountNumber>{count}</CountNumber>
@@ -104,7 +102,7 @@ const CountStepper = ({ habit, onChange }) => {
         whileTap={{ scale: 0.9 }}
         aria-label={`Add one to ${habit.name}`}
       >
-        +
+        <AppIcon name="plus" size={18} stroke={3} />
       </StepButton>
     </StepperWrapper>
   )

@@ -2,6 +2,7 @@ import React from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { getRecentActivityDays } from '../domain/habitTracking'
+import AppIcon from './AppIcon'
 
 const StreakContainer = styled.div`
   display: flex;
@@ -83,7 +84,8 @@ const StreakMilestone = styled.div`
 `
 
 const MilestoneIcon = styled.div`
-  font-size: 24px;
+  display: inline-flex;
+  color: ${props => props.theme.colors.primary};
 `
 
 const MilestoneText = styled.div`
@@ -112,7 +114,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
   const getMilestone = () => {
     if (streak >= 30) {
       return {
-        icon: '🏆',
+        icon: 'trophy',
         title: 'Incredible!',
         description: '30+ day streak! You\'re building life-changing habits.'
       }
@@ -120,7 +122,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
     
     if (streak >= 21) {
       return {
-        icon: '🔥',
+        icon: 'flame',
         title: 'Amazing!',
         description: '21+ day streak! Your habit is becoming automatic.'
       }
@@ -128,7 +130,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
     
     if (streak >= 14) {
       return {
-        icon: '⭐',
+        icon: 'star',
         title: 'Great Job!',
         description: '14+ day streak! You\'re making real progress.'
       }
@@ -136,7 +138,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
     
     if (streak >= 7) {
       return {
-        icon: '👏',
+        icon: 'circle-check',
         title: 'One Week!',
         description: '7-day streak! Keep up the great work.'
       }
@@ -144,7 +146,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
     
     if (streak >= 3) {
       return {
-        icon: '💪',
+        icon: 'dumbbell',
         title: 'Getting Started!',
         description: '3-day streak! You\'re building momentum.'
       }
@@ -182,7 +184,9 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
       
       {milestone && (
         <StreakMilestone>
-          <MilestoneIcon>{milestone.icon}</MilestoneIcon>
+          <MilestoneIcon>
+            <AppIcon name={milestone.icon} size={24} />
+          </MilestoneIcon>
           <MilestoneText>
             <MilestoneTitle>{milestone.title}</MilestoneTitle>
             <MilestoneDescription>{milestone.description}</MilestoneDescription>

@@ -8,9 +8,11 @@ import CircularProgress from '../components/CircularProgress'
 import Confetti from '../components/Confetti'
 import JournalEntry from '../components/JournalEntry'
 import CountStepper from '../components/CountStepper'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
 import { getRecentActivityDays, toDateKey } from '../domain/habitTracking'
+import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const HabitDetailContainer = styled.div`
   width: 100%;
@@ -47,7 +49,7 @@ const HabitIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: ${props => props.$color || props.theme.colors.primary};
-  font-size: 24px;
+  flex: 0 0 auto;
 `
 
 const StatsGrid = styled.div`
@@ -174,7 +176,8 @@ const StreakIndicator = styled.div`
 `
 
 const FireIcon = styled.span`
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
 `
 
 const CountActionPanel = styled(Card)`
@@ -252,7 +255,7 @@ const HabitDetail = () => {
         // Show confetti for milestone streaks
         if (streak > 0 && (streak + 1) % 7 === 0) {
           setShowConfetti(true)
-          showSuccessToast(`🔥 ${streak + 1} day streak! Keep it up!`)
+          showSuccessToast(`${streak + 1} day streak! Keep it up!`)
         }
       }
     }
@@ -315,7 +318,7 @@ const HabitDetail = () => {
       <Header>
         <Title>
           <HabitIcon $color={habit.color}>
-            {habit.icon || '✓'}
+            <AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={24} />
           </HabitIcon>
           {habit.name}
         </Title>
@@ -357,7 +360,11 @@ const HabitDetail = () => {
             <StreakIndicator>
               {isCompletedToday ? 'Completed' : 'Not completed'}
               {isCountHabit && ` (${todayCount} today)`}
-              {isCompletedToday && <FireIcon>🔥</FireIcon>}
+              {isCompletedToday && (
+                <FireIcon>
+                  <AppIcon name="flame" size={18} />
+                </FireIcon>
+              )}
             </StreakIndicator>
           </InfoValue>
         </InfoRow>

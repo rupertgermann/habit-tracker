@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { useNavigation } from '../context/NavigationContext'
+import AppIcon from './AppIcon'
 
 const NavContainer = styled.nav`
   position: fixed;
@@ -73,8 +74,12 @@ const NavItem = styled(motion.button)`
 `
 
 const NavIcon = styled.div`
-  font-size: 24px;
+  width: 24px;
+  height: 24px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `
 
 const NavLabel = styled.span`
@@ -95,37 +100,37 @@ const navItems = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    icon: '📊',
+    icon: 'chart-bar',
     path: '/'
   },
   {
     id: 'habits',
     label: 'Habits',
-    icon: '✓',
+    icon: 'checkbox',
     path: '/habits'
   },
   {
     id: 'calendar',
     label: 'Calendar',
-    icon: '📅',
+    icon: 'calendar',
     path: '/calendar'
   },
   {
     id: 'journal',
     label: 'Journal',
-    icon: '📔',
+    icon: 'notebook',
     path: '/journal'
   },
   {
     id: 'progress',
     label: 'Progress',
-    icon: '📈',
+    icon: 'chart-line',
     path: '/progress'
   },
   {
     id: 'settings',
     label: 'Settings',
-    icon: '⚙️',
+    icon: 'settings',
     path: '/settings'
   }
 ]
@@ -150,7 +155,9 @@ const BottomNavigation = () => {
           whileTap={{ scale: 0.95 }}
           aria-label={item.label}
         >
-          <NavIcon>{item.icon}</NavIcon>
+          <NavIcon>
+            <AppIcon name={item.icon} size={24} />
+          </NavIcon>
           <NavLabel>{item.label}</NavLabel>
         </NavItem>
       ))}

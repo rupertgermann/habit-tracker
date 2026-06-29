@@ -122,8 +122,58 @@ test('appearance picker stores expanded icon and distinct color choices', async 
   const createdHabit = await waitForHabitByName(request, habitName)
   expect(createdHabit).toMatchObject({
     color: '#14B8A6',
-    icon: '☕'
+    icon: 'coffee'
   })
+
+  const state = await getState(request)
+  expect(state.categories).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: 'health', icon: 'dumbbell' }),
+    expect.objectContaining({ id: 'productivity', icon: 'notes' }),
+    expect.objectContaining({ id: 'mindfulness', icon: 'yoga' }),
+    expect.objectContaining({ id: 'learning', icon: 'books' }),
+    expect.objectContaining({ id: 'social', icon: 'users' }),
+    expect.objectContaining({ id: 'creativity', icon: 'palette' }),
+    expect.objectContaining({ id: 'other', icon: 'pin' })
+  ]))
+
+  await page.goto(`/edit-habit/${createdHabit.id}`)
+  await waitForAppReady(page)
+  await page.getByRole('searchbox', { name: 'Search icons' }).fill('water')
+  await page.getByRole('button', { name: 'Select icon Water' }).click()
+  await page.getByRole('button', { name: 'Update Habit' }).click()
+
+  await expect.poll(async () => {
+    const updatedHabit = await findHabitByName(request, habitName)
+    return updatedHabit?.icon
+  }).toBe('droplet')
+
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByText(habitName)).toBeVisible()
+})
+
+test('legacy string icons continue to render safely', async ({ page, request }) => {
+  await resetAppData(request, {
+    habits: [
+      makeHabit({
+        id: 'e2e-legacy-icon',
+        name: 'E2E Legacy Icon',
+        icon: 'Y',
+        completions: []
+      })
+    ],
+    categories: [
+      { id: 'legacy', name: 'Legacy Category', color: '#6B7280', icon: 'L' }
+    ]
+  })
+
+  await page.goto('/habits')
+  await waitForAppReady(page)
+
+  await expect(page.getByText('E2E Legacy Icon')).toBeVisible()
+  await expect(page.getByText('Legacy Category')).toBeVisible()
+  await expect(page.getByText('Y', { exact: true })).toBeVisible()
+  await expect(page.getByText('L', { exact: true })).toBeVisible()
 })
 
 test('yes/no habit toggle persists one dated completion and toggles it off', async ({ page, request }) => {
@@ -144,7 +194,7 @@ test('yes/no habit toggle persists one dated completion and toggles it off', asy
 
   await page.goto('/habit/e2e-yes-no-persistence')
   await waitForAppReady(page)
-  await expect(page.getByRole('heading', { name: habitName, exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: /E2E Yes No Persistence/ })).toBeVisible()
 
   await page.getByRole('button', { name: 'Mark as Complete' }).click()
   await waitForCompletionCount(request, habitName, today, 1)

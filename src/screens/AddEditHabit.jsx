@@ -5,7 +5,14 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import CategorySelector from '../components/CategorySelector'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import {
+  DEFAULT_HABIT_ICON,
+  allIconOptions,
+  iconGroupTabs,
+  iconGroups
+} from '../domain/iconCatalog'
 
 const FormContainer = styled.div`
   width: 100%;
@@ -227,7 +234,7 @@ const IconOption = styled.button`
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.small};
   background: none;
-  font-size: 20px;
+  color: ${props => props.theme.colors.text.primary};
   cursor: pointer;
   transition: all 0.2s ease;
   justify-self: center;
@@ -237,6 +244,7 @@ const IconOption = styled.button`
     `
       background-color: ${theme.colors.primary}20;
       border-color: ${theme.colors.primary};
+      color: ${theme.colors.primary};
     `}
   
   &:hover {
@@ -309,189 +317,6 @@ const colorOptions = [
   { name: 'Graphite', value: '#374151' }
 ]
 
-const iconGroups = [
-  {
-    id: 'essentials',
-    name: 'Essentials',
-    icons: [
-      { icon: '✓', label: 'Check', tags: ['done', 'complete'] },
-      { icon: '⭐', label: 'Star', tags: ['favorite', 'priority'] },
-      { icon: '🎯', label: 'Target', tags: ['goal', 'focus'] },
-      { icon: '🔥', label: 'Fire', tags: ['streak', 'energy'] },
-      { icon: '⏰', label: 'Alarm', tags: ['time', 'routine'] },
-      { icon: '📅', label: 'Calendar', tags: ['schedule', 'date'] },
-      { icon: '📌', label: 'Pin', tags: ['remember', 'important'] },
-      { icon: '🏆', label: 'Trophy', tags: ['win', 'achievement'] },
-      { icon: '💎', label: 'Diamond', tags: ['quality', 'premium'] },
-      { icon: '🚀', label: 'Rocket', tags: ['launch', 'progress'] },
-      { icon: '⚡', label: 'Lightning', tags: ['fast', 'energy'] },
-      { icon: '🔁', label: 'Repeat', tags: ['recurring', 'loop'] }
-    ]
-  },
-  {
-    id: 'health',
-    name: 'Health',
-    icons: [
-      { icon: '💪', label: 'Strength', tags: ['fitness', 'workout'] },
-      { icon: '🏃', label: 'Running', tags: ['run', 'cardio'] },
-      { icon: '🚶', label: 'Walking', tags: ['walk', 'steps'] },
-      { icon: '🚴', label: 'Cycling', tags: ['bike', 'cardio'] },
-      { icon: '🏊', label: 'Swimming', tags: ['swim', 'sport'] },
-      { icon: '🏋️', label: 'Weightlifting', tags: ['gym', 'lift'] },
-      { icon: '🤸', label: 'Stretching', tags: ['mobility', 'movement'] },
-      { icon: '🧘', label: 'Meditation', tags: ['mindfulness', 'calm'] },
-      { icon: '🧠', label: 'Brain', tags: ['mental', 'focus'] },
-      { icon: '❤️', label: 'Heart', tags: ['health', 'love'] },
-      { icon: '🩺', label: 'Checkup', tags: ['doctor', 'health'] },
-      { icon: '💊', label: 'Medicine', tags: ['medication', 'pill'] },
-      { icon: '🦷', label: 'Teeth', tags: ['dental', 'brush'] },
-      { icon: '🧼', label: 'Soap', tags: ['wash', 'clean'] },
-      { icon: '🧴', label: 'Skincare', tags: ['care', 'lotion'] },
-      { icon: '🛌', label: 'Bed', tags: ['sleep', 'rest'] },
-      { icon: '💤', label: 'Sleep', tags: ['rest', 'bed'] },
-      { icon: '🌞', label: 'Sun', tags: ['morning', 'daylight'] },
-      { icon: '🌙', label: 'Moon', tags: ['night', 'evening'] },
-      { icon: '⚖️', label: 'Balance', tags: ['weight', 'measure'] }
-    ]
-  },
-  {
-    id: 'food',
-    name: 'Food',
-    icons: [
-      { icon: '💧', label: 'Water', tags: ['hydrate', 'drink'] },
-      { icon: '☕', label: 'Coffee', tags: ['caffeine', 'drink'] },
-      { icon: '🍵', label: 'Tea', tags: ['drink', 'calm'] },
-      { icon: '🥤', label: 'Drink', tags: ['beverage', 'water'] },
-      { icon: '🍎', label: 'Apple', tags: ['fruit', 'healthy'] },
-      { icon: '🍌', label: 'Banana', tags: ['fruit', 'snack'] },
-      { icon: '🍓', label: 'Strawberry', tags: ['fruit', 'snack'] },
-      { icon: '🥑', label: 'Avocado', tags: ['healthy', 'food'] },
-      { icon: '🥗', label: 'Salad', tags: ['healthy', 'meal'] },
-      { icon: '🥦', label: 'Broccoli', tags: ['vegetables', 'food'] },
-      { icon: '🥕', label: 'Carrot', tags: ['vegetables', 'food'] },
-      { icon: '🥚', label: 'Egg', tags: ['protein', 'food'] },
-      { icon: '🍞', label: 'Bread', tags: ['meal', 'food'] },
-      { icon: '🍚', label: 'Rice', tags: ['meal', 'food'] },
-      { icon: '🍽️', label: 'Meal', tags: ['plate', 'food'] },
-      { icon: '🧃', label: 'Juice', tags: ['drink', 'beverage'] }
-    ]
-  },
-  {
-    id: 'learning',
-    name: 'Learning',
-    icons: [
-      { icon: '📚', label: 'Books', tags: ['read', 'study'] },
-      { icon: '📖', label: 'Reading', tags: ['book', 'learn'] },
-      { icon: '✍️', label: 'Writing', tags: ['journal', 'notes'] },
-      { icon: '📝', label: 'Notes', tags: ['write', 'todo'] },
-      { icon: '📓', label: 'Notebook', tags: ['journal', 'study'] },
-      { icon: '🧮', label: 'Abacus', tags: ['math', 'practice'] },
-      { icon: '🔬', label: 'Science', tags: ['lab', 'study'] },
-      { icon: '🔭', label: 'Astronomy', tags: ['science', 'space'] },
-      { icon: '💻', label: 'Laptop', tags: ['code', 'work'] },
-      { icon: '⌨️', label: 'Keyboard', tags: ['typing', 'code'] },
-      { icon: '🧑‍💻', label: 'Coding', tags: ['developer', 'programming'] },
-      { icon: '🗣️', label: 'Speaking', tags: ['language', 'practice'] },
-      { icon: '🎧', label: 'Listening', tags: ['audio', 'language'] },
-      { icon: '🧩', label: 'Puzzle', tags: ['thinking', 'problem'] },
-      { icon: '💡', label: 'Idea', tags: ['learn', 'insight'] },
-      { icon: '🧪', label: 'Experiment', tags: ['test', 'science'] }
-    ]
-  },
-  {
-    id: 'work',
-    name: 'Work',
-    icons: [
-      { icon: '📋', label: 'Clipboard', tags: ['plan', 'tasks'] },
-      { icon: '✅', label: 'Checklist', tags: ['todo', 'done'] },
-      { icon: '📈', label: 'Growth Chart', tags: ['progress', 'stats'] },
-      { icon: '📊', label: 'Bar Chart', tags: ['metrics', 'stats'] },
-      { icon: '📁', label: 'Folder', tags: ['organize', 'files'] },
-      { icon: '📬', label: 'Inbox', tags: ['email', 'messages'] },
-      { icon: '📞', label: 'Call', tags: ['phone', 'contact'] },
-      { icon: '💬', label: 'Message', tags: ['chat', 'communication'] },
-      { icon: '🤝', label: 'Handshake', tags: ['meeting', 'agreement'] },
-      { icon: '🧾', label: 'Receipt', tags: ['admin', 'finance'] },
-      { icon: '💰', label: 'Money', tags: ['budget', 'finance'] },
-      { icon: '🏦', label: 'Bank', tags: ['finance', 'money'] },
-      { icon: '🧹', label: 'Clean Up', tags: ['tidy', 'organize'] },
-      { icon: '🗂️', label: 'Files', tags: ['archive', 'organize'] },
-      { icon: '🔒', label: 'Lock', tags: ['security', 'privacy'] },
-      { icon: '🛠️', label: 'Tools', tags: ['repair', 'maintenance'] }
-    ]
-  },
-  {
-    id: 'home',
-    name: 'Home',
-    icons: [
-      { icon: '🏠', label: 'Home', tags: ['house', 'routine'] },
-      { icon: '🛏️', label: 'Bedroom', tags: ['bed', 'sleep'] },
-      { icon: '🧺', label: 'Laundry', tags: ['clothes', 'wash'] },
-      { icon: '🧽', label: 'Sponge', tags: ['clean', 'chores'] },
-      { icon: '🪥', label: 'Toothbrush', tags: ['brush', 'teeth'] },
-      { icon: '🚿', label: 'Shower', tags: ['wash', 'bathroom'] },
-      { icon: '🪴', label: 'Plant', tags: ['garden', 'water'] },
-      { icon: '🌱', label: 'Seedling', tags: ['grow', 'plant'] },
-      { icon: '🌿', label: 'Herb', tags: ['plant', 'garden'] },
-      { icon: '🛒', label: 'Shopping Cart', tags: ['groceries', 'errands'] },
-      { icon: '🧑‍🍳', label: 'Cooking', tags: ['cook', 'meal'] },
-      { icon: '🔑', label: 'Key', tags: ['home', 'security'] },
-      { icon: '🧯', label: 'Safety', tags: ['fire', 'home'] },
-      { icon: '🚗', label: 'Car', tags: ['drive', 'commute'] },
-      { icon: '🚌', label: 'Transit', tags: ['bus', 'commute'] }
-    ]
-  },
-  {
-    id: 'creative',
-    name: 'Creative',
-    icons: [
-      { icon: '🎨', label: 'Palette', tags: ['art', 'paint'] },
-      { icon: '✏️', label: 'Pencil', tags: ['draw', 'sketch'] },
-      { icon: '🖌️', label: 'Brush', tags: ['paint', 'art'] },
-      { icon: '🎵', label: 'Music', tags: ['song', 'practice'] },
-      { icon: '🎸', label: 'Guitar', tags: ['music', 'instrument'] },
-      { icon: '🎹', label: 'Piano', tags: ['music', 'instrument'] },
-      { icon: '🎤', label: 'Singing', tags: ['voice', 'music'] },
-      { icon: '📷', label: 'Camera', tags: ['photo', 'creative'] },
-      { icon: '🎥', label: 'Video', tags: ['film', 'camera'] },
-      { icon: '🎬', label: 'Clapperboard', tags: ['film', 'video'] },
-      { icon: '🧵', label: 'Sewing', tags: ['craft', 'thread'] },
-      { icon: '🧶', label: 'Yarn', tags: ['knit', 'craft'] },
-      { icon: '🎲', label: 'Dice', tags: ['game', 'play'] },
-      { icon: '♟️', label: 'Chess', tags: ['strategy', 'game'] },
-      { icon: '🎮', label: 'Game', tags: ['play', 'controller'] },
-      { icon: '🎭', label: 'Theater', tags: ['acting', 'creative'] }
-    ]
-  },
-  {
-    id: 'social',
-    name: 'Social',
-    icons: [
-      { icon: '👥', label: 'People', tags: ['social', 'group'] },
-      { icon: '👨‍👩‍👧', label: 'Family', tags: ['home', 'people'] },
-      { icon: '💌', label: 'Letter', tags: ['message', 'kindness'] },
-      { icon: '🎁', label: 'Gift', tags: ['giving', 'birthday'] },
-      { icon: '🙏', label: 'Gratitude', tags: ['thanks', 'reflect'] },
-      { icon: '😊', label: 'Smile', tags: ['mood', 'happy'] },
-      { icon: '🌈', label: 'Rainbow', tags: ['joy', 'mood'] },
-      { icon: '🌍', label: 'World', tags: ['community', 'travel'] },
-      { icon: '🕯️', label: 'Candle', tags: ['reflect', 'calm'] },
-      { icon: '☮️', label: 'Peace', tags: ['calm', 'mindful'] },
-      { icon: '💐', label: 'Flowers', tags: ['gift', 'kindness'] },
-      { icon: '🎉', label: 'Celebration', tags: ['party', 'milestone'] }
-    ]
-  }
-]
-
-const allIconOptions = Array.from(
-  new Map(iconGroups.flatMap(group => group.icons).map(option => [option.icon, option])).values()
-)
-
-const iconGroupTabs = [
-  { id: 'all', name: 'All' },
-  ...iconGroups.map(group => ({ id: group.id, name: group.name }))
-]
-
 const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 const AddEditHabit = () => {
@@ -509,7 +334,7 @@ const AddEditHabit = () => {
     daysPerWeek: 3,
     selectedDays: [false, false, false, false, false, false, false],
     color: '#6CC47C',
-    icon: '✓',
+    icon: DEFAULT_HABIT_ICON,
     category: 'other',
     reminders: []
   })
@@ -568,7 +393,7 @@ const AddEditHabit = () => {
           daysPerWeek: habit.daysPerWeek || 3,
           selectedDays: habit.selectedDays || [false, false, false, false, false, false, false],
           color: habit.color || '#6CC47C',
-          icon: habit.icon || '✓',
+          icon: habit.icon || DEFAULT_HABIT_ICON,
           category: habit.category || 'other',
           reminders: habit.reminders || []
         })
@@ -898,7 +723,7 @@ const AddEditHabit = () => {
                       aria-pressed={formData.icon === icon.icon}
                       title={icon.label}
                     >
-                      {icon.icon}
+                      <AppIcon name={icon.icon} size={22} />
                     </IconOption>
                   ))
                 ) : (

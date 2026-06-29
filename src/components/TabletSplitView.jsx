@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import HabitsList from '../screens/HabitsList'
 import HabitDetail from '../screens/HabitDetail'
 import { useHabits } from '../context/HabitsContext'
+import AppIcon from './AppIcon'
 
 const SplitViewContainer = styled.div`
   display: flex;
@@ -36,7 +37,8 @@ const EmptyDetailPanel = styled.div`
 `
 
 const EmptyIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  color: ${props => props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.lg};
   opacity: 0.5;
 `
@@ -90,7 +92,9 @@ const TabletSplitView = () => {
           <HabitDetail />
         ) : (
           <EmptyDetailPanel>
-            <EmptyIcon>📋</EmptyIcon>
+            <EmptyIcon>
+              <AppIcon name="clipboard" size={64} />
+            </EmptyIcon>
             <EmptyTitle>Select a Habit</EmptyTitle>
             <EmptyText>
               Choose a habit from the list to view its details, progress, and statistics.

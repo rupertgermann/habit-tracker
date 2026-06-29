@@ -5,6 +5,7 @@ import BarChart from '../components/BarChart'
 import LineChart from '../components/LineChart'
 import CircularProgress from '../components/CircularProgress'
 import StreakVisualization from '../components/StreakVisualization'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 
 const ProgressContainer = styled.div`
@@ -133,7 +134,6 @@ const InsightIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: ${props => props.$color || props.theme.colors.primary};
-  font-size: 20px;
   flex-shrink: 0;
 `
 
@@ -159,7 +159,9 @@ const EmptyState = styled.div`
 `
 
 const EmptyStateIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  justify-content: center;
+  color: ${props => props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
@@ -201,7 +203,7 @@ const ProgressStats = () => {
     
     if (stats.completionRate === 100 && stats.totalHabits > 0) {
       insights.push({
-        icon: '🎯',
+        icon: 'target',
         title: 'Perfect Day!',
         description: 'You completed all your habits today. Keep up the amazing work!',
         color: '#6CC47C'
@@ -210,7 +212,7 @@ const ProgressStats = () => {
     
     if (stats.maxStreak >= 7) {
       insights.push({
-        icon: '🔥',
+        icon: 'flame',
         title: 'Week Long Streak',
         description: `You're on a ${stats.maxStreak}-day streak! Consistency is building strong habits.`,
         color: '#F6D860'
@@ -219,7 +221,7 @@ const ProgressStats = () => {
     
     if (stats.totalCompletions >= 50) {
       insights.push({
-        icon: '🏆',
+        icon: 'trophy',
         title: 'Milestone Reached',
         description: `You've completed ${stats.totalCompletions} habits total. Every completion counts!`,
         color: '#6CC47C'
@@ -228,7 +230,7 @@ const ProgressStats = () => {
     
     if (stats.totalHabits === 0) {
       insights.push({
-        icon: '🌱',
+        icon: 'seedling',
         title: 'Start Your Journey',
         description: 'Create your first habit to begin building a better you.',
         color: '#6CC47C'
@@ -237,7 +239,7 @@ const ProgressStats = () => {
     
     if (stats.completionRate < 50 && stats.totalHabits > 0) {
       insights.push({
-        icon: '💪',
+        icon: 'dumbbell',
         title: 'Room to Grow',
         description: 'Focus on consistency rather than perfection. Small steps lead to big changes.',
         color: '#F6D860'
@@ -257,7 +259,9 @@ const ProgressStats = () => {
         </Header>
         
         <EmptyState>
-          <EmptyStateIcon>📊</EmptyStateIcon>
+          <EmptyStateIcon>
+            <AppIcon name="chart-bar" size={64} />
+          </EmptyStateIcon>
           <EmptyStateTitle>No progress yet</EmptyStateTitle>
           <EmptyStateText>Create your first habit to start tracking your progress.</EmptyStateText>
         </EmptyState>
@@ -354,7 +358,7 @@ const ProgressStats = () => {
             {insights.map((insight, index) => (
               <InsightItem key={index}>
                 <InsightIcon $color={insight.color}>
-                  {insight.icon}
+                  <AppIcon name={insight.icon} size={22} />
                 </InsightIcon>
                 <InsightContent>
                   <InsightTitle>{insight.title}</InsightTitle>

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { motion } from 'framer-motion'
+import AppIcon from './AppIcon'
+import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const fadeIn = keyframes`
   from {
@@ -129,7 +131,8 @@ const HabitStatus = styled.div`
 `
 
 const HabitIcon = styled.span`
-  font-size: 16px;
+  display: inline-flex;
+  color: ${props => props.theme.colors.primary};
 `
 
 const HabitName = styled.span`
@@ -187,10 +190,12 @@ const Tooltip = ({
           {content.map((item, index) => (
             <TooltipListItem key={index}>
               <HabitStatus>
-                <HabitIcon>{item.icon || '✓'}</HabitIcon>
+                <HabitIcon>
+                  <AppIcon name={item.icon} fallbackName={DEFAULT_HABIT_ICON} size={16} />
+                </HabitIcon>
                 <HabitName>{item.name}</HabitName>
                 <CompletionStatus $completed={item.completed}>
-                  {item.completed ? '✓' : '✗'}
+                  <AppIcon name={item.completed ? 'check' : 'x'} size={14} />
                 </CompletionStatus>
               </HabitStatus>
             </TooltipListItem>

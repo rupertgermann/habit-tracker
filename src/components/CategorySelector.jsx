@@ -1,6 +1,8 @@
 import React from 'react'
 import styled from 'styled-components'
 import { useHabits } from '../context/HabitsContext'
+import AppIcon from './AppIcon'
+import { DEFAULT_CATEGORY_ICON } from '../domain/iconCatalog'
 
 const CategorySelectorContainer = styled.div`
   margin-bottom: ${props => props.theme.spacing.md};
@@ -40,7 +42,12 @@ const CategoryOption = styled.div`
 `
 
 const CategoryIcon = styled.div`
-  font-size: 20px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$color || props.theme.colors.primary};
   flex-shrink: 0;
 `
 
@@ -63,7 +70,9 @@ const CategorySelector = ({ selectedCategory, onCategoryChange, showLabel = true
             $selected={selectedCategory === category.id}
             onClick={() => onCategoryChange(category.id)}
           >
-            <CategoryIcon>{category.icon}</CategoryIcon>
+            <CategoryIcon $color={category.color}>
+              <AppIcon name={category.icon} fallbackName={DEFAULT_CATEGORY_ICON} size={22} />
+            </CategoryIcon>
             <CategoryName>{category.name}</CategoryName>
           </CategoryOption>
         ))}

@@ -2,6 +2,7 @@ import React from 'react'
 import styled, { keyframes } from 'styled-components'
 import { motion } from 'framer-motion'
 import { lightTheme } from '../styles/theme'
+import AppIcon from './AppIcon'
 
 const slideUp = keyframes`
   from {
@@ -58,7 +59,7 @@ const ToastContainer = styled(motion.div)`
 `
 
 const ToastIcon = styled.span`
-  font-size: 20px;
+  display: inline-flex;
   flex-shrink: 0;
 `
 
@@ -86,13 +87,14 @@ const Toast = ({
   }, [duration, onClose])
 
   const getIcon = () => {
-    if (icon) return icon
+    if (React.isValidElement(icon)) return icon
+    if (typeof icon === 'string' && icon) return <AppIcon name={icon} size={20} />
     
     switch (variant) {
-      case 'success': return '✓'
-      case 'error': return '✕'
-      case 'warning': return '⚠'
-      default: return '✓'
+      case 'success': return <AppIcon name="check" size={20} />
+      case 'error': return <AppIcon name="x" size={20} />
+      case 'warning': return <AppIcon name="alarm" size={20} />
+      default: return <AppIcon name="check" size={20} />
     }
   }
 

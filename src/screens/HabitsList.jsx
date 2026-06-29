@@ -7,8 +7,10 @@ import Button from '../components/Button'
 import Confetti from '../components/Confetti'
 import CountStepper from '../components/CountStepper'
 import EmptyState from '../components/EmptyState'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
+import { DEFAULT_CATEGORY_ICON, DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const HabitsListContainer = styled.div`
   width: 100%;
@@ -76,6 +78,7 @@ const CategoryChip = styled.button`
 const CategoryIconText = styled.span`
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   line-height: 1;
   flex-shrink: 0;
 `
@@ -149,7 +152,6 @@ const HabitIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: ${props => props.$color || props.theme.colors.primary};
-  font-size: 24px;
 `
 
 const HabitDetails = styled.div`
@@ -200,6 +202,7 @@ const CheckButton = styled(motion.button)`
   border-radius: ${props => props.theme.borderRadius.round};
   border: 2px solid ${props => props.$checked ? props.theme.colors.primary : props.theme.colors.border};
   background-color: ${props => props.$checked ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.theme.colors.white};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,17 +214,6 @@ const CheckButton = styled(motion.button)`
     transform: scale(1.1);
   }
 `
-
-const CheckIcon = styled.svg`
-  width: 20px;
-  height: 20px;
-  stroke: ${props => props.theme.colors.white};
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-`
-
 
 const FloatingActionButton = styled(motion.button)`
   position: fixed;
@@ -243,16 +235,6 @@ const FloatingActionButton = styled(motion.button)`
   &:hover {
     background-color: #5CAD6C;
   }
-`
-
-const PlusIcon = styled.svg`
-  width: 24px;
-  height: 24px;
-  stroke: ${props => props.theme.colors.white};
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 `
 
 const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
@@ -324,7 +306,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   }
 
   const getCategoryInfo = (categoryId) => {
-    return categories.find(cat => cat.id === categoryId) || { id: 'other', name: 'Other', color: '#6B7280', icon: '📌' }
+    return categories.find(cat => cat.id === categoryId) || { id: 'other', name: 'Other', color: '#6B7280', icon: DEFAULT_CATEGORY_ICON }
   }
 
   const getFrequencyText = (habit) => {
@@ -388,7 +370,9 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
             $color={category.color}
             onClick={() => handleCategoryFilter(category.id)}
           >
-            <CategoryIconText aria-hidden="true">{category.icon}</CategoryIconText>
+            <CategoryIconText aria-hidden="true">
+              <AppIcon name={category.icon} fallbackName={DEFAULT_CATEGORY_ICON} size={16} />
+            </CategoryIconText>
             <CategoryLabelText>{category.name}</CategoryLabelText>
           </CategoryChip>
         ))}
@@ -422,20 +406,24 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
             >
               <HabitInfo>
                 <HabitIcon $color={habit.color}>
-                  {habit.icon || '✓'}
+                  <AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={24} />
                 </HabitIcon>
                 <HabitDetails>
                   <HabitName>{habit.name}</HabitName>
                   <HabitMeta>
                     <HabitStreak>
-                      🔥 {getHabitStreak(habit)} days
+                      <AppIcon name="flame" size={14} /> {getHabitStreak(habit)} days
                     </HabitStreak>
                     <HabitFrequency>
                       {getFrequencyText(habit)}
                     </HabitFrequency>
                     <CategoryBadge $color={getCategoryInfo(habit.category).color}>
                       <CategoryIconText aria-hidden="true">
-                        {getCategoryInfo(habit.category).icon}
+                        <AppIcon
+                          name={getCategoryInfo(habit.category).icon}
+                          fallbackName={DEFAULT_CATEGORY_ICON}
+                          size={14}
+                        />
                       </CategoryIconText>
                       <CategoryLabelText>
                         {getCategoryInfo(habit.category).name}
@@ -454,9 +442,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
                   whileTap={{ scale: 0.9 }}
                 >
                   {getHabitStatus(habit) && (
-                    <CheckIcon>
-                      <polyline points="20 6 9 17 4 12" />
-                    </CheckIcon>
+                    <AppIcon name="check" size={20} stroke={3} />
                   )}
                 </CheckButton>
               )}
@@ -471,10 +457,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
         whileTap={{ scale: 0.9 }}
         aria-label="Add new habit"
       >
-        <PlusIcon>
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </PlusIcon>
+        <AppIcon name="plus" size={24} stroke={3} />
       </FloatingActionButton>
     </HabitsListContainer>
   )

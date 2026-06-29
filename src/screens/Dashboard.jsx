@@ -10,8 +10,10 @@ import BarChart from '../components/BarChart'
 import Confetti from '../components/Confetti'
 import CountStepper from '../components/CountStepper'
 import EmptyState from '../components/EmptyState'
+import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
+import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const DashboardContainer = styled.div`
   width: 100%;
@@ -146,7 +148,6 @@ const HabitIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: ${props => props.theme.colors.primary};
-  font-size: 20px;
 `
 
 const HabitDetails = styled.div`
@@ -179,6 +180,7 @@ const CheckButton = styled(motion.button)`
   border-radius: ${props => props.theme.borderRadius.round};
   border: 2px solid ${props => props.$checked ? props.theme.colors.primary : props.theme.colors.border};
   background-color: ${props => props.$checked ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.theme.colors.white};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,16 +190,6 @@ const CheckButton = styled(motion.button)`
   &:hover {
     transform: scale(1.1);
   }
-`
-
-const CheckIcon = styled.svg`
-  width: 16px;
-  height: 16px;
-  stroke: ${props => props.theme.colors.white};
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 `
 
 
@@ -241,7 +233,7 @@ const Dashboard = () => {
       if (completedCount === stats.totalHabits && stats.totalHabits > 0) {
         // All habits completed
         setShowConfetti(true)
-        showSuccessToast('🎉 Perfect day! All habits completed!')
+        showSuccessToast('Perfect day! All habits completed!')
       } else if (completedCount % 3 === 0) {
         // Every 3 habits completed
         setShowConfetti(true)
@@ -261,7 +253,7 @@ const Dashboard = () => {
     
     if (completionRate === 100) {
       return {
-        title: "Perfect Day! 🎉",
+        title: "Perfect Day!",
         text: "You've completed all your habits today. Amazing work!"
       }
     }
@@ -275,7 +267,7 @@ const Dashboard = () => {
     
     if (maxStreak >= 7) {
       return {
-        title: "On Fire! 🔥",
+        title: "On Fire!",
         text: `You're on a ${maxStreak}-day streak. Keep it up!`
       }
     }
@@ -366,13 +358,13 @@ const Dashboard = () => {
             >
               <HabitInfo>
                 <HabitIcon $color={habit.color}>
-                  {habit.icon || '✓'}
+                  <AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={22} />
                 </HabitIcon>
                 <HabitDetails>
                   <HabitName>{habit.name}</HabitName>
                   <HabitMeta>
                     <HabitStreak>
-                      🔥 {getHabitStreak(habits.find(h => h.id === habit.id) || habit)} days
+                      <AppIcon name="flame" size={14} /> {getHabitStreak(habits.find(h => h.id === habit.id) || habit)} days
                     </HabitStreak>
                   </HabitMeta>
                 </HabitDetails>
@@ -390,9 +382,7 @@ const Dashboard = () => {
                   whileTap={{ scale: 0.9 }}
                 >
                   {habit.isCompleted && (
-                    <CheckIcon>
-                      <polyline points="20 6 9 17 4 12" />
-                    </CheckIcon>
+                    <AppIcon name="check" size={18} stroke={3} />
                   )}
                 </CheckButton>
               )}
@@ -434,7 +424,9 @@ const Dashboard = () => {
             textAlign: 'center',
             color: 'var(--text-secondary)'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📔</div>
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+              <AppIcon name="notebook" size={48} />
+            </div>
             <p>Reflect on your habits and track your mood</p>
             <Button
               style={{ marginTop: '16px' }}

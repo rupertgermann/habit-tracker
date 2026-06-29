@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import AppIcon from '../components/AppIcon'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useHabits } from '../context/HabitsContext'
@@ -225,7 +226,6 @@ const SettingIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: ${props => props.theme.colors.text.primary};
-  font-size: 20px;
 `
 
 const SettingInfo = styled.div`
@@ -272,14 +272,9 @@ const SettingSelect = styled.select`
   }
 `
 
-const ChevronIcon = styled.svg`
-  width: 20px;
-  height: 20px;
-  stroke: ${props => props.theme.colors.text.secondary};
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+const ChevronIcon = styled.span`
+  display: inline-flex;
+  color: ${props => props.theme.colors.text.secondary};
 `
 
 const ToggleSwitch = styled.label`
@@ -734,7 +729,7 @@ const Settings = () => {
 
   const settings = [
     {
-      icon: '🔔',
+      icon: 'bell',
       title: 'Notifications',
       description: 'Daily reminders and achievements',
       type: 'toggle',
@@ -742,7 +737,7 @@ const Settings = () => {
       onChange: handleNotificationsToggle
     },
     {
-      icon: '⏰',
+      icon: 'clock',
       title: 'Reminder Time',
       description: 'When to send daily reminders',
       type: 'time',
@@ -750,7 +745,7 @@ const Settings = () => {
       onChange: handleReminderTimeChange
     },
     {
-      icon: '📅',
+      icon: 'calendar-week',
       title: 'Week Starts On',
       description: 'First day used in calendar and journal weeks',
       type: 'select',
@@ -759,7 +754,7 @@ const Settings = () => {
       onChange: setWeekStartsOn
     },
     {
-      icon: '🌙',
+      icon: 'moon',
       title: 'Dark Mode',
       description: 'Easier on the eyes at night',
       type: 'toggle',
@@ -864,7 +859,9 @@ const Settings = () => {
           {settings.map((setting, index) => (
             <SettingItem key={index}>
               <SettingLeft>
-                <SettingIcon>{setting.icon}</SettingIcon>
+                <SettingIcon>
+                  <AppIcon name={setting.icon} size={22} />
+                </SettingIcon>
                 <SettingInfo>
                   <SettingTitle>{setting.title}</SettingTitle>
                   <SettingDescription>{setting.description}</SettingDescription>
@@ -903,7 +900,7 @@ const Settings = () => {
                   <>
                     {setting.value && <SettingValue>{setting.value}</SettingValue>}
                     <ChevronIcon>
-                      <polyline points="9 18 15 12 9 6" />
+                      <AppIcon name="chevron-right" size={20} />
                     </ChevronIcon>
                   </>
                 )}
@@ -918,50 +915,58 @@ const Settings = () => {
         <SettingsCard elevated>
           <SettingItem onClick={handleExportData}>
             <SettingLeft>
-              <SettingIcon>📤</SettingIcon>
+              <SettingIcon>
+                <AppIcon name="upload" size={22} />
+              </SettingIcon>
               <SettingInfo>
                 <SettingTitle>Export Data (JSON)</SettingTitle>
                 <SettingDescription>Download your habit data as JSON</SettingDescription>
               </SettingInfo>
             </SettingLeft>
             <ChevronIcon>
-              <polyline points="9 18 15 12 9 6" />
+              <AppIcon name="chevron-right" size={20} />
             </ChevronIcon>
           </SettingItem>
           <SettingItem onClick={handleExportCSV}>
             <SettingLeft>
-              <SettingIcon>📊</SettingIcon>
+              <SettingIcon>
+                <AppIcon name="file-spreadsheet" size={22} />
+              </SettingIcon>
               <SettingInfo>
                 <SettingTitle>Export Data (CSV)</SettingTitle>
                 <SettingDescription>Download your habit data as CSV</SettingDescription>
               </SettingInfo>
             </SettingLeft>
             <ChevronIcon>
-              <polyline points="9 18 15 12 9 6" />
+              <AppIcon name="chevron-right" size={20} />
             </ChevronIcon>
           </SettingItem>
           <SettingItem onClick={handleBackupData}>
             <SettingLeft>
-              <SettingIcon>💾</SettingIcon>
+              <SettingIcon>
+                <AppIcon name="download" size={22} />
+              </SettingIcon>
               <SettingInfo>
                 <SettingTitle>Backup Data</SettingTitle>
                 <SettingDescription>Save a backup of your data</SettingDescription>
               </SettingInfo>
             </SettingLeft>
             <ChevronIcon>
-              <polyline points="9 18 15 12 9 6" />
+              <AppIcon name="chevron-right" size={20} />
             </ChevronIcon>
           </SettingItem>
           <SettingItem onClick={handleRestoreData}>
             <SettingLeft>
-              <SettingIcon>🔄</SettingIcon>
+              <SettingIcon>
+                <AppIcon name="restore" size={22} />
+              </SettingIcon>
               <SettingInfo>
                 <SettingTitle>Restore Data</SettingTitle>
                 <SettingDescription>Restore from a backup file</SettingDescription>
               </SettingInfo>
             </SettingLeft>
             <ChevronIcon>
-              <polyline points="9 18 15 12 9 6" />
+              <AppIcon name="chevron-right" size={20} />
             </ChevronIcon>
           </SettingItem>
         </SettingsCard>
