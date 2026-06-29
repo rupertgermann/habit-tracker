@@ -54,7 +54,8 @@ export const resetAppData = async (request, state = {}) => {
     data: {
       habits: state.habits || [],
       categories: state.categories || [],
-      journalEntries: state.journalEntries || []
+      journalEntries: state.journalEntries || [],
+      settings: state.settings || {}
     }
   })
 }

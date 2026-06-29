@@ -23,6 +23,25 @@ app.get('/api/state', asyncWrap((req, res) => {
   res.json(store.getState())
 }))
 
+// Settings
+app.get('/api/settings/:key', asyncWrap((req, res) => {
+  res.json({
+    key: req.params.key,
+    value: store.getSetting(req.params.key, null)
+  })
+}))
+
+app.put('/api/settings/:key', asyncWrap((req, res) => {
+  const value = req.body && Object.prototype.hasOwnProperty.call(req.body, 'value')
+    ? req.body.value
+    : null
+
+  res.json({
+    key: req.params.key,
+    value: store.upsertSetting(req.params.key, value)
+  })
+}))
+
 // Habits
 app.post('/api/habits', asyncWrap((req, res) => {
   res.status(201).json(store.upsertRow('habits', req.body))

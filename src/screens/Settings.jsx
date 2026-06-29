@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -12,6 +12,55 @@ import { usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContex
 
 const DEFAULT_PROFILE_NAME = 'User Name'
 const PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
+const PROFILE_SETTINGS_KEY = 'profile'
+const AVATAR_SIZE = 256
+
+const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
+
+const readImageFile = file => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result)
+  reader.onerror = () => reject(new Error('Unable to read image file'))
+  reader.readAsDataURL(file)
+})
+
+const loadImage = src => new Promise((resolve, reject) => {
+  const image = new Image()
+  image.onload = () => resolve(image)
+  image.onerror = () => reject(new Error('Unable to load image file'))
+  image.src = src
+})
+
+const createAvatarImage = async file => {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please choose an image file')
+  }
+
+  const dataUrl = await readImageFile(file)
+  const image = await loadImage(dataUrl)
+  const canvas = document.createElement('canvas')
+  canvas.width = AVATAR_SIZE
+  canvas.height = AVATAR_SIZE
+
+  const context = canvas.getContext('2d')
+  const sourceSize = Math.min(image.naturalWidth, image.naturalHeight)
+  const sourceX = (image.naturalWidth - sourceSize) / 2
+  const sourceY = (image.naturalHeight - sourceSize) / 2
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceSize,
+    sourceSize,
+    0,
+    0,
+    AVATAR_SIZE,
+    AVATAR_SIZE
+  )
+
+  return canvas.toDataURL('image/jpeg', 0.88)
+}
 
 const SettingsContainer = styled.div`
   width: 100%;
@@ -48,10 +97,13 @@ const Avatar = styled.div`
   height: 80px;
   flex: 0 0 80px;
   border-radius: ${props => props.theme.borderRadius.round};
-  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.secondary});
+  background: ${props => props.$hasImage
+    ? props.theme.colors.background
+    : `linear-gradient(135deg, ${props.theme.colors.primary}, ${props.theme.colors.secondary})`};
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   color: ${props => props.theme.colors.white};
   font-size: 32px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
@@ -63,6 +115,25 @@ const Avatar = styled.div`
     flex-basis: 64px;
     font-size: 28px;
   }
+`
+
+const AvatarImage = styled.img`
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+`
+
+const AvatarInput = styled.input`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 `
 
 const ProfileInfo = styled.div`
@@ -92,6 +163,8 @@ const ProfileNameInput = styled(Input)`
 const ProfileActions = styled.div`
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: ${props => props.theme.spacing.sm};
   flex: 0 0 auto;
   margin-left: auto;
@@ -292,14 +365,46 @@ const Settings = () => {
   const { weekStartsOn, setWeekStartsOn } = usePreferences()
   const { showToast } = useToast()
   const { habits, categories, journalEntries } = useHabits()
+  const avatarInputRef = useRef(null)
   const [profileName, setProfileName] = useState(() => {
     if (typeof window === 'undefined') return DEFAULT_PROFILE_NAME
     return window.localStorage.getItem(PROFILE_NAME_STORAGE_KEY) || DEFAULT_PROFILE_NAME
   })
   const [draftProfileName, setDraftProfileName] = useState(profileName)
+  const [profileAvatarImage, setProfileAvatarImage] = useState(null)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [reminderTime, setReminderTime] = useState('09:00')
+
+  useEffect(() => {
+    let cancelled = false
+
+    habitsApi.getSetting(PROFILE_SETTINGS_KEY)
+      .then(({ value }) => {
+        if (cancelled || !isProfileSettings(value)) return
+
+        const nextProfileName = typeof value.name === 'string' && value.name.trim()
+          ? value.name.trim()
+          : profileName
+
+        setProfileName(nextProfileName)
+        setDraftProfileName(nextProfileName)
+        setProfileAvatarImage(typeof value.avatarImage === 'string' ? value.avatarImage : null)
+      })
+      .catch(() => {
+        // The local default profile remains usable if the API is unavailable.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const saveProfileSettings = (profile) => {
+    return habitsApi.saveSetting(PROFILE_SETTINGS_KEY, profile)
+  }
 
   // Check notification permission & (re) schedule on mount
   useEffect(() => {
@@ -439,6 +544,10 @@ const Settings = () => {
         categories,
         journalEntries,
         settings: {
+          profile: {
+            name: profileName,
+            avatarImage: profileAvatarImage
+          },
           theme: localStorage.getItem('theme'),
           notifications: localStorage.getItem('notifications')
         },
@@ -482,7 +591,8 @@ const Settings = () => {
               habitsApi.restore({
                 habits: data.habits,
                 categories: Array.isArray(data.categories) ? data.categories : [],
-                journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : []
+                journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : [],
+                settings: data.settings && typeof data.settings === 'object' ? data.settings : {}
               })
                 .then(() => {
                   // Restore UI preferences if available
@@ -537,7 +647,7 @@ const Settings = () => {
     setIsEditingProfile(false)
   }
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const nextProfileName = draftProfileName.trim()
 
     if (!nextProfileName) {
@@ -545,11 +655,24 @@ const Settings = () => {
       return
     }
 
-    setProfileName(nextProfileName)
-    setDraftProfileName(nextProfileName)
-    window.localStorage.setItem(PROFILE_NAME_STORAGE_KEY, nextProfileName)
-    setIsEditingProfile(false)
-    showToast('Username updated', 'success')
+    setIsSavingProfile(true)
+
+    try {
+      await saveProfileSettings({
+        name: nextProfileName,
+        avatarImage: profileAvatarImage
+      })
+
+      setProfileName(nextProfileName)
+      setDraftProfileName(nextProfileName)
+      window.localStorage.setItem(PROFILE_NAME_STORAGE_KEY, nextProfileName)
+      setIsEditingProfile(false)
+      showToast('Username updated', 'success')
+    } catch {
+      showToast('Failed to save username', 'error')
+    } finally {
+      setIsSavingProfile(false)
+    }
   }
 
   const handleProfileNameKeyDown = (event) => {
@@ -557,6 +680,53 @@ const Settings = () => {
       handleSaveProfile()
     } else if (event.key === 'Escape') {
       handleCancelProfileEdit()
+    }
+  }
+
+  const handleSelectAvatar = () => {
+    avatarInputRef.current?.click()
+  }
+
+  const handleAvatarFileChange = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) return
+
+    setIsSavingAvatar(true)
+
+    try {
+      const nextAvatarImage = await createAvatarImage(file)
+
+      await saveProfileSettings({
+        name: profileName,
+        avatarImage: nextAvatarImage
+      })
+
+      setProfileAvatarImage(nextAvatarImage)
+      showToast('Avatar updated', 'success')
+    } catch (error) {
+      showToast(error.message || 'Failed to save avatar', 'error')
+    } finally {
+      setIsSavingAvatar(false)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    setIsSavingAvatar(true)
+
+    try {
+      await saveProfileSettings({
+        name: profileName,
+        avatarImage: null
+      })
+
+      setProfileAvatarImage(null)
+      showToast('Avatar removed', 'success')
+    } catch {
+      showToast('Failed to remove avatar', 'error')
+    } finally {
+      setIsSavingAvatar(false)
     }
   }
 
@@ -605,7 +775,20 @@ const Settings = () => {
       </Header>
 
       <ProfileSection elevated>
-        <Avatar>{avatarInitial}</Avatar>
+        <Avatar $hasImage={Boolean(profileAvatarImage)}>
+          {profileAvatarImage ? (
+            <AvatarImage src={profileAvatarImage} alt={`${profileName} avatar`} />
+          ) : (
+            avatarInitial
+          )}
+        </Avatar>
+        <AvatarInput
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          aria-label="Avatar image"
+          onChange={handleAvatarFileChange}
+        />
         <ProfileInfo>
           {isEditingProfile ? (
             <ProfileNameInput
@@ -626,6 +809,7 @@ const Settings = () => {
                 type="button"
                 size="small"
                 onClick={handleSaveProfile}
+                loading={isSavingProfile}
                 disabled={!draftProfileName.trim()}
               >
                 Save
@@ -635,6 +819,7 @@ const Settings = () => {
                 size="small"
                 variant="ghost"
                 onClick={handleCancelProfileEdit}
+                disabled={isSavingProfile}
               >
                 Cancel
               </Button>
@@ -646,7 +831,26 @@ const Settings = () => {
             <Button
               type="button"
               variant="ghost"
+              onClick={handleSelectAvatar}
+              loading={isSavingAvatar}
+            >
+              Photo
+            </Button>
+            {profileAvatarImage && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleRemoveAvatar}
+                loading={isSavingAvatar}
+              >
+                Remove Photo
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
               onClick={handleEditProfile}
+              disabled={isSavingAvatar}
             >
               Edit
             </Button>

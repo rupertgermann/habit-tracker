@@ -14,6 +14,11 @@ async function request(path, options = {}) {
 
 export const habitsApi = {
   getState: () => request('/state'),
+  getSetting: key => request(`/settings/${encodeURIComponent(key)}`),
+  saveSetting: (key, value) => request(`/settings/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value })
+  }),
 
   createHabit: habit => request('/habits', { method: 'POST', body: JSON.stringify(habit) }),
   updateHabit: habit => request(`/habits/${habit.id}`, { method: 'PUT', body: JSON.stringify(habit) }),

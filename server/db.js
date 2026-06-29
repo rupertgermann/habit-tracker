@@ -60,6 +60,35 @@ function listRows(table) {
   return db.prepare(`SELECT data FROM ${table}`).all().map(row => JSON.parse(row.data))
 }
 
+function parseSettingValue(value) {
+  if (value == null) return null
+
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+function listSettings() {
+  return db.prepare('SELECT key, value FROM settings').all().reduce((settings, row) => {
+    settings[row.key] = parseSettingValue(row.value)
+    return settings
+  }, {})
+}
+
+function getSetting(key, fallback = null) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key)
+  return row ? parseSettingValue(row.value) : fallback
+}
+
+function upsertSetting(key, value) {
+  db.prepare(`INSERT INTO settings (key, value) VALUES (@key, @value)
+              ON CONFLICT(key) DO UPDATE SET value = @value`)
+    .run({ key, value: JSON.stringify(value) })
+  return value
+}
+
 function upsertRow(table, item) {
   db.prepare(`INSERT INTO ${table} (id, data) VALUES (@id, @data)
               ON CONFLICT(id) DO UPDATE SET data = @data`)
@@ -75,7 +104,8 @@ function getState() {
   return {
     habits: listRows('habits'),
     categories: listRows('categories'),
-    journalEntries: listRows('journal_entries')
+    journalEntries: listRows('journal_entries'),
+    settings: listSettings()
   }
 }
 
@@ -91,11 +121,12 @@ function deleteJournalEntriesForHabit(habitId) {
   tx()
 }
 
-function replaceAll({ habits = [], categories = [], journalEntries = [] }) {
+function replaceAll({ habits = [], categories = [], journalEntries = [], settings = {} }) {
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM habits').run()
     db.prepare('DELETE FROM categories').run()
     db.prepare('DELETE FROM journal_entries').run()
+    db.prepare('DELETE FROM settings').run()
 
     const insertHabit = db.prepare('INSERT INTO habits (id, data) VALUES (?, ?)')
     for (const h of habits) insertHabit.run(h.id, JSON.stringify(h))
@@ -105,6 +136,14 @@ function replaceAll({ habits = [], categories = [], journalEntries = [] }) {
 
     const insertEntry = db.prepare('INSERT INTO journal_entries (id, data) VALUES (?, ?)')
     for (const e of journalEntries) insertEntry.run(e.id, JSON.stringify(e))
+
+    const insertSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
+    const settingEntries = settings && typeof settings === 'object' && !Array.isArray(settings)
+      ? Object.entries(settings)
+      : []
+    for (const [key, value] of settingEntries) {
+      insertSetting.run(key, JSON.stringify(value))
+    }
   })
   tx()
   // Re-seed categories if the backup contained none.
@@ -116,6 +155,7 @@ function clearAll() {
     db.prepare('DELETE FROM habits').run()
     db.prepare('DELETE FROM categories').run()
     db.prepare('DELETE FROM journal_entries').run()
+    db.prepare('DELETE FROM settings').run()
   })
   tx()
   seedCategories()
@@ -125,7 +165,10 @@ module.exports = {
   db,
   getState,
   listRows,
+  listSettings,
+  getSetting,
   upsertRow,
+  upsertSetting,
   deleteRow,
   deleteJournalEntriesForHabit,
   replaceAll,
