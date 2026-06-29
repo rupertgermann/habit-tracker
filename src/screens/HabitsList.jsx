@@ -188,9 +188,7 @@ const CategoryBadge = styled.span`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.xs};
-  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
-  border-radius: ${props => props.theme.borderRadius.round};
-  background-color: ${props => props.$color || props.theme.colors.primary}20;
+  padding: 0;
   color: ${props => props.$color || props.theme.colors.primary};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
