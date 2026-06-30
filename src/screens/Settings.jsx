@@ -16,6 +16,7 @@ const DEFAULT_PROFILE_NAME = 'User Name'
 const PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
 const PROFILE_SETTINGS_KEY = 'profile'
 const AVATAR_SIZE = 256
+const SETTINGS_CONTROL_WIDTH = '128px'
 
 const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
 
@@ -193,6 +194,7 @@ const GroupTitle = styled.h2`
 
 const SettingsCard = styled(Card)`
   padding: 0;
+  overflow: visible;
 `
 
 const SettingItem = styled.div`
@@ -257,8 +259,8 @@ const SettingRight = styled.div`
 `
 
 const ReminderTimeInput = styled(Input)`
-  width: 128px;
-  flex: 0 0 128px;
+  width: ${SETTINGS_CONTROL_WIDTH};
+  flex: 0 0 ${SETTINGS_CONTROL_WIDTH};
 
   input {
     min-width: 0;
@@ -266,26 +268,83 @@ const ReminderTimeInput = styled(Input)`
   }
 `
 
-const SettingValue = styled.span`
-  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
-  color: ${props => props.theme.colors.text.secondary};
+const SettingSelectWrapper = styled.div`
+  position: relative;
+  width: ${SETTINGS_CONTROL_WIDTH};
+  flex: 0 0 ${SETTINGS_CONTROL_WIDTH};
 `
 
-const SettingSelect = styled.select`
-  height: 40px;
-  min-width: 112px;
-  border: 1px solid ${props => props.theme.colors.border};
+const SettingSelectButton = styled.button`
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${props => props.theme.spacing.sm};
+  border: 1px solid ${props => props.$open ? props.theme.colors.primary : props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.small};
   padding: 0 ${props => props.theme.spacing.md};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
   color: ${props => props.theme.colors.text.primary};
   background-color: ${props => props.theme.colors.white};
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  cursor: pointer;
 
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}20;
   }
+`
+
+const SelectChevron = styled.span`
+  display: inline-flex;
+  color: ${props => props.theme.colors.text.primary};
+  transform: ${props => props.$open ? 'rotate(-90deg)' : 'rotate(90deg)'};
+  transition: transform 0.2s ease;
+`
+
+const SettingSelectMenu = styled.div`
+  position: absolute;
+  top: calc(100% + ${props => props.theme.spacing.xs});
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.xs};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.small};
+  background-color: ${props => props.theme.colors.white};
+  box-shadow: ${props => props.theme.shadows.strong};
+`
+
+const SettingSelectOption = styled.button`
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: ${props => props.theme.borderRadius.small};
+  padding: 0 ${props => props.theme.spacing.md};
+  color: ${props => props.$selected ? props.theme.colors.white : props.theme.colors.text.primary};
+  background-color: ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.white};
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    outline: none;
+    color: ${props => props.$selected ? props.theme.colors.white : props.theme.colors.text.primary};
+    background-color: ${props => props.$selected ? props.theme.colors.primary : `${props.theme.colors.primary}20`};
+  }
+`
+
+const SettingValue = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+  color: ${props => props.theme.colors.text.secondary};
 `
 
 const ChevronIcon = styled.span`
@@ -377,6 +436,62 @@ const AppLink = styled(Link)`
 const DangerButton = styled(Button)`
   margin-top: ${props => props.theme.spacing.lg};
 `
+
+const SettingSelectControl = ({ title, value, options, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedOption = options.find(option => option.value === value) || options[0]
+
+  const handleSelect = (nextValue) => {
+    onChange(nextValue)
+    setIsOpen(false)
+  }
+
+  return (
+    <SettingSelectWrapper
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOpen(false)
+        }
+      }}
+    >
+      <SettingSelectButton
+        type="button"
+        $open={isOpen}
+        aria-label={title}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen(current => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') setIsOpen(false)
+          if (event.key === 'ArrowDown') setIsOpen(true)
+        }}
+      >
+        <span>{selectedOption.label}</span>
+        <SelectChevron $open={isOpen} aria-hidden="true">
+          <AppIcon name="chevron-right" size={18} />
+        </SelectChevron>
+      </SettingSelectButton>
+
+      {isOpen && (
+        <SettingSelectMenu role="listbox" aria-label={title}>
+          {options.map(option => (
+            <SettingSelectOption
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              $selected={option.value === value}
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => handleSelect(option.value)}
+            >
+              {option.label}
+            </SettingSelectOption>
+          ))}
+        </SettingSelectMenu>
+      )}
+    </SettingSelectWrapper>
+  )
+}
 
 const Settings = () => {
   const { isDarkMode, toggleTheme } = useTheme()
@@ -908,17 +1023,12 @@ const Settings = () => {
                     aria-label={setting.title}
                   />
                 ) : setting.type === 'select' ? (
-                  <SettingSelect
+                  <SettingSelectControl
+                    title={setting.title}
                     value={setting.value}
-                    onChange={(event) => setting.onChange(Number(event.target.value))}
-                    aria-label={setting.title}
-                  >
-                    {setting.options.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </SettingSelect>
+                    options={setting.options}
+                    onChange={setting.onChange}
+                  />
                 ) : (
                   <>
                     {setting.value && <SettingValue>{setting.value}</SettingValue>}

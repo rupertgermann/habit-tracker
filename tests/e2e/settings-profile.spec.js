@@ -16,6 +16,32 @@ const getState = async (request) => {
   return response.json()
 }
 
+const parseRgb = value => {
+  const [, r, g, b] = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/) || []
+  return {
+    r: Number(r),
+    g: Number(g),
+    b: Number(b)
+  }
+}
+
+const relativeLuminance = ({ r, g, b }) => {
+  const toLinear = channel => {
+    const value = channel / 255
+    return value <= 0.03928
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4
+  }
+
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
+}
+
+const contrastRatio = (foreground, background) => {
+  const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background))
+  const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background))
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
 test.beforeEach(async ({ request }) => {
   await resetAppData(request)
 })
@@ -92,5 +118,68 @@ test('reminder time input remains fully visible in dark mode', async ({ page }) 
 
   const inputWidth = await reminderTimeInput.evaluate(element => element.getBoundingClientRect().width)
   expect(inputWidth).toBeGreaterThanOrEqual(128)
+  await expectNoRootOverflow(page)
+})
+
+test('week start selector opens in place with readable options', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.addInitScript(() => {
+    window.localStorage.setItem('theme', 'dark')
+    window.localStorage.setItem('habitTracker.weekStartsOn', '1')
+  })
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  const reminderTimeInput = page.getByLabel('Reminder Time')
+  const weekStartButton = page.getByRole('button', { name: 'Week Starts On' })
+  await expect(weekStartButton).toBeVisible()
+  await expect(weekStartButton).toHaveText('Monday')
+
+  const sizes = await Promise.all([
+    reminderTimeInput.evaluate(element => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    }),
+    weekStartButton.evaluate(element => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    })
+  ])
+  expect(Math.abs(sizes[0].width - sizes[1].width)).toBeLessThanOrEqual(1)
+  expect(Math.abs(sizes[0].height - sizes[1].height)).toBeLessThanOrEqual(1)
+
+  await weekStartButton.click()
+  const optionList = page.getByRole('listbox', { name: 'Week Starts On' })
+  await expect(optionList).toBeVisible()
+
+  const positions = await Promise.all([
+    weekStartButton.evaluate(element => {
+      const rect = element.getBoundingClientRect()
+      return { bottom: rect.bottom, left: rect.left }
+    }),
+    optionList.evaluate(element => {
+      const rect = element.getBoundingClientRect()
+      return { top: rect.top, left: rect.left }
+    })
+  ])
+  expect(positions[1].top).toBeGreaterThanOrEqual(positions[0].bottom - 1)
+  expect(Math.abs(positions[1].left - positions[0].left)).toBeLessThanOrEqual(1)
+
+  for (const optionName of ['Sunday', 'Monday']) {
+    const option = page.getByRole('option', { name: optionName })
+    await expect(option).toBeVisible()
+    const colors = await option.evaluate(element => {
+      const style = getComputedStyle(element)
+      return {
+        background: style.backgroundColor,
+        text: style.color
+      }
+    })
+    expect(contrastRatio(parseRgb(colors.text), parseRgb(colors.background))).toBeGreaterThanOrEqual(4.5)
+  }
+
+  await page.getByRole('option', { name: 'Sunday' }).click()
+  await expect(weekStartButton).toHaveText('Sunday')
+  await expect(optionList).toHaveCount(0)
   await expectNoRootOverflow(page)
 })
