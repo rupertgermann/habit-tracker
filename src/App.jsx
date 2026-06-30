@@ -8,6 +8,7 @@ import CalendarView from './screens/CalendarView'
 import HabitDetail from './screens/HabitDetail'
 import ProgressStats from './screens/ProgressStats'
 import Settings from './screens/Settings'
+import InfoPage from './screens/InfoPage'
 import AddEditHabit from './screens/AddEditHabit'
 import JournalView from './screens/JournalView'
 import BottomNavigation from './components/BottomNavigation'
@@ -52,6 +53,9 @@ function AppContent() {
             <Route path="/habit/:id" element={isWideLayout ? <TabletSplitView /> : <HabitDetail />} />
             <Route path="/progress" element={<ProgressStats />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/privacy" element={<InfoPage page="privacy" />} />
+            <Route path="/terms" element={<InfoPage page="terms" />} />
+            <Route path="/support" element={<InfoPage page="support" />} />
             <Route path="/add-habit" element={<AddEditHabit />} />
             <Route path="/edit-habit/:id" element={<AddEditHabit />} />
             <Route path="/journal" element={<JournalView />} />

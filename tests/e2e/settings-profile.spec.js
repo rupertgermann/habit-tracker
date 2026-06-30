@@ -53,3 +53,29 @@ test('profile avatar image is stored in the database and survives reloads', asyn
     return state.settings?.profile?.avatarImage ?? null
   }).toBe(null)
 })
+
+test('settings footer links navigate to app information pages', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/settings')
+  await waitForAppReady(page)
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+
+  const footerLinks = [
+    { label: 'Privacy Policy', path: '/privacy' },
+    { label: 'Terms of Service', path: '/terms' },
+    { label: 'Support', path: '/support' }
+  ]
+
+  for (const footerLink of footerLinks) {
+    const link = page.getByRole('link', { name: footerLink.label })
+    await expect(link).toHaveAttribute('href', new RegExp(`${footerLink.path}$`))
+
+    await link.click()
+    await expect(page).toHaveURL(new RegExp(`${footerLink.path}$`))
+    await expect(page.getByRole('heading', { level: 1, name: footerLink.label })).toBeVisible()
+    await expectNoRootOverflow(page)
+
+    await page.getByRole('link', { name: 'Back to Settings' }).click()
+    await expect(page).toHaveURL(/\/settings$/)
+  }
+})

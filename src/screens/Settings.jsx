@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -336,18 +337,25 @@ const AppVersion = styled.p`
 
 const AppLinks = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: ${props => props.theme.spacing.lg};
 `
 
-const AppLink = styled.a`
+const AppLink = styled(Link)`
   color: ${props => props.theme.colors.primary};
   text-decoration: none;
+  text-align: center;
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   
   &:hover {
     text-decoration: underline;
+  }
+
+  &:focus {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
   }
 `
 
@@ -983,9 +991,9 @@ const Settings = () => {
       <AppInfo elevated>
         <AppVersion>Habit Tracker v1.0.0</AppVersion>
         <AppLinks>
-          <AppLink href="#">Privacy Policy</AppLink>
-          <AppLink href="#">Terms of Service</AppLink>
-          <AppLink href="#">Support</AppLink>
+          <AppLink to="/privacy">Privacy Policy</AppLink>
+          <AppLink to="/terms">Terms of Service</AppLink>
+          <AppLink to="/support">Support</AppLink>
         </AppLinks>
       </AppInfo>
     </SettingsContainer>
