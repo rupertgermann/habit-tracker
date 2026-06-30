@@ -1,4 +1,5 @@
 export const lightTheme = {
+  mode: 'light',
   colors: {
     primary: '#4CAF50', // Darker green for better contrast
     secondary: '#FFC107', // Darker yellow for better contrast
@@ -63,6 +64,7 @@ export const lightTheme = {
 }
 
 export const darkTheme = {
+  mode: 'dark',
   colors: {
     primary: '#66BB6A', // Lighter green for better contrast on dark
     secondary: '#FFD54F', // Lighter yellow for better contrast on dark

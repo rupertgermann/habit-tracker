@@ -108,12 +108,50 @@ const contrastRatio = (foreground, background) => {
 }
 
 const parseRgb = value => {
-  const [, r, g, b] = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/) || []
+  const [, r, g, b, alpha] = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/) || []
   return {
     r: Number(r),
     g: Number(g),
-    b: Number(b)
+    b: Number(b),
+    a: alpha === undefined ? 1 : Number(alpha)
   }
+}
+
+const visibleRgb = (foreground, background) => {
+  if (!Number.isFinite(foreground.a) || foreground.a >= 1) return foreground
+
+  return {
+    r: foreground.r * foreground.a + background.r * (1 - foreground.a),
+    g: foreground.g * foreground.a + background.g * (1 - foreground.a),
+    b: foreground.b * foreground.a + background.b * (1 - foreground.a),
+    a: 1
+  }
+}
+
+const formatCalendarButtonName = date => {
+  const label = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date)
+
+  return `Select ${label}`
+}
+
+const dateFromLocalDateKey = dateKey => {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+const getUnmarkedMonthDate = (completedDates, referenceDate) => {
+  const lastDayOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate()
+
+  for (let day = 1; day <= lastDayOfMonth; day += 1) {
+    const date = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), day)
+    if (!completedDates.has(localDateKey(date))) return date
+  }
+
+  throw new Error('Expected at least one unmarked day in the current month')
 }
 
 test.describe('responsive smoke coverage', () => {
@@ -165,22 +203,35 @@ test.describe('responsive smoke coverage', () => {
     await waitForAppReady(page)
     await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
 
-    const dayCell = page.locator('[role="button"][aria-label^="Select "]').first()
-    await expect(dayCell).toBeVisible()
+    const completedDates = new Set(smokeState.habits[0].completions.map(completion => completion.date))
+    const markedDate = dateFromLocalDateKey(smokeState.habits[0].completions[0].date)
+    const markedCell = page.getByRole('button', { name: formatCalendarButtonName(markedDate), exact: true })
+    const unmarkedCell = page.getByRole('button', { name: formatCalendarButtonName(getUnmarkedMonthDate(completedDates, markedDate)), exact: true })
 
-    const colors = await dayCell.evaluate(element => {
+    await expect(markedCell).toBeVisible()
+    await expect(unmarkedCell).toBeVisible()
+
+    const readColors = async locator => locator.evaluate(element => {
       const label = element.querySelector('span')
       return {
         background: getComputedStyle(element).backgroundColor,
+        pageBackground: getComputedStyle(document.body).backgroundColor,
         text: getComputedStyle(label).color
       }
     })
 
-    const background = parseRgb(colors.background)
-    const text = parseRgb(colors.text)
+    const markedColors = await readColors(markedCell)
+    const unmarkedColors = await readColors(unmarkedCell)
+    const pageBackground = parseRgb(markedColors.pageBackground)
+    const markedBackground = visibleRgb(parseRgb(markedColors.background), pageBackground)
+    const unmarkedBackground = visibleRgb(parseRgb(unmarkedColors.background), pageBackground)
+    const markedText = parseRgb(markedColors.text)
+    const unmarkedText = parseRgb(unmarkedColors.text)
 
-    expect(relativeLuminance(background)).toBeLessThan(0.12)
-    expect(contrastRatio(text, background)).toBeGreaterThanOrEqual(4.5)
+    expect(relativeLuminance(unmarkedBackground)).toBeLessThan(0.12)
+    expect(relativeLuminance(markedBackground) - relativeLuminance(unmarkedBackground)).toBeGreaterThanOrEqual(0.02)
+    expect(contrastRatio(markedText, markedBackground)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(unmarkedText, unmarkedBackground)).toBeGreaterThanOrEqual(4.5)
     await expectNoRootOverflow(page)
   })
 })

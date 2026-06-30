@@ -20,7 +20,31 @@ const getLeadingEmptyCellCount = (date, weekStartsOn) =>
 
 const filledTileTextColor = '#102016'
 
+const darkCompletionLevelStyles = {
+  1: {
+    background: '#183F21',
+    border: '#2F7D3D'
+  },
+  2: {
+    background: '#245C2D',
+    border: '#43A047'
+  },
+  3: {
+    background: '#2D6F37',
+    border: '#66BB6A'
+  }
+}
+
 const getCompletionLevelStyles = (level, theme) => {
+  if (theme.mode === 'dark' && darkCompletionLevelStyles[level]) {
+    const { background, border } = darkCompletionLevelStyles[level]
+
+    return `
+      background-color: ${background};
+      border-color: ${border};
+    `
+  }
+
   switch (level) {
     case 0:
       return `
