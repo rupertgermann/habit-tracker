@@ -17,6 +17,7 @@ const NavContainer = styled.nav`
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: center;
   gap: 0;
+  padding: 0 ${props => props.theme.spacing.xs};
   padding-bottom: env(safe-area-inset-bottom, 0);
   z-index: 100;
 
