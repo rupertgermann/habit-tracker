@@ -37,11 +37,15 @@ const controlStyles = css`
     opacity: 0.6;
   }
   
-  ${({ type }) =>
+  ${({ type, theme }) =>
     type === 'time' &&
-    `
+    css`
+      color-scheme: ${theme.mode === 'dark' ? 'dark' : 'light'};
+
       &::-webkit-calendar-picker-indicator {
         cursor: pointer;
+        filter: ${theme.mode === 'dark' ? 'invert(1)' : 'none'};
+        opacity: ${theme.mode === 'dark' ? '0.85' : '0.75'};
       }
     `}
 `
