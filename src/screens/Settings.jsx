@@ -216,6 +216,8 @@ const SettingLeft = styled.div`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.md};
+  min-width: 0;
+  flex: 1 1 auto;
 `
 
 const SettingIcon = styled.div`
@@ -232,6 +234,7 @@ const SettingIcon = styled.div`
 const SettingInfo = styled.div`
   display: flex;
   flex-direction: column;
+  min-width: 0;
 `
 
 const SettingTitle = styled.h3`
@@ -243,12 +246,24 @@ const SettingTitle = styled.h3`
 const SettingDescription = styled.p`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
+  overflow-wrap: anywhere;
 `
 
 const SettingRight = styled.div`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.sm};
+  flex: 0 0 auto;
+`
+
+const ReminderTimeInput = styled(Input)`
+  width: 128px;
+  flex: 0 0 128px;
+
+  input {
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+  }
 `
 
 const SettingValue = styled.span`
@@ -886,12 +901,12 @@ const Settings = () => {
                     <ToggleSlider />
                   </ToggleSwitch>
                 ) : setting.type === 'time' ? (
-                    <Input
-                      type="time"
-                      value={setting.value}
-                      onChange={setting.onChange}
-                      style={{ width: '100px' }}
-                    />
+                  <ReminderTimeInput
+                    type="time"
+                    value={setting.value}
+                    onChange={setting.onChange}
+                    aria-label={setting.title}
+                  />
                 ) : setting.type === 'select' ? (
                   <SettingSelect
                     value={setting.value}

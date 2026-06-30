@@ -79,3 +79,18 @@ test('settings footer links navigate to app information pages', async ({ page })
     await expect(page).toHaveURL(/\/settings$/)
   }
 })
+
+test('reminder time input remains fully visible in dark mode', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  const reminderTimeInput = page.getByLabel('Reminder Time')
+  await expect(reminderTimeInput).toBeVisible()
+  await expect(reminderTimeInput).toHaveValue('09:00')
+
+  const inputWidth = await reminderTimeInput.evaluate(element => element.getBoundingClientRect().width)
+  expect(inputWidth).toBeGreaterThanOrEqual(128)
+  await expectNoRootOverflow(page)
+})
