@@ -17,6 +17,7 @@ const DEFAULT_PROFILE_NAME = 'User Name'
 const PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
 const PROFILE_SETTINGS_KEY = 'profile'
 const AVATAR_SIZE = 256
+const CLOCK_ICON_MASK = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'9\'/%3E%3Cpath d=\'M12 7v5l3 2\'/%3E%3C/svg%3E")'
 
 const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
 
@@ -262,9 +263,33 @@ const ReminderTimeInput = styled(Input)`
   width: ${SELECT_DROPDOWN_CONTROL_WIDTH};
   flex: 0 0 ${SELECT_DROPDOWN_CONTROL_WIDTH};
 
+  > div {
+    position: relative;
+  }
+
+  > div::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: ${props => props.theme.spacing.md};
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    transform: translateY(-50%);
+    background-color: ${props => props.theme.colors.text.secondary};
+    mask: ${CLOCK_ICON_MASK} center / contain no-repeat;
+    -webkit-mask: ${CLOCK_ICON_MASK} center / contain no-repeat;
+  }
+
   input {
     min-width: 0;
+    padding-right: ${props => props.theme.spacing.xxl};
     font-variant-numeric: tabular-nums;
+  }
+
+  input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0;
   }
 `
 
