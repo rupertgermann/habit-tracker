@@ -16,6 +16,7 @@ const concurrentlyBin = path.join(
 const env = {
   ...process.env,
   HABIT_TRACKER_DB_PATH: path.join(tmpDir, 'habit-tracker.db'),
+  HABIT_TRACKER_E2E: 'true',
   HOST: '127.0.0.1',
   PORT: '3001',
   VITE_OPEN: 'false'

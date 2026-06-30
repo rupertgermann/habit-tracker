@@ -49,7 +49,25 @@ export const makeJournalEntry = (overrides = {}) => ({
   ...overrides
 })
 
+let e2eRuntimeVerified = false
+
+export const expectE2ERuntime = async (request) => {
+  if (e2eRuntimeVerified) return
+
+  const response = await request.get('/api/runtime')
+  expect(response.ok(), 'E2E tests require an API runtime marker before resetting data').toBe(true)
+
+  const runtime = await response.json()
+  expect(
+    runtime.e2e,
+    'Refusing to reset app data because the API is not using the e2e temp database'
+  ).toBe(true)
+  e2eRuntimeVerified = true
+}
+
 export const resetAppData = async (request, state = {}) => {
+  await expectE2ERuntime(request)
+
   await request.post('/api/restore', {
     data: {
       habits: state.habits || [],

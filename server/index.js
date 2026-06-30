@@ -1,3 +1,4 @@
+const path = require('path')
 const express = require('express')
 const cors = require('cors')
 const store = require('./db')
@@ -5,6 +6,9 @@ const store = require('./db')
 const app = express()
 const HOST = process.env.HOST || '127.0.0.1'
 const PORT = process.env.PORT || 3001
+const E2E_DB_DIR = path.join(process.cwd(), '.tmp', 'e2e')
+const isE2ERuntime = process.env.HABIT_TRACKER_E2E === 'true' &&
+  path.resolve(store.DB_PATH).startsWith(`${path.resolve(E2E_DB_DIR)}${path.sep}`)
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
@@ -21,6 +25,10 @@ const asyncWrap = handler => (req, res) => {
 // Full app state (habits, categories, journal entries)
 app.get('/api/state', asyncWrap((req, res) => {
   res.json(store.getState())
+}))
+
+app.get('/api/runtime', asyncWrap((req, res) => {
+  res.json({ e2e: isE2ERuntime })
 }))
 
 // Settings

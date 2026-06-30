@@ -189,6 +189,7 @@ function clearAll() {
 }
 
 module.exports = {
+  DB_PATH,
   db,
   getState,
   listRows,
