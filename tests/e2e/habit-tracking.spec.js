@@ -313,10 +313,55 @@ test('calendar stats for a count habit survive reload', async ({ page, request }
   await waitForAppReady(page)
 
   await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible()
-  await expect(page.getByRole('combobox', { name: 'Select habit to view' })).toHaveValue(habit.id)
+  await expect(page.getByRole('button', { name: 'Select habit to view' })).toContainText(habit.name)
 
   await expectCalendarStat(page, 'This Month: Days Said', expectedDaysSaid)
   await expectCalendarStat(page, 'This Month: Days Not Said', expectedDaysNotSaid)
   await expectCalendarStat(page, 'Total Count', String(completions.length))
   await expectCalendarStat(page, 'Best Day', '3')
+})
+
+test('calendar habit dropdown uses the shared dropdown surface', async ({ page, request }) => {
+  const firstHabit = makeHabit({
+    id: 'e2e-calendar-dropdown-first',
+    name: 'E2E Calendar Dropdown First',
+    icon: 'book'
+  })
+  const secondHabit = makeHabit({
+    id: 'e2e-calendar-dropdown-second',
+    name: 'E2E Calendar Dropdown Second',
+    icon: 'coffee'
+  })
+
+  await resetAppData(request, { habits: [firstHabit, secondHabit] })
+  await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
+  await page.goto('/calendar')
+  await waitForAppReady(page)
+
+  const habitDropdown = page.getByRole('button', { name: 'Select habit to view' })
+  await expect(habitDropdown).toBeVisible()
+  await expect(habitDropdown).toContainText(firstHabit.name)
+
+  const buttonBox = await habitDropdown.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return { bottom: rect.bottom, left: rect.left, width: rect.width, height: rect.height }
+  })
+  expect(Math.abs(buttonBox.height - 48)).toBeLessThanOrEqual(1)
+
+  await habitDropdown.click()
+  const optionList = page.getByRole('listbox', { name: 'Select habit to view' })
+  await expect(optionList).toBeVisible()
+  await expect(page.getByRole('option', { name: firstHabit.name })).toBeVisible()
+  await expect(page.getByRole('option', { name: secondHabit.name })).toBeVisible()
+
+  const listBox = await optionList.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return { top: rect.top, left: rect.left, width: rect.width }
+  })
+  expect(listBox.top).toBeGreaterThanOrEqual(buttonBox.bottom - 1)
+  expect(Math.abs(listBox.left - buttonBox.left)).toBeLessThanOrEqual(1)
+  expect(Math.abs(listBox.width - buttonBox.width)).toBeLessThanOrEqual(1)
+
+  await page.getByRole('option', { name: secondHabit.name }).click()
+  await expect(habitDropdown).toContainText(secondHabit.name)
 })

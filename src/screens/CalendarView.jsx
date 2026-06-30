@@ -6,6 +6,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Tooltip from '../components/Tooltip'
 import AppIcon from '../components/AppIcon'
+import SelectDropdown from '../components/SelectDropdown'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
 import { DEFAULT_HABIT_ICON, getLegacyIconText } from '../domain/iconCatalog'
@@ -373,24 +374,6 @@ const HabitSelectRow = styled.div`
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
-const HabitSelect = styled.select`
-  width: 100%;
-  height: 48px;
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.small};
-  padding: 0 ${props => props.theme.spacing.md};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
-  color: ${props => props.theme.colors.text.primary};
-  background-color: ${props => props.theme.colors.white};
-  cursor: pointer;
-
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-  }
-`
-
 const SelectedDateCard = styled(Card)`
   padding: ${props => props.theme.spacing.lg};
   margin-bottom: ${props => props.theme.spacing.lg};
@@ -523,6 +506,10 @@ const CalendarView = () => {
   }, [habits, selectedHabitId])
 
   const selectedHabit = habits.find(h => h.id === selectedHabitId) || habits[0] || null
+  const habitOptions = habits.map(habit => ({
+    value: habit.id,
+    label: (getLegacyIconText(habit.icon) ? `${getLegacyIconText(habit.icon)} ` : '') + habit.name
+  }))
 
   const getCount = (date) =>
     selectedHabit ? getCountForDate(selectedHabit, format(date, 'yyyy-MM-dd')) : 0
@@ -790,17 +777,13 @@ const CalendarView = () => {
       </Header>
 
       <HabitSelectRow>
-        <HabitSelect
+        <SelectDropdown
+          fullWidth
           value={selectedHabitId || ''}
-          onChange={(e) => setSelectedHabitId(e.target.value)}
-          aria-label="Select habit to view"
-        >
-          {habits.map(habit => (
-            <option key={habit.id} value={habit.id}>
-              {(getLegacyIconText(habit.icon) ? `${getLegacyIconText(habit.icon)} ` : '') + habit.name}
-            </option>
-          ))}
-        </HabitSelect>
+          options={habitOptions}
+          onChange={setSelectedHabitId}
+          ariaLabel="Select habit to view"
+        />
       </HabitSelectRow>
 
       <CalendarHeader>
