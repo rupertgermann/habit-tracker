@@ -191,3 +191,7 @@ Browser tests run with `npm run test:e2e`. Playwright starts `npm run dev:e2e`, 
 - `docs/implementation-summary.md` - implementation overview with file-level pointers.
 - `docs/prompt.md` - original product/design brief.
 - `docs/agents/` - agent workflow notes for GitHub Issues, triage labels, and domain docs.
+
+## License
+
+Habit Tracker is released under the [MIT License](LICENSE).
