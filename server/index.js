@@ -5,7 +5,7 @@ const store = require('./db')
 
 const app = express()
 const HOST = process.env.HOST || '127.0.0.1'
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3301
 const E2E_DB_DIR = path.join(process.cwd(), '.tmp', 'e2e')
 const isE2ERuntime = process.env.HABIT_TRACKER_E2E === 'true' &&
   path.resolve(store.DB_PATH).startsWith(`${path.resolve(E2E_DB_DIR)}${path.sep}`)
