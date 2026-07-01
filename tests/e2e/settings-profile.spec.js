@@ -46,6 +46,56 @@ test.beforeEach(async ({ request }) => {
   await resetAppData(request)
 })
 
+test('profile and calendar preferences use the database instead of legacy localStorage', async ({ page, request }) => {
+  await resetAppData(request, {
+    settings: {
+      profile: {
+        name: 'Database User',
+        email: 'database@example.com',
+        avatarImage: null
+      },
+      preferences: {
+        weekStartsOn: 0
+      }
+    }
+  })
+  await page.addInitScript(() => {
+    window.localStorage.setItem('habitTracker.profileName', 'Browser User')
+    window.localStorage.setItem('habitTracker.weekStartsOn', '1')
+  })
+
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  await expect(page.getByText('Database User')).toBeVisible()
+  await expect(page.getByText('database@example.com')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Week Starts On' })).toHaveText('Sunday')
+  await expect.poll(() => page.evaluate(() => ({
+    profileName: window.localStorage.getItem('habitTracker.profileName'),
+    weekStartsOn: window.localStorage.getItem('habitTracker.weekStartsOn')
+  }))).toEqual({
+    profileName: null,
+    weekStartsOn: null
+  })
+
+  await page.getByRole('button', { name: 'Edit' }).click()
+  await page.getByLabel('Username').fill('Rupert')
+  await page.getByLabel('Email').fill('rupert@example.com')
+  await page.getByRole('button', { name: 'Save' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Rupert' })).toBeVisible()
+  await expect(page.getByText('rupert@example.com')).toBeVisible()
+  await expect.poll(async () => {
+    const state = await getState(request)
+    return state.settings?.profile
+  }).toMatchObject({
+    name: 'Rupert',
+    email: 'rupert@example.com',
+    avatarImage: null
+  })
+})
+
 test('profile avatar image is stored in the database and survives reloads', async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/settings')
@@ -106,9 +156,13 @@ test('settings footer links navigate to app information pages', async ({ page })
   }
 })
 
-test('reminder time input remains fully visible in dark mode', async ({ page }) => {
+test('reminder time input remains fully visible in dark mode', async ({ page, request }) => {
+  await resetAppData(request, {
+    settings: {
+      theme: 'dark'
+    }
+  })
   await page.setViewportSize({ width: 390, height: 900 })
-  await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
   await page.goto('/settings')
   await waitForAppReady(page)
 
@@ -121,12 +175,16 @@ test('reminder time input remains fully visible in dark mode', async ({ page }) 
   await expectNoRootOverflow(page)
 })
 
-test('week start selector opens in place with readable options', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 900 })
-  await page.addInitScript(() => {
-    window.localStorage.setItem('theme', 'dark')
-    window.localStorage.setItem('habitTracker.weekStartsOn', '1')
+test('week start selector opens in place with readable options', async ({ page, request }) => {
+  await resetAppData(request, {
+    settings: {
+      theme: 'dark',
+      preferences: {
+        weekStartsOn: 1
+      }
+    }
   })
+  await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/settings')
   await waitForAppReady(page)
 
@@ -181,5 +239,10 @@ test('week start selector opens in place with readable options', async ({ page }
   await page.getByRole('option', { name: 'Sunday' }).click()
   await expect(weekStartButton).toHaveText('Sunday')
   await expect(optionList).toHaveCount(0)
+  await expect.poll(async () => {
+    const state = await getState(request)
+    return state.settings?.preferences?.weekStartsOn
+  }).toBe(0)
+  await expect(page.evaluate(() => window.localStorage.getItem('habitTracker.weekStartsOn'))).resolves.toBe(null)
   await expectNoRootOverflow(page)
 })

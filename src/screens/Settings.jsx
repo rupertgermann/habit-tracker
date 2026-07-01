@@ -6,20 +6,47 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 import AppIcon from '../components/AppIcon'
 import SelectDropdown, { SELECT_DROPDOWN_CONTROL_WIDTH } from '../components/SelectDropdown'
-import { useTheme } from '../context/ThemeContext'
+import { removeLegacyThemePreference, useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useHabits } from '../context/HabitsContext'
 import { habitsApi } from '../api/habitsApi'
 import { isCompletedOnDate, toDateKey } from '../domain/habitTracking'
-import { usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
+import { removeLegacyWeekStartPreference, usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
 
-const DEFAULT_PROFILE_NAME = 'User Name'
-const PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
+const DEFAULT_PROFILE = {
+  name: 'User Name',
+  email: 'user@example.com',
+  avatarImage: null
+}
+const LEGACY_PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
 const PROFILE_SETTINGS_KEY = 'profile'
 const AVATAR_SIZE = 256
 const CLOCK_ICON_MASK = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'9\'/%3E%3Cpath d=\'M12 7v5l3 2\'/%3E%3C/svg%3E")'
 
 const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
+const isValidEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+
+const normalizeProfileSettings = value => {
+  if (!isProfileSettings(value)) return { ...DEFAULT_PROFILE }
+
+  const name = typeof value.name === 'string' && value.name.trim()
+    ? value.name.trim()
+    : DEFAULT_PROFILE.name
+  const email = typeof value.email === 'string' && value.email.trim()
+    ? value.email.trim()
+    : DEFAULT_PROFILE.email
+  const avatarImage = typeof value.avatarImage === 'string' ? value.avatarImage : null
+
+  return { name, email, avatarImage }
+}
+
+const removeLegacyProfileName = () => {
+  try {
+    window.localStorage.removeItem(LEGACY_PROFILE_NAME_STORAGE_KEY)
+  } catch {
+    // The database remains the source of truth when browser storage is unavailable.
+  }
+}
 
 const readImageFile = file => new Promise((resolve, reject) => {
   const reader = new FileReader()
@@ -161,7 +188,14 @@ const ProfileEmail = styled.p`
 const ProfileNameInput = styled(Input)`
   width: 100%;
   max-width: 100%;
-  margin-bottom: ${props => props.theme.spacing.xs};
+`
+
+const ProfileEmailInput = styled(ProfileNameInput)`
+`
+
+const ProfileEditFields = styled.div`
+  display: grid;
+  gap: ${props => props.theme.spacing.sm};
 `
 
 const ProfileActions = styled.div`
@@ -394,12 +428,11 @@ const Settings = () => {
   const { showToast } = useToast()
   const { habits, categories, journalEntries } = useHabits()
   const avatarInputRef = useRef(null)
-  const [profileName, setProfileName] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_PROFILE_NAME
-    return window.localStorage.getItem(PROFILE_NAME_STORAGE_KEY) || DEFAULT_PROFILE_NAME
-  })
-  const [draftProfileName, setDraftProfileName] = useState(profileName)
-  const [profileAvatarImage, setProfileAvatarImage] = useState(null)
+  const [profileName, setProfileName] = useState(DEFAULT_PROFILE.name)
+  const [profileEmail, setProfileEmail] = useState(DEFAULT_PROFILE.email)
+  const [draftProfileName, setDraftProfileName] = useState(DEFAULT_PROFILE.name)
+  const [draftProfileEmail, setDraftProfileEmail] = useState(DEFAULT_PROFILE.email)
+  const [profileAvatarImage, setProfileAvatarImage] = useState(DEFAULT_PROFILE.avatarImage)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
@@ -409,17 +442,19 @@ const Settings = () => {
   useEffect(() => {
     let cancelled = false
 
+    removeLegacyProfileName()
+
     habitsApi.getSetting(PROFILE_SETTINGS_KEY)
       .then(({ value }) => {
-        if (cancelled || !isProfileSettings(value)) return
+        if (cancelled) return
 
-        const nextProfileName = typeof value.name === 'string' && value.name.trim()
-          ? value.name.trim()
-          : profileName
+        const nextProfile = normalizeProfileSettings(value)
 
-        setProfileName(nextProfileName)
-        setDraftProfileName(nextProfileName)
-        setProfileAvatarImage(typeof value.avatarImage === 'string' ? value.avatarImage : null)
+        setProfileName(nextProfile.name)
+        setProfileEmail(nextProfile.email)
+        setDraftProfileName(nextProfile.name)
+        setDraftProfileEmail(nextProfile.email)
+        setProfileAvatarImage(nextProfile.avatarImage)
       })
       .catch(() => {
         // The local default profile remains usable if the API is unavailable.
@@ -431,7 +466,7 @@ const Settings = () => {
   }, [])
 
   const saveProfileSettings = (profile) => {
-    return habitsApi.saveSetting(PROFILE_SETTINGS_KEY, profile)
+    return habitsApi.saveSetting(PROFILE_SETTINGS_KEY, normalizeProfileSettings(profile))
   }
 
   // Check notification permission & (re) schedule on mount
@@ -574,10 +609,13 @@ const Settings = () => {
         settings: {
           profile: {
             name: profileName,
+            email: profileEmail,
             avatarImage: profileAvatarImage
           },
-          theme: localStorage.getItem('theme'),
-          notifications: localStorage.getItem('notifications')
+          theme: isDarkMode ? 'dark' : 'light',
+          preferences: {
+            weekStartsOn
+          }
         },
         backupDate: new Date().toISOString(),
         version: '1.0.0'
@@ -623,16 +661,6 @@ const Settings = () => {
                 settings: data.settings && typeof data.settings === 'object' ? data.settings : {}
               })
                 .then(() => {
-                  // Restore UI preferences if available
-                  if (data.settings) {
-                    if (data.settings.theme) {
-                      localStorage.setItem('theme', data.settings.theme)
-                    }
-                    if (data.settings.notifications) {
-                      localStorage.setItem('notifications', data.settings.notifications)
-                    }
-                  }
-
                   showToast('Data restored successfully', 'success')
                   setTimeout(() => {
                     window.location.reload()
@@ -658,7 +686,9 @@ const Settings = () => {
     if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
       habitsApi.clearAll()
         .then(() => {
-          localStorage.clear()
+          removeLegacyProfileName()
+          removeLegacyThemePreference()
+          removeLegacyWeekStartPreference()
           window.location.reload()
         })
         .catch(() => showToast('Failed to clear data', 'error'))
@@ -667,19 +697,27 @@ const Settings = () => {
 
   const handleEditProfile = () => {
     setDraftProfileName(profileName)
+    setDraftProfileEmail(profileEmail)
     setIsEditingProfile(true)
   }
 
   const handleCancelProfileEdit = () => {
     setDraftProfileName(profileName)
+    setDraftProfileEmail(profileEmail)
     setIsEditingProfile(false)
   }
 
   const handleSaveProfile = async () => {
     const nextProfileName = draftProfileName.trim()
+    const nextProfileEmail = draftProfileEmail.trim()
 
     if (!nextProfileName) {
       showToast('Please enter a username', 'error')
+      return
+    }
+
+    if (!nextProfileEmail || !isValidEmail(nextProfileEmail)) {
+      showToast('Please enter a valid email', 'error')
       return
     }
 
@@ -688,16 +726,18 @@ const Settings = () => {
     try {
       await saveProfileSettings({
         name: nextProfileName,
+        email: nextProfileEmail,
         avatarImage: profileAvatarImage
       })
 
       setProfileName(nextProfileName)
       setDraftProfileName(nextProfileName)
-      window.localStorage.setItem(PROFILE_NAME_STORAGE_KEY, nextProfileName)
+      setProfileEmail(nextProfileEmail)
+      setDraftProfileEmail(nextProfileEmail)
       setIsEditingProfile(false)
-      showToast('Username updated', 'success')
+      showToast('Profile updated', 'success')
     } catch {
-      showToast('Failed to save username', 'error')
+      showToast('Failed to save profile', 'error')
     } finally {
       setIsSavingProfile(false)
     }
@@ -728,6 +768,7 @@ const Settings = () => {
 
       await saveProfileSettings({
         name: profileName,
+        email: profileEmail,
         avatarImage: nextAvatarImage
       })
 
@@ -746,6 +787,7 @@ const Settings = () => {
     try {
       await saveProfileSettings({
         name: profileName,
+        email: profileEmail,
         avatarImage: null
       })
 
@@ -819,18 +861,30 @@ const Settings = () => {
         />
         <ProfileInfo>
           {isEditingProfile ? (
-            <ProfileNameInput
-              aria-label="Username"
-              value={draftProfileName}
-              onChange={setDraftProfileName}
-              onKeyDown={handleProfileNameKeyDown}
-              maxLength={40}
-              autoFocus
-            />
+            <ProfileEditFields>
+              <ProfileNameInput
+                aria-label="Username"
+                value={draftProfileName}
+                onChange={setDraftProfileName}
+                onKeyDown={handleProfileNameKeyDown}
+                maxLength={40}
+                autoFocus
+              />
+              <ProfileEmailInput
+                aria-label="Email"
+                type="email"
+                value={draftProfileEmail}
+                onChange={setDraftProfileEmail}
+                onKeyDown={handleProfileNameKeyDown}
+                maxLength={80}
+              />
+            </ProfileEditFields>
           ) : (
-            <ProfileName>{profileName}</ProfileName>
+            <>
+              <ProfileName>{profileName}</ProfileName>
+              <ProfileEmail>{profileEmail}</ProfileEmail>
+            </>
           )}
-          <ProfileEmail>user@example.com</ProfileEmail>
           {isEditingProfile && (
             <ProfileEditActions>
               <Button
@@ -838,7 +892,7 @@ const Settings = () => {
                 size="small"
                 onClick={handleSaveProfile}
                 loading={isSavingProfile}
-                disabled={!draftProfileName.trim()}
+                disabled={!draftProfileName.trim() || !draftProfileEmail.trim()}
               >
                 Save
               </Button>

@@ -12,7 +12,7 @@ const PAGES = {
     sections: [
       {
         title: 'Data Stored',
-        body: 'The app stores habits, categories, journal entries, profile details, theme preference, notification preference, and backup settings.'
+        body: 'The app stores habits, categories, journal entries, profile details, theme preference, calendar preference, and backup settings.'
       },
       {
         title: 'Data Use',

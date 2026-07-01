@@ -103,13 +103,13 @@ The app follows a modular structure with clear separation of concerns:
 State is managed with React Context:
 
 - **HabitsContext** — habit data, completion, streaks, and categories. Loads from and persists to the API with optimistic updates.
-- **ThemeContext** — theme selection and dark mode (stored as a UI preference in `localStorage`).
+- **ThemeContext** — theme selection and dark mode loaded from and persisted to the API.
 - **ToastContext** — toast notifications.
 - **NavigationContext** — active navigation state synced with the current route.
 
 ### Data Persistence
 
-Habits, categories, and journal entries are stored in a SQLite database (`server/data/habit-tracker.db`) through an Express REST API. The frontend talks to it via the `src/api/habitsApi.js` client, and Vite proxies `/api` to the backend in development. Default categories are seeded automatically on first run. Theme and notification preferences remain in the browser's `localStorage`.
+Habits, categories, journal entries, profile details, theme, and calendar preferences are stored in a SQLite database (`server/data/habit-tracker.db`) through an Express REST API. The frontend talks to it via the `src/api/habitsApi.js` client, and Vite proxies `/api` to the backend in development. Default categories are seeded automatically on first run.
 
 #### API Endpoints
 

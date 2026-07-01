@@ -1,19 +1,22 @@
 import assert from 'node:assert/strict'
 import {
-  resolveInitialIsDarkMode,
-  writeStoredThemePreference
+  DARK_THEME_VALUE,
+  LEGACY_THEME_STORAGE_KEY,
+  LIGHT_THEME_VALUE,
+  normalizeThemePreference,
+  removeLegacyThemePreference,
+  resolveInitialIsDarkMode
 } from '/src/context/ThemeContext.jsx'
 
 const createStorage = (initialValue = null) => {
   const values = new Map()
 
   if (initialValue !== null) {
-    values.set('theme', initialValue)
+    values.set(LEGACY_THEME_STORAGE_KEY, initialValue)
   }
 
   return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
     valueFor: (key) => values.get(key)
   }
 }
@@ -26,11 +29,11 @@ const createWindow = (prefersDark) => ({
 
 export const tests = [
   {
-    name: 'theme context initializes dark mode from saved preference',
+    name: 'theme context initializes dark mode from database preference',
     run() {
       assert.equal(
         resolveInitialIsDarkMode({
-          storage: createStorage('dark'),
+          themePreference: DARK_THEME_VALUE,
           windowObject: createWindow(false)
         }),
         true
@@ -38,11 +41,11 @@ export const tests = [
     }
   },
   {
-    name: 'theme context keeps saved light preference over system dark mode',
+    name: 'theme context keeps database light preference over system dark mode',
     run() {
       assert.equal(
         resolveInitialIsDarkMode({
-          storage: createStorage('light'),
+          themePreference: LIGHT_THEME_VALUE,
           windowObject: createWindow(true)
         }),
         false
@@ -50,15 +53,11 @@ export const tests = [
     }
   },
   {
-    name: 'theme context falls back to system preference when storage is unavailable',
+    name: 'theme context falls back to system preference when database has no theme',
     run() {
       assert.equal(
         resolveInitialIsDarkMode({
-          storage: {
-            getItem: () => {
-              throw new Error('storage unavailable')
-            }
-          },
+          themePreference: null,
           windowObject: createWindow(true)
         }),
         true
@@ -66,15 +65,20 @@ export const tests = [
     }
   },
   {
-    name: 'theme context persists the selected theme value',
+    name: 'theme context ignores unsupported database theme values',
     run() {
-      const storage = createStorage()
+      assert.equal(normalizeThemePreference(DARK_THEME_VALUE), DARK_THEME_VALUE)
+      assert.equal(normalizeThemePreference(LIGHT_THEME_VALUE), LIGHT_THEME_VALUE)
+      assert.equal(normalizeThemePreference('system'), null)
+    }
+  },
+  {
+    name: 'theme context removes the legacy localStorage value',
+    run() {
+      const storage = createStorage(DARK_THEME_VALUE)
 
-      writeStoredThemePreference(true, storage)
-      assert.equal(storage.valueFor('theme'), 'dark')
-
-      writeStoredThemePreference(false, storage)
-      assert.equal(storage.valueFor('theme'), 'light')
+      removeLegacyThemePreference(storage)
+      assert.equal(storage.valueFor(LEGACY_THEME_STORAGE_KEY), undefined)
     }
   }
 ]

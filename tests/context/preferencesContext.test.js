@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict'
 import {
+  LEGACY_WEEK_START_STORAGE_KEY,
+  normalizePreferencesSettings,
   normalizeWeekStartsOn,
-  readStoredWeekStartsOn,
-  writeStoredWeekStartsOn
+  removeLegacyWeekStartPreference
 } from '/src/context/PreferencesContext.jsx'
 
 const createStorage = (initialValue = null) => {
   const values = new Map()
 
   if (initialValue !== null) {
-    values.set('habitTracker.weekStartsOn', initialValue)
+    values.set(LEGACY_WEEK_START_STORAGE_KEY, initialValue)
   }
 
   return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
     valueFor: (key) => values.get(key)
   }
 }
@@ -30,21 +30,31 @@ export const tests = [
     }
   },
   {
-    name: 'week-start preference reads Monday from storage',
+    name: 'week-start preference reads Monday from database settings',
     run() {
-      assert.equal(readStoredWeekStartsOn(createStorage('1')), 1)
+      assert.deepEqual(normalizePreferencesSettings({ weekStartsOn: 1 }), {
+        weekStartsOn: 1
+      })
     }
   },
   {
-    name: 'week-start preference persists the selected value',
+    name: 'week-start preference ignores unsupported database settings',
     run() {
-      const storage = createStorage()
+      assert.deepEqual(normalizePreferencesSettings({ weekStartsOn: 6 }), {
+        weekStartsOn: 0
+      })
+      assert.deepEqual(normalizePreferencesSettings(null), {
+        weekStartsOn: 0
+      })
+    }
+  },
+  {
+    name: 'week-start preference removes the legacy localStorage value',
+    run() {
+      const storage = createStorage('1')
 
-      writeStoredWeekStartsOn(1, storage)
-      assert.equal(storage.valueFor('habitTracker.weekStartsOn'), '1')
-
-      writeStoredWeekStartsOn(0, storage)
-      assert.equal(storage.valueFor('habitTracker.weekStartsOn'), '0')
+      removeLegacyWeekStartPreference(storage)
+      assert.equal(storage.valueFor(LEGACY_WEEK_START_STORAGE_KEY), undefined)
     }
   }
 ]

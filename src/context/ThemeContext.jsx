@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { habitsApi } from '../api/habitsApi'
 import { lightTheme, darkTheme } from '../styles/theme'
 
 const ThemeContext = createContext()
-const THEME_STORAGE_KEY = 'theme'
-const DARK_THEME_VALUE = 'dark'
-const LIGHT_THEME_VALUE = 'light'
+export const LEGACY_THEME_STORAGE_KEY = 'theme'
+export const THEME_SETTINGS_KEY = 'theme'
+export const DARK_THEME_VALUE = 'dark'
+export const LIGHT_THEME_VALUE = 'light'
 
 const getBrowserStorage = () => {
   try {
@@ -18,19 +20,8 @@ const getBrowserStorage = () => {
   }
 }
 
-export const readStoredThemePreference = (storage = getBrowserStorage()) => {
-  try {
-    const savedTheme = storage?.getItem(THEME_STORAGE_KEY)
-
-    if (savedTheme === DARK_THEME_VALUE || savedTheme === LIGHT_THEME_VALUE) {
-      return savedTheme
-    }
-  } catch {
-    return null
-  }
-
-  return null
-}
+export const normalizeThemePreference = value =>
+  value === DARK_THEME_VALUE || value === LIGHT_THEME_VALUE ? value : null
 
 const getSystemPrefersDark = (windowObject = typeof window !== 'undefined' ? window : undefined) => {
   try {
@@ -45,10 +36,10 @@ const getSystemPrefersDark = (windowObject = typeof window !== 'undefined' ? win
 }
 
 export const resolveInitialIsDarkMode = ({
-  storage,
+  themePreference,
   windowObject
 } = {}) => {
-  const savedTheme = readStoredThemePreference(storage ?? getBrowserStorage())
+  const savedTheme = normalizeThemePreference(themePreference)
 
   if (savedTheme) {
     return savedTheme === DARK_THEME_VALUE
@@ -57,22 +48,51 @@ export const resolveInitialIsDarkMode = ({
   return getSystemPrefersDark(windowObject ?? (typeof window !== 'undefined' ? window : undefined))
 }
 
-export const writeStoredThemePreference = (isDarkMode, storage = getBrowserStorage()) => {
+export const removeLegacyThemePreference = (storage = getBrowserStorage()) => {
   try {
-    storage?.setItem(THEME_STORAGE_KEY, isDarkMode ? DARK_THEME_VALUE : LIGHT_THEME_VALUE)
+    storage?.removeItem?.(LEGACY_THEME_STORAGE_KEY)
   } catch {
-    // Ignore storage failures so theme toggling still works in restricted browsers.
+    // The database remains the source of truth when browser storage is unavailable.
   }
 }
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => resolveInitialIsDarkMode())
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const theme = isDarkMode ? darkTheme : lightTheme
 
-  // Save theme preference to localStorage whenever it changes
   useEffect(() => {
-    writeStoredThemePreference(isDarkMode)
-  }, [isDarkMode])
+    let cancelled = false
+
+    removeLegacyThemePreference()
+
+    habitsApi.getSetting(THEME_SETTINGS_KEY)
+      .then(({ value }) => {
+        if (cancelled) return
+
+        const savedTheme = normalizeThemePreference(value)
+        if (savedTheme) {
+          setIsDarkMode(savedTheme === DARK_THEME_VALUE)
+        }
+      })
+      .catch(error => {
+        if (!cancelled) console.error('Failed to load theme preference:', error)
+      })
+      .finally(() => {
+        if (!cancelled) setSettingsLoaded(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!settingsLoaded) return
+
+    habitsApi.saveSetting(THEME_SETTINGS_KEY, isDarkMode ? DARK_THEME_VALUE : LIGHT_THEME_VALUE)
+      .catch(error => console.error('Failed to save theme preference:', error))
+  }, [isDarkMode, settingsLoaded])
 
   // Apply theme class to body
   useEffect(() => {

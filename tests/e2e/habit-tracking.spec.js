@@ -60,9 +60,11 @@ const createCountHabitThroughUi = async (page, name, dailyGoal) => {
 }
 
 const expectCalendarStat = async (page, label, value) => {
-  const statsCard = page.getByText('Total Count', { exact: true }).locator('xpath=../..')
-  await expect(statsCard.getByText(label, { exact: true })).toBeVisible()
-  await expect(statsCard.getByText(value, { exact: true })).toBeVisible()
+  const statLabel = page.getByText(label, { exact: true })
+  const statItem = statLabel.locator('xpath=..')
+
+  await expect(statLabel).toBeVisible()
+  await expect(statItem.getByText(value, { exact: true })).toBeVisible()
 }
 
 test.beforeEach(async ({ request }) => {
@@ -333,8 +335,12 @@ test('calendar habit dropdown uses the shared dropdown surface', async ({ page, 
     icon: 'coffee'
   })
 
-  await resetAppData(request, { habits: [firstHabit, secondHabit] })
-  await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
+  await resetAppData(request, {
+    habits: [firstHabit, secondHabit],
+    settings: {
+      theme: 'dark'
+    }
+  })
   await page.goto('/calendar')
   await waitForAppReady(page)
 

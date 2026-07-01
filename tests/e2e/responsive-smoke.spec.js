@@ -197,8 +197,12 @@ test.describe('responsive smoke coverage', () => {
 
   test('calendar heatmap cells keep readable contrast in dark mode', async ({ page, request }) => {
     const smokeState = buildSmokeState()
-    await resetAppData(request, smokeState)
-    await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
+    await resetAppData(request, {
+      ...smokeState,
+      settings: {
+        theme: 'dark'
+      }
+    })
     await page.goto('/calendar')
     await waitForAppReady(page)
     await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
