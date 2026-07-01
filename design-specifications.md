@@ -4,16 +4,31 @@
 
 ### Color Palette
 
-| Color | Hex Code | Usage |
+#### Light Theme
+
+| Token | Hex Code | Usage |
 |-------|----------|-------|
-| Primary Green | `#6CC47C` | Primary actions, progress indicators, active states |
-| Soft Yellow | `#F6D860` | Secondary actions, highlights, warnings |
-| Muted Red | `#F28A8A` | Streak breaks, errors, destructive actions |
-| Background | `#F9FAFB` | App background, card backgrounds |
-| Primary Text | `#1A1A1A` | Headings, primary content |
-| Secondary Text | `#6B7280` | Secondary content, placeholders |
-| White | `#FFFFFF` | Card backgrounds, button backgrounds |
-| Border | `#E5E7EB` | Dividers, borders |
+| Primary Green | `#4CAF50` | Primary actions, progress indicators, active states |
+| Secondary Yellow | `#FFC107` | Secondary actions, highlights, warnings |
+| Destructive Red | `#F44336` | Streak breaks, errors, destructive actions |
+| Background | `#FFFFFF` | App background |
+| Surface | `#FFFFFF` | Cards, inputs, and button surfaces |
+| Primary Text | `#212121` | Headings, primary content |
+| Secondary Text | `#424242` | Secondary content, placeholders |
+| Border | `#BDBDBD` | Dividers, borders |
+
+#### Dark Theme
+
+| Token | Hex Code | Usage |
+|-------|----------|-------|
+| Primary Green | `#66BB6A` | Primary actions, progress indicators, active states |
+| Secondary Yellow | `#FFD54F` | Secondary actions, highlights, warnings |
+| Destructive Red | `#EF5350` | Errors and destructive actions |
+| Background | `#121212` | App background |
+| Surface | `#1E1E1E` | Cards, inputs, navigation, and controls |
+| Primary Text | `#FFFFFF` | Headings, primary content |
+| Secondary Text | `#E0E0E0` | Secondary content, placeholders |
+| Border | `#616161` | Dividers, borders |
 
 ### Typography
 
@@ -76,10 +91,10 @@ Based on 8px increments:
 - Loading: Show spinner
 
 **Specifications:**
-- Primary: `#6CC47C` background, white text
-- Secondary: `#F6D860` background, `#1A1A1A` text
-- Ghost: Transparent background, `#6CC47C` text
-- Destructive: `#F28A8A` background, white text
+- Primary: theme primary background, white text
+- Secondary: theme secondary background, primary text
+- Ghost: transparent background, theme primary text
+- Destructive: theme destructive background, white text
 - Small: 32px height, 12px horizontal padding
 - Medium: 40px height, 16px horizontal padding
 - Large: 48px height, 20px horizontal padding
@@ -97,13 +112,13 @@ Based on 8px increments:
 - `border`: boolean
 
 **States:**
-- Default: White background, subtle shadow
+- Default: theme surface background, subtle shadow
 - Elevated: Medium shadow
 - Clickable: Hover effect with scale to 1.02
-- Border: 1px solid `#E5E7EB`
+- Border: 1px solid theme border
 
 **Specifications:**
-- Background: `#FFFFFF`
+- Background: theme surface color
 - Border radius: 12px
 - Padding: Based on prop (none: 0, small: 12px, medium: 16px, large: 24px)
 - Shadow: Based on elevated prop
@@ -123,10 +138,10 @@ Based on 8px increments:
 - `type`: "text" | "email" | "password" | "number"
 
 **States:**
-- Default: Border `#E5E7EB`
-- Focused: Border `#6CC47C`
-- Error: Border `#F28A8A`
-- Disabled: Background `#F9FAFB`, 50% opacity
+- Default: theme border
+- Focused: theme primary border
+- Error: theme destructive border
+- Disabled: theme background, 50% opacity
 
 **Specifications:**
 - Height: 48px
@@ -146,17 +161,18 @@ Based on 8px increments:
 - `onTabChange`: function
 
 **States:**
-- Default: White background, medium shadow
-- Active item: `#6CC47C` icon and text
+- Default: theme surface background, medium shadow
+- Active item: theme primary icon and text
 
 **Specifications:**
 - Height: 80px (including safe area)
-- Background: `#FFFFFF`
+- Background: theme surface color
 - Shadow: Medium
 - Icon size: 24px
 - Text: 12px medium
-- Active color: `#6CC47C`
-- Inactive color: `#6B7280`
+- Active color: theme primary
+- Inactive color: theme secondary text
+- Items: Dashboard, Habits, Calendar, Journal, Progress, Settings
 
 ## Screen Designs
 
@@ -213,7 +229,7 @@ Based on 8px increments:
    - Props: `id`, `title`, `streakCount`, `isChecked`, `color`, `icon`
    - Left: Icon and habit name
    - Right: Streak count and check button
-   - Background: White with subtle shadow
+   - Background: theme surface with subtle shadow
    - Border radius: 12px
    - Height: 80px
    - Padding: 16px
@@ -221,12 +237,12 @@ Based on 8px increments:
 2. `FilterTabs`
    - Props: `activeTab`, `onTabChange`
    - Three tabs with underline indicator
-   - Active tab: `#6CC47C` text and indicator
+   - Active tab: theme primary text and indicator
 
 **Specifications:**
 - Outer padding: 20px
 - Card spacing: 12px
-- FAB: 56px diameter, `#6CC47C` background, plus icon
+- FAB: 56px diameter, theme primary background, plus icon
 
 ### Calendar View Screen
 
@@ -236,31 +252,30 @@ Based on 8px increments:
 
 **Layout:**
 - Header: "Calendar" heading with month/year
-- Toggle: Week/Month view
-- Calendar Grid: Heatmap of completion days
-- Legend: Color coding for completion levels
+- Toggle: Week/Month/Year view
+- Habit selector for focusing one habit
+- Calendar grid or contribution-style year heatmap
+- Selected-day details card with same-day habit action
+- Legend: count intensity levels
 
 **Components:**
 1. `CalendarHeatmap`
-   - Props: `completionData`, `viewType` ("week" | "month")
+   - Props: `completionData`, `viewType` ("week" | "month" | "year")
    - Grid of day cells
-   - Color intensity based on completion rate
+   - Color intensity based on logged count
    - Cell size: 40px
    - Cell spacing: 4px
 
 2. `ViewToggle`
    - Props: `activeView`, `onViewChange`
-   - Two segmented buttons
-   - Active: `#6CC47C` background, white text
+   - Three segmented buttons
+   - Active: theme surface/primary state
 
 **Specifications:**
 - Outer padding: 20px
-- Cell colors:
-  - No data: `#F3F4F6`
-  - 0-25%: `#E0F2E3`
-  - 26-50%: `#A8E0B1`
-  - 51-75%: `#6CC47C`
-  - 76-100%: `#4A9F5A`
+- Cell intensity levels: 0, 1, 2-3, 4-6, 7+
+- Dark mode uses opaque surface and heatmap colors with readable text contrast
+- Week layout follows the Settings week-start preference
 
 ### Habit Detail Screen
 
@@ -344,31 +359,36 @@ Based on 8px increments:
 
 **Layout:**
 - Header: "Settings" heading
-- Profile Section: User avatar and name
-- Settings Groups: Organized setting categories
-- App Info: Version and links
+- Profile section: avatar, name, email, photo actions, and edit controls
+- Preferences group: notifications, reminder time, week-start selector, and dark mode toggle
+- Data group: JSON export, CSV export, backup, restore, and clear-all action
+- App info: version plus Privacy, Terms, and Support links
 
 **Components:**
 1. `ProfileSection`
    - Props: `name`, `email`, `avatar`
-   - Avatar, name, email
-   - Edit profile button
+   - Avatar image or initial
+   - Name and email
+   - Photo, remove photo, edit, save, and cancel actions
 
 2. `SettingsGroup`
    - Props: `title`, `items`
    - Section title with list of settings
-   - Each setting: Icon, title, value, chevron
+   - Each setting: icon, title, description, value, control, or chevron
 
 3. `SettingItem`
-   - Props: `icon`, `title`, `value`, `type` ("toggle" | "navigate" | "action")
+   - Props: `icon`, `title`, `description`, `value`, `type` ("toggle" | "time" | "select" | "navigate" | "action")
    - Left: Icon and title
-   - Right: Value or toggle
+   - Right: value, toggle, time input, select dropdown, or chevron
 
 **Specifications:**
 - Outer padding: 20px
 - Group spacing: 24px
 - Item height: 56px
 - Toggle switch: 48px width, 28px height
+- Reminder time input and week-start dropdown share stable widths
+- Dark-mode time input uses an app-rendered clock glyph
+- Profile and preference settings persist through the database
 
 ### Add/Edit Habit Flow
 
@@ -378,7 +398,7 @@ Based on 8px increments:
 
 **Layout:**
 - Header: "New Habit" or "Edit Habit" with back button
-- Form Sections: Name, frequency, reminders, color, icon
+- Form Sections: name, description, type, daily goal, frequency, category, reminders, color, icon
 - Action Buttons: Cancel and Save
 
 **Components:**
@@ -400,13 +420,16 @@ Based on 8px increments:
 4. `ColorIconPicker`
    - Props: `selectedColor`, `selectedIcon`, `onColorChange`, `onIconChange`
    - Grid of color options
-   - Grid of icon options
+   - Searchable grouped Tabler icon picker
+   - Legacy icon values remain renderable when editing older data
 
 **Specifications:**
 - Outer padding: 20px
 - Section spacing: 24px
 - Color grid: 40px circles, 8px spacing
 - Icon grid: 40px squares, 8px spacing
+- Count habits expose a daily goal field
+- Yes/No habits hide the daily goal field
 
 ### Empty States
 
@@ -453,8 +476,8 @@ Based on 8px increments:
 **Specifications:**
 - Default size: 120px
 - Default stroke width: 8px
-- Default color: `#6CC47C`
-- Default background: `#E5E7EB`
+- Default color: theme primary
+- Default background: theme border/background contrast color
 - Animation: 500ms ease-in-out
 
 ### BarChart
@@ -473,8 +496,8 @@ Based on 8px increments:
 - Default height: 200px
 - Default bar width: 24px
 - Default spacing: 8px
-- Completed color: `#6CC47C`
-- Missed color: `#F28A8A`
+- Completed color: theme primary
+- Missed color: theme destructive
 - Animation: 300ms ease-out
 
 ### LineChart
@@ -492,7 +515,7 @@ Based on 8px increments:
 
 **Specifications:**
 - Default height: 200px
-- Default color: `#6CC47C`
+- Default color: theme primary
 - Default area opacity: 0.1
 - Animation: 500ms ease-in-out
 
@@ -502,12 +525,12 @@ Based on 8px increments:
 - Scale to 1.2 on press
 - Bounce back to 1.0 with 150ms ease-out
 - Micro-confetti effect from check position
-- Confetti particles: Small circles in `#6CC47C`, `#F6D860`, `#F28A8A`
+- Confetti particles: Small circles using theme primary, secondary, and destructive colors
 
 ### Toast Notifications
 - Slide up from bottom (100px to 0)
 - Duration: 3000ms
-- Background: `#1A1A1A` with 90% opacity
+- Background: high-contrast dark surface with 90% opacity
 - Text: `#FFFFFF`
 - Height: 48px
 - Padding: 0 16px
@@ -561,7 +584,9 @@ Based on 8px increments:
 - `CalendarViewScreen`: Heatmap calendar
 - `HabitDetailScreen`: Individual habit details
 - `ProgressStatsScreen`: Analytics and charts
+- `JournalScreen`: Weekly reflection timeline with mood and search
 - `SettingsScreen`: App preferences
+- `InfoPage`: Privacy, terms, and support content
 - `AddEditHabitFlow`: Habit creation/editing
 
 ### Data Visualization
@@ -570,9 +595,13 @@ Based on 8px increments:
 - `LineChart`: Trend visualization
 
 ### Utility Components
+- `AppIcon`: Tabler icon renderer with legacy fallback
+- `CountStepper`: Increment/decrement control for count habits
 - `EmptyState`: Placeholder content
+- `SelectDropdown`: Accessible custom select control
+- `StreakVisualization`: Streak milestones and timeline
 - `Toast`: Notification messages
 - `FilterTabs`: Tabbed filtering
 - `ViewToggle`: View switcher
 
-This design specification provides a comprehensive foundation for implementing the habit tracker app in Lovable, with all necessary details for colors, typography, spacing, components, and interactions.
+This design specification describes the current Habit Tracker interface, theme system, components, screens, interactions, responsive behavior, and accessibility expectations.

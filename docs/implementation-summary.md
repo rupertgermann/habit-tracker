@@ -1,268 +1,170 @@
-# Habit Tracker App - Feature Overview
+# Habit Tracker App - Implementation Summary
 
 ## Overview
 
-This document summarizes the features and technical implementation of the habit tracker app. The original design brief lives in `docs/prompt.md` and the UI/UX specification in `design-specifications.md`.
+Habit Tracker is a mobile-first React app backed by an Express API and a local SQLite database. It supports yes/no habits, count habits, streaks, calendar heatmaps, progress analytics, journaling, profile settings, dark mode, data export/restore, and browser-tested responsive layouts.
 
-## Features
+The original product brief lives in `docs/prompt.md`; the current UI specification lives in `design-specifications.md`.
 
-### 1. Animation and Interaction Enhancements
+## Product Surface
 
-#### Check-off Animation with Micro-Confetti
-- **Implementation**: Created a `Confetti` component that triggers when habits are completed
-- **Location**: `src/components/Confetti.jsx`
-- **Features**: 
-  - Uses the `react-confetti` package that was already installed
-  - Triggers on habit completion with customizable duration
-  - Can be triggered from any component with a single prop
+### Dashboard
 
-#### Toast Notifications
-- **Implementation**: Created a comprehensive toast notification system
-- **Location**: `src/components/Toast.jsx` and `src/context/ToastContext.jsx`
-- **Features**:
-  - Slide-up animation from bottom
-  - Context-based management for notifications
-  - Toasts for habit completion, streak milestones, habit creation/deletion, and error states
-  - Auto-dismiss after a set duration
-  - Multiple toast types (success, error, info, warning)
+- **Location**: `src/screens/Dashboard.jsx`
+- Shows total habits, today's completion rate, circular progress, motivational messaging, today's habits, weekly overview, and journal entry point.
+- Supports binary check-off and count-habit steppers from the same daily list.
+- Uses `Confetti`, `ToastContext`, and `CircularProgress` for feedback and completion celebrations.
 
-### 2. Calendar View Enhancements
+### Habit Management
 
-#### Week / Month / Year Views
-- **Implementation**: Per-habit calendar with week, month, and year views
+- **Location**: `src/screens/AddEditHabit.jsx`, `src/screens/HabitsList.jsx`, `src/screens/HabitDetail.jsx`
+- Habits support name, description, category, color, icon, frequency, reminders, type, and optional daily goal.
+- Yes/no habits store one completion per date; count habits store multiple completions per date.
+- Habit detail renders range stats, streak visualization, completion history, and journal reflection controls.
+- Tablet-sized viewports use `src/components/TabletSplitView.jsx` for list/detail navigation.
+
+### Icon System
+
+- **Location**: `src/components/AppIcon.jsx`, `src/domain/iconCatalog.js`
+- Habit and category icons use Tabler Icons React.
+- The icon catalog groups options by essentials, health, food, learning, work, home, creativity, and social themes.
+- Search and group tabs make the Add/Edit Habit icon picker usable with a large icon set.
+- Legacy emoji and one-letter icon values render safely through normalization and fallback helpers.
+
+### Calendar
+
 - **Location**: `src/screens/CalendarView.jsx`
-- **Features**:
-  - Toggle between week, month, and year views
-  - Habit selector to focus the calendar on a single habit
-  - Period navigation controls (previous/next week, month, or year)
-  - Count heatmap intensity (0, 1, 2-3, 4-6, 7+) per day
-  - Year view renders a 12-month contribution-style heatmap
-  - Stats card with percentage of days completed, total count, and best day
+- Per-habit calendar periods include week, month, and year.
+- Month and year views render a count heatmap with intensity levels for 0, 1, 2-3, 4-6, and 7+ completions.
+- Day cells expose click/tap details and a same-day action for marking a habit incomplete.
+- Week-start preference flows through `PreferencesContext` into calendar and journal date calculations.
+- Dark-mode heatmap colors use explicit opaque values so marked and unmarked cells remain distinguishable.
 
-#### Count Tracking
-- **Implementation**: Habits can be Yes/No or Count type
-- **Location**: `src/screens/AddEditHabit.jsx`, `src/components/CountStepper.jsx`, `src/context/HabitsContext.jsx`
-- **Features**:
-  - Count habits log multiple occurrences per day with an optional daily goal
-  - Increment/decrement stepper on the dashboard and habits list
-  - Per-habit range statistics (week/month/year): percentage of days with at least one entry, total count, average per active day, and best day
+### Progress & Streaks
 
-#### Tooltips on Tap for Calendar Details
-- **Implementation**: Created a reusable tooltip component
-- **Location**: `src/components/Tooltip.jsx`
-- **Features**:
-  - Shows on tap/click for calendar cells
-  - Displays habit completion details for each day
-  - Shows which habits were completed/missed
-  - Includes completion percentage for the day
+- **Location**: `src/screens/ProgressStats.jsx`, `src/components/StreakVisualization.jsx`
+- Progress includes total habits, completion rate, current streak, longest streak, weekly bar data, monthly trend data, and insight cards.
+- Streak calculations live in `src/domain/habitTracking.js` and count consecutive active days ending at the reference day.
 
-### 3. Progress/Stats Enhancements
+### Journal
 
-#### Enhanced Circular Progress Rings
-- **Implementation**: Enhanced the existing circular progress component
-- **Location**: `src/components/CircularProgress.jsx`
-- **Features**:
-  - Specific daily completion visualization
-  - Animated progress rings with smooth transitions
-  - Progress indicators for weekly/monthly completion
-  - Customizable colors and sizes
+- **Location**: `src/screens/JournalView.jsx`, `src/components/JournalEntry.jsx`, `src/domain/journalTimeline.js`
+- Journal entries connect to habits by `habitId`, date, content, and mood.
+- Weekly timeline data is scoped to the selected week and follows the configured week-start preference.
+- Search matches entry content and habit names while staying within the active week.
 
-#### Better Streak Visualization
-- **Implementation**: Created a dedicated streak visualization component
-- **Location**: `src/components/StreakVisualization.jsx`
-- **Features**:
-  - Shows current and longest streaks with visual indicators
-  - Streak history timeline
-  - Streak milestone celebrations
-  - Visual representation of streak consistency
+### Settings, Profile, and Preferences
 
-### 4. Settings Functionality
+- **Location**: `src/screens/Settings.jsx`, `src/context/ThemeContext.jsx`, `src/context/PreferencesContext.jsx`
+- Profile settings include name, email, image avatar upload, and avatar removal.
+- Theme and week-start preferences are stored in the database through `/api/settings/:key`.
+- Legacy `localStorage` profile, theme, and week-start values are removed so the database remains the source of truth.
+- Reminder controls use the browser Notification API and a themed time-input clock glyph.
+- Settings links route to app-local Privacy, Terms, and Support pages in `src/screens/InfoPage.jsx`.
 
-#### Dark Mode Implementation
-- **Implementation**: Created a theme context with dark mode support
-- **Location**: `src/context/ThemeContext.jsx` and `src/styles/theme.js`
-- **Features**:
-  - Dark mode theme variants
-  - Theme switching functionality
-  - All components updated to support dark mode
-  - System preference detection
+### Data Management
 
-#### Reminder System
-- **Implementation**: Integrated browser notification API
-- **Location**: `src/screens/Settings.jsx`
-- **Features**:
-  - Browser notification API integration
-  - Reminder scheduling system
-  - Notification permission handling
-  - Multiple reminders per habit
-  - Reminder customization options
+- **Location**: `src/screens/Settings.jsx`, `server/index.js`, `server/db.js`
+- JSON export downloads habit data.
+- CSV export downloads completion rows.
+- Full backup includes habits, categories, journal entries, profile settings, theme, and preferences.
+- Restore replaces app data through `POST /api/restore`.
+- Clear-all uses `DELETE /api/data` and re-seeds default categories.
 
-### 5. Data Management
+## Technical Architecture
 
-#### Export Data Functionality
-- **Implementation**: Added export features to settings
-- **Location**: `src/screens/Settings.jsx`
-- **Features**:
-  - JSON export of habit data
-  - CSV export option
-  - Date range selection for exports
-  - Export format options
+### Frontend
 
-#### Backup/Restore System
-- **Implementation**: Backup/restore against the SQLite-backed API
-- **Location**: `src/screens/Settings.jsx`, `server/index.js`
-- **Features**:
-  - JSON backup of habits, categories, and journal entries
-  - Restore replaces all data via `POST /api/restore`
-  - Clear-all wipes the database and re-seeds default categories
-  - UI preferences (theme, notifications) included in the backup file
+- `src/App.jsx` defines routes and provider order.
+- `src/api/habitsApi.js` centralizes REST requests.
+- `src/context/HabitsContext.jsx` owns habit, category, completion, and journal state.
+- `src/context/ThemeContext.jsx` owns light/dark theme state.
+- `src/context/PreferencesContext.jsx` owns calendar and journal week-start preference.
+- `src/context/NavigationContext.jsx` keeps bottom navigation in sync with routes.
+- `src/styles/theme.js` contains light/dark theme tokens and exposes `theme.mode`.
+- `src/styles/GlobalStyles.js` applies base typography, focus styles, and responsive rules.
 
-#### Persistent SQLite Storage
-- **Implementation**: Express REST API backed by a SQLite database
-- **Location**: `server/index.js`, `server/db.js`, `src/api/habitsApi.js`
-- **Features**:
-  - Habits, categories, and journal entries persisted in `server/data/habit-tracker.db`
-  - `HabitsContext` loads from `GET /api/state` and persists mutations with optimistic updates
-  - Default categories seeded automatically on first run
-  - Vite proxies `/api` to the API server (port 3001) in development
+### Backend
 
-### 6. Accessibility Improvements
+- `server/index.js` exposes the REST API on `127.0.0.1:3301` by default.
+- `server/db.js` initializes SQLite, enables WAL mode and foreign keys, seeds default categories, and provides JSON row helpers.
+- The database path defaults to `server/data/habit-tracker.db` and can be overridden with `HABIT_TRACKER_DB_PATH`.
+- Tables:
+  - `habits`
+  - `categories`
+  - `journal_entries`
+  - `settings`
 
-#### Comprehensive ARIA Labels
-- **Implementation**: Added ARIA labels throughout the app
-- **Location**: All components and screens
-- **Features**:
-  - Proper aria-labels on all buttons and interactive elements
-  - Screen reader support for charts and visualizations
-  - Keyboard navigation improvements
-  - All interactive elements are focusable
+### Development Server
 
-#### Improved Contrast Ratios
-- **Implementation**: Updated theme colors for better contrast
-- **Location**: `src/styles/theme.js`
-- **Features**:
-  - All color combinations audited for contrast compliance
-  - Updated theme colors where needed
-  - High contrast mode option
-  - Tested with accessibility tools
+- Vite runs on `3300` by default.
+- Vite proxies `/api` to `http://127.0.0.1:${PORT || 3301}` unless `VITE_API_TARGET` is set.
+- The e2e harness uses `3340/3341` with `.tmp/e2e/habit-tracker.db`.
+- The screenshot harness uses `3330/3331` with `.tmp/screenshots/habit-tracker.db`.
 
-### 7. Responsive Design
+## API Endpoints
 
-#### Tablet Split View
-- **Implementation**: Created a tablet-specific layout
-- **Location**: `src/components/TabletSplitView.jsx`
-- **Features**:
-  - Split view for tablet screens
-  - List on left and detail on right
-  - Updated navigation for tablet experience
-  - Responsive breakpoints
+| Method & Path | Purpose |
+|---|---|
+| `GET /api/state` | Full app state including settings. |
+| `GET /api/runtime` | Runtime marker for test reset safety. |
+| `GET /api/settings/:key` | Read one database-backed setting. |
+| `PUT /api/settings/:key` | Persist one database-backed setting. |
+| `POST /api/habits` | Create a habit. |
+| `PUT /api/habits/:id` | Update a habit. |
+| `DELETE /api/habits/:id` | Delete a habit and its journal entries. |
+| `POST /api/categories` | Create a category. |
+| `PUT /api/categories/:id` | Update a category. |
+| `DELETE /api/categories/:id` | Delete a category. |
+| `POST /api/journal` | Create a journal entry. |
+| `PUT /api/journal/:id` | Update a journal entry. |
+| `DELETE /api/journal/:id` | Delete a journal entry. |
+| `POST /api/restore` | Replace app data from a backup payload. |
+| `DELETE /api/data` | Clear app data and re-seed default categories. |
 
-### 8. Empty States
+## Commands
 
-#### Inspiring Vector Illustrations
-- **Implementation**: Created empty state components with illustrations
-- **Location**: `src/components/EmptyState.jsx`
-- **Features**:
-  - SVG illustrations for empty states
-  - Encouraging microcopy for different empty states
-  - Consistent empty state design across all screens
-  - Call-to-action buttons in empty states
-
-### 9. Performance Optimizations
-
-#### Data Visualization Performance
-- **Implementation**: Optimized chart components
-- **Location**: `src/components/BarChart.jsx` and `src/components/LineChart.jsx`
-- **Features**:
-  - Virtualization for large datasets
-  - Chart data point limits
-  - Optimized rendering for calendar with many entries
-  - Loading states for data-intensive operations
-
-### 10. Additional Features
-
-#### Habit Categories/Tags
-- **Implementation**: Added category system to habits
-- **Location**: Updated habit model in `src/context/HabitsContext.jsx`
-- **Features**:
-  - Category system for habits
-  - Filtering by category
-  - Category management UI
-  - Category icons and colors
-
-#### Journaling Functionality
-- **Implementation**: Created journaling components and screens
-- **Location**: `src/screens/JournalView.jsx`
-- **Features**:
-  - Daily notes for habits
-  - Journal view for reflections
-  - Note search functionality
-  - Mood tracking integration
-
-### 11. Navigation Fix
-
-#### Bottom Navigation State Management
-- **Implementation**: Created a navigation context for state management
-- **Location**: `src/context/NavigationContext.jsx`
-- **Features**:
-  - Global navigation state management
-  - Active tab synchronization with current route
-  - Persistent navigation state on page reload
-  - Removed prop drilling for navigation state
-
-## Technical Implementation Details
-
-### Architecture
-
-The app follows a modular architecture with clear separation of concerns:
-
-1. **Components**: Reusable UI components in `src/components/`
-2. **Screens**: Page-level components in `src/screens/`
-3. **Context**: State management in `src/context/`
-4. **Styles**: Theme and global styles in `src/styles/`
-
-### State Management
-
-The app uses React Context for state management:
-
-1. **HabitsContext**: Manages habit data and operations
-2. **ThemeContext**: Manages theme and dark mode
-3. **ToastContext**: Manages toast notifications
-4. **NavigationContext**: Manages navigation state
-
-### Styling
-
-The app uses styled-components for styling:
-
-1. **Theme System**: Comprehensive theme with light and dark variants
-2. **Global Styles**: Consistent base styles across the app
-3. **Component Styles**: Co-located with components for better maintainability
-
-### Dependencies
-
-The app uses the following key dependencies:
-
-1. **React 19**: UI library
-2. **Vite 8**: Build tool and dev server (requires Node.js 20.19+)
-3. **React Router 7**: Navigation
-4. **styled-components 6**: Styling
-5. **Framer Motion 12**: Animations
-6. **Recharts 3**: Data visualization
-7. **date-fns 4**: Date manipulation
-8. **react-confetti 6**: Celebration effects
-9. **Express 5**: REST API server
-10. **better-sqlite3**: SQLite database driver
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start API and client on `3301/3300`. |
+| `npm run server` | Start only the API on `3301`. |
+| `npm run dev:client` | Start only Vite on `3300`. |
+| `npm run dev:e2e` | Start the isolated e2e runtime on `3341/3340`. |
+| `npm run test:domain` | Run domain and context tests through Vite SSR. |
+| `npm run test:e2e` | Run Playwright tests against the isolated e2e runtime. |
+| `npm run test` | Run domain tests and e2e tests. |
+| `npm run screenshots` | Generate README screenshots from seeded example data. |
+| `npm run build` | Build the production bundle. |
+| `npm run preview` | Preview the production bundle. |
 
 ## Testing
 
-All features have been tested for:
+### Domain and Context Tests
 
-1. **Functionality**: All features work as expected
-2. **Responsiveness**: Works on mobile and tablet devices
-3. **Accessibility**: Meets WCAG guidelines
-4. **Performance**: Optimized for large datasets
-5. **Cross-browser**: Works in modern browsers
+- **Location**: `tests/domain/`, `tests/context/`, `scripts/run-domain-tests.mjs`
+- Covers count-habit completions, binary toggles, date-targeted mutations, streaks, weekly completion data, journal timeline filtering, week-start normalization, and theme preference resolution.
 
-## Conclusion
+### Browser Tests
 
-The app provides a comprehensive habit tracking experience with animations, visualizations, and a polished user interface, giving users a powerful tool to build habits, track streaks, and visualize progress in a motivating and distraction-free way.
+- **Location**: `tests/e2e/`, `playwright.config.js`, `scripts/run-e2e-dev.mjs`
+- Uses a temp SQLite database under `.tmp/e2e`.
+- Verifies the runtime marker before destructive reset/restore operations.
+- Covers persisted habit flows, icon selection, legacy icon rendering, mobile edit stability, journal timelines, profile/avatar settings, information pages, reminder and week-start controls, dark calendar contrast, and responsive smoke coverage.
+
+### Documentation Screenshots
+
+- **Location**: `scripts/capture-readme-screenshots.mjs`, `docs/images/`
+- Seeds example habits and journal entries into `.tmp/screenshots/habit-tracker.db`.
+- Captures light dashboard, dark dashboard, and dark calendar screenshots for the README.
+
+## Accessibility and Responsive Behavior
+
+- Interactive controls use labels, focus styles, and keyboard-reachable elements.
+- The bottom navigation supports the main mobile routes.
+- Wide viewports switch habit list/detail workflows into a split layout.
+- Playwright smoke tests assert no root overflow across mobile and desktop viewports.
+- Dark-mode tests assert contrast-sensitive calendar cells and settings controls remain readable.
+
+## Public Repository Positioning
+
+Habit Tracker showcases AI-assisted product engineering across UI implementation, backend persistence, domain modeling, test automation, documentation, and reproducible project assets. The repository description and topics are documented in `README.md` for GitHub repository setup.

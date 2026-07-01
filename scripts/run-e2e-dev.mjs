@@ -4,6 +4,8 @@ import path from 'node:path'
 
 const root = process.cwd()
 const tmpDir = path.join(root, '.tmp', 'e2e')
+const clientPort = process.env.E2E_CLIENT_PORT || '3340'
+const apiPort = process.env.E2E_API_PORT || '3341'
 mkdirSync(tmpDir, { recursive: true })
 
 const concurrentlyBin = path.join(
@@ -18,7 +20,8 @@ const env = {
   HABIT_TRACKER_DB_PATH: path.join(tmpDir, 'habit-tracker.db'),
   HABIT_TRACKER_E2E: 'true',
   HOST: '127.0.0.1',
-  PORT: '3001',
+  PORT: apiPort,
+  VITE_API_TARGET: `http://127.0.0.1:${apiPort}`,
   VITE_OPEN: 'false'
 }
 
@@ -28,7 +31,7 @@ const child = spawn(concurrentlyBin, [
   '-c',
   'blue,green',
   'node server/index.js',
-  'vite --host 127.0.0.1 --port 3000 --strictPort'
+  `vite --host 127.0.0.1 --port ${clientPort} --strictPort`
 ], {
   cwd: root,
   env,
