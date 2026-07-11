@@ -202,6 +202,8 @@ test.describe('responsive smoke coverage', () => {
       await page.setViewportSize(viewport.size)
       await page.goto('/progress')
       await waitForAppReady(page)
+      await expect(page.getByText('Top Current Streak', { exact: true })).toBeVisible()
+      await expect(page.getByText(/Longest streak:/)).toHaveCount(0)
 
       const timeline = page.getByTestId('streak-timeline').first()
       const currentDay = timeline.locator('[data-current-day="true"]')

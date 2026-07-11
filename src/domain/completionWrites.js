@@ -37,8 +37,20 @@ export const createInMemoryCompletionPersistence = ({ habits = [] } = {}) => {
   }
 }
 
-const createCompletionWriter = ({ persistence, replaceHabit, onFailure = () => {}, update }) => ({
-  async write({ habit, date = new Date() }) {
+const createCompletionWriter = ({
+  persistence,
+  replaceHabit,
+  getHabit,
+  pendingWrites = new Map(),
+  onFailure = () => {},
+  update
+}) => {
+  const performWrite = async ({ habit: providedHabit, habitId, date = new Date() }) => {
+    const resolvedHabitId = habitId || providedHabit?.id
+    const habit = getHabit && resolvedHabitId
+      ? getHabit(resolvedHabitId)
+      : providedHabit
+
     if (!habit) {
       return {
         ok: false,
@@ -64,7 +76,28 @@ const createCompletionWriter = ({ persistence, replaceHabit, onFailure = () => {
       return { ok: false, habit: previousHabit, changed: false, error }
     }
   }
-})
+
+  return {
+    write(input) {
+      const habitId = input.habitId || input.habit?.id
+      if (!habitId) return performWrite(input)
+
+      const previousWrite = pendingWrites.get(habitId) || Promise.resolve()
+      const operation = previousWrite.then(() => performWrite(input))
+      let trackedOperation
+      trackedOperation = operation
+        .catch(() => {})
+        .finally(() => {
+          if (pendingWrites.get(habitId) === trackedOperation) {
+            pendingWrites.delete(habitId)
+          }
+        })
+
+      pendingWrites.set(habitId, trackedOperation)
+      return operation
+    }
+  }
+}
 
 export const createYesNoCompletionWriter = (dependencies) => {
   const writer = createCompletionWriter({
@@ -78,12 +111,15 @@ export const createYesNoCompletionWriter = (dependencies) => {
 }
 
 export const createCountCompletionWriter = (dependencies) => {
+  const pendingWrites = dependencies.pendingWrites || new Map()
   const incrementWriter = createCompletionWriter({
     ...dependencies,
+    pendingWrites,
     update: incrementCompletionForDate
   })
   const decrementWriter = createCompletionWriter({
     ...dependencies,
+    pendingWrites,
     update: decrementCompletionForDate
   })
 

@@ -137,7 +137,7 @@ const MilestoneDescription = styled.div`
   color: ${props => props.theme.colors.text.secondary};
 `
 
-const StreakVisualization = ({ habit, streak, longestStreak }) => {
+const StreakVisualization = ({ habit, streak }) => {
   const timelineRef = useRef(null)
   const todayRef = useRef(null)
   const dragRef = useRef({ isDragging: false, pointerId: null, startX: 0, startScrollLeft: 0 })
@@ -294,13 +294,6 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
         </StreakMilestone>
       )}
       
-      {longestStreak > 0 && (
-        <div style={{ textAlign: 'center', marginTop: '8px' }}>
-          <div style={{ fontSize: '14px', color: '#6B7280' }}>
-            Longest streak: {longestStreak} days
-          </div>
-        </div>
-      )}
     </StreakContainer>
   )
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { habitsApi } from '../api/habitsApi'
 import {
   createCompletionPersistence,
@@ -98,6 +98,23 @@ export const HabitsProvider = ({
   completionPersistence = productionCompletionPersistence
 }) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
+  const habitsRef = useRef(state.habits)
+  const pendingCompletionWrites = useRef(new Map())
+  habitsRef.current = state.habits
+
+  const replaceHabit = replacement => {
+    habitsRef.current = habitsRef.current.map(habit => (
+      habit.id === replacement.id ? replacement : habit
+    ))
+    dispatch({ type: 'UPDATE_HABIT', payload: replacement })
+  }
+
+  const getCompletionWriterDependencies = () => ({
+    persistence: completionPersistence,
+    getHabit: habitId => habitsRef.current.find(habit => habit.id === habitId),
+    replaceHabit,
+    pendingWrites: pendingCompletionWrites.current
+  })
 
   // Load full state from the SQLite-backed API on mount
   useEffect(() => {
@@ -203,37 +220,32 @@ export const HabitsProvider = ({
   }
 
   const toggleYesNoCompletion = async (habitId, date = new Date()) => {
-    const habit = state.habits.find(h => h.id === habitId)
     dispatch({ type: 'CLEAR_MUTATION_ERROR' })
     const writer = createYesNoCompletionWriter({
-      persistence: completionPersistence,
-      replaceHabit: replacement => dispatch({ type: 'UPDATE_HABIT', payload: replacement }),
-      onFailure: () => dispatch({
+      ...getCompletionWriterDependencies(),
+      onFailure: (error, previousHabit) => dispatch({
         type: 'SET_MUTATION_ERROR',
         payload: {
           habitId,
-          message: `Could not update "${habit?.name || 'Habit'}". Please try again.`
+          message: `Could not update "${previousHabit?.name || 'Habit'}". Please try again.`
         }
       })
     })
 
-    const result = await writer.toggle({ habit, date })
+    const result = await writer.toggle({ habitId, date })
     return result
   }
 
   const getCountCompletionWriter = () => createCountCompletionWriter({
-    persistence: completionPersistence,
-    replaceHabit: replacement => dispatch({ type: 'UPDATE_HABIT', payload: replacement })
+    ...getCompletionWriterDependencies()
   })
 
   const incrementCountCompletion = async (habitId, date = new Date()) => {
-    const habit = state.habits.find(h => h.id === habitId)
-    return getCountCompletionWriter().increment({ habit, date })
+    return getCountCompletionWriter().increment({ habitId, date })
   }
 
   const decrementCountCompletion = async (habitId, date = new Date()) => {
-    const habit = state.habits.find(h => h.id === habitId)
-    return getCountCompletionWriter().decrement({ habit, date })
+    return getCountCompletionWriter().decrement({ habitId, date })
   }
 
   const addCategory = (categoryData) => {

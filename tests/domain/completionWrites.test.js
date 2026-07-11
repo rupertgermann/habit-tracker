@@ -129,6 +129,90 @@ export const tests = [
     }
   },
   {
+    name: 'overlapping Count Completion writes serialize against the latest Habit state',
+    async run() {
+      const habit = { ...makeHabit(), type: 'count', completions: [] }
+      let currentHabit = habit
+      let persistedHabit = habit
+      let releaseFirstWrite
+      let updateCount = 0
+      const persistence = {
+        async updateHabit(updatedHabit) {
+          updateCount += 1
+          if (updateCount === 1) {
+            await new Promise(resolve => { releaseFirstWrite = resolve })
+          }
+          persistedHabit = updatedHabit
+          return updatedHabit
+        }
+      }
+      const writer = createCountCompletionWriter({
+        persistence,
+        getHabit: () => currentHabit,
+        replaceHabit: replacement => { currentHabit = replacement }
+      })
+
+      const first = writer.increment({ habitId: habit.id, date })
+      const secondDate = new Date('2026-07-11T09:15:00.000Z')
+      const second = writer.increment({ habitId: habit.id, date: secondDate })
+      await Promise.resolve()
+
+      assert.equal(updateCount, 1)
+      assert.equal(currentHabit.completions.length, 1)
+
+      releaseFirstWrite()
+      const results = await Promise.all([first, second])
+
+      assert.deepEqual(results.map(result => result.ok), [true, true])
+      assert.equal(updateCount, 2)
+      assert.deepEqual(currentHabit.completions, [
+        { date: '2026-07-11', completedAt: date.toISOString() },
+        { date: '2026-07-11', completedAt: secondDate.toISOString() }
+      ])
+      assert.equal(persistedHabit, currentHabit)
+    }
+  },
+  {
+    name: 'a failed queued Count write rolls back before the next write begins',
+    async run() {
+      const habit = { ...makeHabit(), type: 'count', completions: [] }
+      let currentHabit = habit
+      let persistedHabit = habit
+      let rejectFirstWrite
+      let updateCount = 0
+      const persistence = {
+        async updateHabit(updatedHabit) {
+          updateCount += 1
+          if (updateCount === 1) {
+            await new Promise((resolve, reject) => { rejectFirstWrite = reject })
+          }
+          persistedHabit = updatedHabit
+          return updatedHabit
+        }
+      }
+      const writer = createCountCompletionWriter({
+        persistence,
+        getHabit: () => currentHabit,
+        replaceHabit: replacement => { currentHabit = replacement }
+      })
+
+      const first = writer.increment({ habitId: habit.id, date })
+      const secondDate = new Date('2026-07-11T09:15:00.000Z')
+      const second = writer.increment({ habitId: habit.id, date: secondDate })
+      await Promise.resolve()
+
+      rejectFirstWrite(new Error('first write failed'))
+      const results = await Promise.all([first, second])
+
+      assert.deepEqual(results.map(result => result.ok), [false, true])
+      assert.equal(updateCount, 2)
+      assert.deepEqual(currentHabit.completions, [
+        { date: '2026-07-11', completedAt: secondDate.toISOString() }
+      ])
+      assert.equal(persistedHabit, currentHabit)
+    }
+  },
+  {
     name: 'Count Completion decrement removes the last matching occurrence only',
     async run() {
       const firstToday = { date: '2026-07-11', completedAt: '2026-07-11T07:00:00.000Z' }

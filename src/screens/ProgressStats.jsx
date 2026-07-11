@@ -189,20 +189,11 @@ const ProgressStats = () => {
   const [weeklyData, setWeeklyData] = useState([])
   const [monthlyData, setMonthlyData] = useState([])
   const [stats, setStats] = useState({})
-  const [longestStreak, setLongestStreak] = useState(0)
 
   useEffect(() => {
     setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
     setMonthlyData(getMonthlyCompletionData(habits))
     setStats(getTrackingStats(habits))
-    
-    // Calculate longest streak across all habits
-    if (habits.length > 0) {
-      const maxStreak = Math.max(...habits.map(habit => {
-        return getHabitStreak(habit)
-      }), 0)
-      setLongestStreak(maxStreak)
-    }
   }, [habits, weekStartsOn])
 
   const getInsights = () => {
@@ -302,8 +293,8 @@ const ProgressStats = () => {
           <StatLabel>Today's Rate</StatLabel>
         </StatCard>
         <StatCard elevated>
-          <StatValue>{longestStreak}</StatValue>
-          <StatLabel>Best Streak</StatLabel>
+          <StatValue>{stats.maxStreak || 0}</StatValue>
+          <StatLabel>Top Current Streak</StatLabel>
         </StatCard>
       </StatsGrid>
 
@@ -318,7 +309,6 @@ const ProgressStats = () => {
                 <StreakVisualization
                   habit={habit}
                   streak={streak}
-                  longestStreak={streak}
                 />
               </Card>
             )
