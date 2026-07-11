@@ -12,7 +12,16 @@ import CountStepper from '../components/CountStepper'
 import EmptyState from '../components/EmptyState'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import { usePreferences } from '../context/PreferencesContext.jsx'
 import { useToast } from '../context/ToastContext'
+import {
+  getHabitStreak,
+  getTodayHabits,
+  getTrackingStats,
+  getWeeklyCompletionData,
+  isCompletedOnDate,
+  toDateKey
+} from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const DashboardContainer = styled.div`
@@ -195,34 +204,40 @@ const CheckButton = styled(motion.button)`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { habits, getTodayHabits, getWeeklyCompletionData, getStats, getHabitStreak, toggleHabitCompletion } = useHabits()
-  const { showSuccessToast } = useToast()
+  const { habits, toggleYesNoCompletion } = useHabits()
+  const { weekStartsOn } = usePreferences()
+  const { showSuccessToast, showErrorToast } = useToast()
   const [todayHabits, setTodayHabits] = useState([])
   const [weeklyData, setWeeklyData] = useState([])
   const [stats, setStats] = useState({})
   const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
-    setTodayHabits(getTodayHabits())
-    setWeeklyData(getWeeklyCompletionData())
-    setStats(getStats())
-  }, [getTodayHabits, getWeeklyCompletionData, getStats])
+    setTodayHabits(getTodayHabits(habits))
+    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
+    setStats(getTrackingStats(habits))
+  }, [habits, weekStartsOn])
 
-  const handleToggleHabit = (habitId) => {
+  const handleToggleHabit = async (habitId) => {
     const habit = todayHabits.find(h => h.id === habitId)
+    if (!habit) return { ok: false }
+
     const isCompleting = !habit.isCompleted
-    
-    // Toggle the habit completion
-    toggleHabitCompletion(habitId)
-    
-    // Update local state
-    const updatedHabits = todayHabits.map(habit => {
-      if (habit.id === habitId) {
-        return { ...habit, isCompleted: isCompleting }
-      }
-      return habit
-    })
-    setTodayHabits(updatedHabits)
+
+    const result = await toggleYesNoCompletion(habitId)
+    if (!result.ok) {
+      showErrorToast(`Could not update "${habit.name}". Please try again.`)
+      return result
+    }
+
+    const updatedHabits = todayHabits.map(todayHabit => (
+      todayHabit.id === habitId
+        ? {
+            ...result.habit,
+            isCompleted: isCompletedOnDate(result.habit, toDateKey())
+          }
+        : todayHabit
+    ))
     
     // Show toast notification
     if (isCompleting) {
@@ -239,6 +254,8 @@ const Dashboard = () => {
         setShowConfetti(true)
       }
     }
+
+    return result
   }
 
   const getMotivationalMessage = () => {

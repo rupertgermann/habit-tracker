@@ -7,6 +7,13 @@ import CircularProgress from '../components/CircularProgress'
 import StreakVisualization from '../components/StreakVisualization'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import { usePreferences } from '../context/PreferencesContext.jsx'
+import {
+  getHabitStreak,
+  getMonthlyCompletionData,
+  getTrackingStats,
+  getWeeklyCompletionData
+} from '../domain/habitTracking'
 
 const ProgressContainer = styled.div`
   width: 100%;
@@ -176,27 +183,18 @@ const EmptyStateText = styled.p`
 `
 
 const ProgressStats = () => {
-  const { habits, getWeeklyCompletionData, getMonthlyCompletionData, getStats, getHabitStreak } = useHabits()
+  const { habits } = useHabits()
+  const { weekStartsOn } = usePreferences()
   const [timePeriod, setTimePeriod] = useState('week')
   const [weeklyData, setWeeklyData] = useState([])
   const [monthlyData, setMonthlyData] = useState([])
   const [stats, setStats] = useState({})
-  const [longestStreak, setLongestStreak] = useState(0)
 
   useEffect(() => {
-    setWeeklyData(getWeeklyCompletionData())
-    setMonthlyData(getMonthlyCompletionData())
-    setStats(getStats())
-    
-    // Calculate longest streak across all habits
-    if (habits.length > 0) {
-      const maxStreak = Math.max(...habits.map(habit => {
-        const streak = getHabitStreak(habit)
-        return Math.max(streak, habit.longestStreak || 0)
-      }), 0)
-      setLongestStreak(maxStreak)
-    }
-  }, [getWeeklyCompletionData, getMonthlyCompletionData, getStats, habits, getHabitStreak])
+    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
+    setMonthlyData(getMonthlyCompletionData(habits))
+    setStats(getTrackingStats(habits))
+  }, [habits, weekStartsOn])
 
   const getInsights = () => {
     const insights = []
@@ -281,8 +279,6 @@ const ProgressStats = () => {
           progress={stats.completionRate}
           size={150}
           strokeWidth={12}
-          animated={stats.completionRate === 100}
-          daily={true}
           label={`${stats.todayCompletions}/${stats.totalHabits} habits`}
         />
       </ProgressCard>
@@ -297,8 +293,8 @@ const ProgressStats = () => {
           <StatLabel>Today's Rate</StatLabel>
         </StatCard>
         <StatCard elevated>
-          <StatValue>{longestStreak}</StatValue>
-          <StatLabel>Best Streak</StatLabel>
+          <StatValue>{stats.maxStreak || 0}</StatValue>
+          <StatLabel>Top Current Streak</StatLabel>
         </StatCard>
       </StatsGrid>
 
@@ -307,14 +303,12 @@ const ProgressStats = () => {
           <ChartTitle>Current Streaks</ChartTitle>
           {habits.map(habit => {
             const streak = getHabitStreak(habit)
-            const habitLongestStreak = Math.max(streak, habit.longestStreak || 0)
             
             return (
               <Card key={habit.id} elevated style={{ marginBottom: '16px' }}>
                 <StreakVisualization
                   habit={habit}
                   streak={streak}
-                  longestStreak={habitLongestStreak}
                 />
               </Card>
             )

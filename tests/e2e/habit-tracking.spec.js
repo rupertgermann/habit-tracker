@@ -5,6 +5,7 @@ import {
   localDateKey,
   makeCompletion,
   makeHabit,
+  makeJournalEntry,
   resetAppData,
   waitForAppReady
 } from './helpers.js'
@@ -84,6 +85,8 @@ test('count habit persists daily logs through reloads and decrementing', async (
     dailyTarget: 5,
     completions: []
   })
+  expect(createdHabit).not.toHaveProperty('streak')
+  expect(createdHabit).not.toHaveProperty('longestStreak')
 
   await page.reload()
   await waitForAppReady(page)
@@ -230,6 +233,7 @@ test('mobile habit detail renders records without a created date', async ({ page
 
   await page.goto('/habit/e2e-missing-created-date')
   await waitForAppReady(page)
+  await assertNoConsoleErrors()
 
   await expect(page.getByRole('heading', { level: 1, name: /E2E Missing Created Date/ })).toBeVisible()
   await expect(page.getByText('Not recorded')).toBeVisible()
@@ -256,7 +260,7 @@ test('yes/no habit toggle persists one dated completion and toggles it off', asy
   await waitForAppReady(page)
   await expect(page.getByRole('heading', { level: 1, name: /E2E Yes No Persistence/ })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Mark as Complete' }).click()
+  await page.getByRole('button', { name: 'Mark as Complete', exact: true }).click()
   await waitForCompletionCount(request, habitName, today, 1)
 
   let persistedHabit = await waitForHabitByName(request, habitName)
@@ -264,9 +268,9 @@ test('yes/no habit toggle persists one dated completion and toggles it off', asy
 
   await page.reload()
   await waitForAppReady(page)
-  await expect(page.getByRole('button', { name: 'Mark as Incomplete' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mark as Incomplete', exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Mark as Incomplete' }).click()
+  await page.getByRole('button', { name: 'Mark as Incomplete', exact: true }).click()
   await waitForCompletionCount(request, habitName, today, 0)
 
   persistedHabit = await waitForHabitByName(request, habitName)
@@ -274,7 +278,156 @@ test('yes/no habit toggle persists one dated completion and toggles it off', asy
 
   await page.reload()
   await waitForAppReady(page)
-  await expect(page.getByRole('button', { name: 'Mark as Complete' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mark as Complete', exact: true })).toBeVisible()
+})
+
+test('yes/no habit list and calendar actions share persisted completion state', async ({ page, request }) => {
+  const habitName = 'E2E Shared Yes No Write'
+  const habitId = 'e2e-shared-yes-no-write'
+  const today = localDateKey()
+
+  await resetAppData(request, {
+    habits: [
+      makeHabit({
+        id: habitId,
+        name: habitName,
+        type: 'binary',
+        completions: []
+      })
+    ]
+  })
+
+  await page.goto('/habits')
+  await waitForAppReady(page)
+  await page.getByRole('button', { name: `Mark as complete: ${habitName}` }).click()
+  await waitForCompletionCount(request, habitName, today, 1)
+
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByRole('button', { name: `Mark as incomplete: ${habitName}` })).toBeVisible()
+
+  await page.goto('/calendar')
+  await waitForAppReady(page)
+  await expect(page.getByRole('button', { name: 'Mark Incomplete' })).toBeVisible()
+  await page.getByRole('button', { name: 'Mark Incomplete' }).click()
+  await waitForCompletionCount(request, habitName, today, 0)
+
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByRole('button', { name: 'Mark Complete' })).toBeVisible()
+})
+
+test('failed yes/no write rolls Habit detail back and reports only failure', async ({ page, request }) => {
+  const habitName = 'E2E Failed Yes No Write'
+  const habitId = 'e2e-failed-yes-no-write'
+  const today = localDateKey()
+  let didInterceptFailedWrite = false
+  const pageErrors = []
+  page.on('pageerror', error => pageErrors.push(error.stack || error.message))
+
+  await resetAppData(request, {
+    habits: [
+      makeHabit({
+        id: habitId,
+        name: habitName,
+        type: 'binary',
+        completions: []
+      })
+    ]
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  await page.route(`**/api/habits/${habitId}`, async route => {
+    if (route.request().method() === 'PUT') {
+      didInterceptFailedWrite = true
+      await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+      return
+    }
+    await route.continue()
+  })
+
+  await page.goto(`/habit/${habitId}`)
+  await waitForAppReady(page)
+  await page.getByRole('button', { name: 'Mark as Complete', exact: true }).click()
+  await expect.poll(() => didInterceptFailedWrite).toBe(true)
+  await expect.poll(() => pageErrors).toEqual([])
+  await expect(page.getByRole('button', { name: 'Mark as Complete', exact: true })).toBeVisible()
+
+  const persistedHabit = await waitForHabitByName(request, habitName)
+  expect(countCompletionsOnDate(persistedHabit, today)).toBe(0)
+  await expect(page.getByText(`Could not update "${habitName}". Please try again.`)).toBeVisible()
+  await expect(page.getByText(`Great job! "${habitName}" completed!`)).toHaveCount(0)
+})
+
+test('deleting a Habit removes only its Journal Entries and stays deleted after reload', async ({ page, request }) => {
+  const deletedHabit = makeHabit({ id: 'e2e-delete-habit', name: 'E2E Delete Habit' })
+  const keptHabit = makeHabit({ id: 'e2e-keep-habit', name: 'E2E Keep Habit' })
+  const relatedEntry = makeJournalEntry({
+    id: 'e2e-delete-related-entry',
+    habitId: deletedHabit.id,
+    content: 'Delete this reflection'
+  })
+  const unrelatedEntry = makeJournalEntry({
+    id: 'e2e-keep-unrelated-entry',
+    habitId: keptHabit.id,
+    content: 'Keep this reflection'
+  })
+  await resetAppData(request, {
+    habits: [deletedHabit, keptHabit],
+    journalEntries: [relatedEntry, unrelatedEntry]
+  })
+
+  page.once('dialog', dialog => dialog.accept())
+  await page.goto(`/habit/${deletedHabit.id}`)
+  await waitForAppReady(page)
+  await page.getByRole('button', { name: 'Delete Habit', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/habits$/)
+  await expect(page.getByText(`"${deletedHabit.name}" deleted.`)).toBeVisible()
+  await expect(page.getByText(keptHabit.name)).toBeVisible()
+
+  const committedState = await getState(request)
+  expect(committedState.habits.map(habit => habit.id)).toEqual([keptHabit.id])
+  expect(committedState.journalEntries).toEqual([unrelatedEntry])
+
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByText(deletedHabit.name)).toHaveCount(0)
+  await expect(page.getByText(keptHabit.name)).toBeVisible()
+})
+
+test('failed Habit deletion preserves visible and persisted Habit data', async ({ page, request }) => {
+  const habit = makeHabit({ id: 'e2e-failed-delete-habit', name: 'E2E Failed Delete Habit' })
+  const journalEntry = makeJournalEntry({
+    id: 'e2e-failed-delete-entry',
+    habitId: habit.id,
+    content: 'Preserve this reflection'
+  })
+  await resetAppData(request, { habits: [habit], journalEntries: [journalEntry] })
+
+  await page.route(`**/api/habits/${habit.id}`, async route => {
+    if (route.request().method() === 'DELETE') {
+      await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+      return
+    }
+    await route.continue()
+  })
+  page.once('dialog', dialog => dialog.accept())
+
+  await page.goto(`/habit/${habit.id}`)
+  await waitForAppReady(page)
+  await page.getByRole('button', { name: 'Delete Habit', exact: true }).click()
+
+  await expect(page).toHaveURL(new RegExp(`/habit/${habit.id}$`))
+  await expect(page.getByRole('heading', { level: 1, name: new RegExp(habit.name) })).toBeVisible()
+  await expect(page.getByText(`Could not delete "${habit.name}". Please try again.`)).toBeVisible()
+  const persistedState = await getState(request)
+  expect(persistedState.habits).toEqual([habit])
+  expect(persistedState.journalEntries).toEqual([journalEntry])
+
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByRole('heading', { level: 1, name: new RegExp(habit.name) })).toBeVisible()
 })
 
 test('calendar stats for a count habit survive reload', async ({ page, request }) => {

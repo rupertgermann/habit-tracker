@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { useHabits } from '../context/HabitsContext'
@@ -51,16 +51,26 @@ const CountTarget = styled.span`
 `
 
 const CountStepper = ({ habit, onChange }) => {
-  const { incrementCompletion, decrementCompletion } = useHabits()
-  const { showSuccessToast } = useToast()
+  const { incrementCountCompletion, decrementCountCompletion } = useHabits()
+  const { showSuccessToast, showErrorToast } = useToast()
+  const [isWriting, setIsWriting] = useState(false)
 
   const today = toDateKey()
   const count = getCountForDate(habit, today)
   const target = habit.dailyTarget
 
-  const handleIncrement = (e) => {
+  const handleIncrement = async (e) => {
     e.stopPropagation()
-    incrementCompletion(habit.id)
+    if (isWriting) return
+
+    setIsWriting(true)
+    const result = await incrementCountCompletion(habit.id)
+    setIsWriting(false)
+    if (!result.ok) {
+      showErrorToast(`Could not log "${habit.name}". Please try again.`)
+      return result
+    }
+
     const next = count + 1
     if (target && next === target) {
       showSuccessToast(`Daily goal reached for "${habit.name}"!`)
@@ -68,13 +78,23 @@ const CountStepper = ({ habit, onChange }) => {
       showSuccessToast(`"${habit.name}" logged - ${next} today`)
     }
     if (onChange) onChange(next)
+    return result
   }
 
-  const handleDecrement = (e) => {
+  const handleDecrement = async (e) => {
     e.stopPropagation()
-    if (count === 0) return
-    decrementCompletion(habit.id)
+    if (count === 0 || isWriting) return
+
+    setIsWriting(true)
+    const result = await decrementCountCompletion(habit.id)
+    setIsWriting(false)
+    if (!result.ok) {
+      showErrorToast(`Could not remove a log from "${habit.name}". Please try again.`)
+      return result
+    }
+
     if (onChange) onChange(count - 1)
+    return result
   }
 
   return (
@@ -83,7 +103,7 @@ const CountStepper = ({ habit, onChange }) => {
         type="button"
         $variant="minus"
         onClick={handleDecrement}
-        disabled={count === 0}
+        disabled={count === 0 || isWriting}
         whileHover={{ scale: count === 0 ? 1 : 1.1 }}
         whileTap={{ scale: count === 0 ? 1 : 0.9 }}
         aria-label={`Remove one from ${habit.name}`}
@@ -98,6 +118,7 @@ const CountStepper = ({ habit, onChange }) => {
         type="button"
         $variant="plus"
         onClick={handleIncrement}
+        disabled={isWriting}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         aria-label={`Add one to ${habit.name}`}

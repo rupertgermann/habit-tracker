@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useLayoutEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { getRecentActivityDays } from '../domain/habitTracking'
@@ -31,9 +31,43 @@ const StreakValue = styled.div`
 
 const StreakTimeline = styled.div`
   display: flex;
+  flex-wrap: nowrap;
   gap: ${props => props.theme.spacing.xs};
+  width: 100%;
   overflow-x: auto;
   padding: ${props => props.theme.spacing.sm} 0;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: ${props => props.$isDragging ? 'grabbing' : 'grab'};
+  scrollbar-width: thin;
+  scrollbar-color: ${props => props.theme.colors.border} ${props => `${props.theme.colors.border}40`};
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: ${props => `${props.theme.colors.border}40`};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: ${props => props.theme.colors.border};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: ${props => props.theme.colors.primary};
+  }
+`
+
+const StreakDayItem = styled.div`
+  flex: 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `
 
 const StreakDay = styled(motion.div)`
@@ -103,7 +137,61 @@ const MilestoneDescription = styled.div`
   color: ${props => props.theme.colors.text.secondary};
 `
 
-const StreakVisualization = ({ habit, streak, longestStreak }) => {
+const StreakVisualization = ({ habit, streak }) => {
+  const timelineRef = useRef(null)
+  const todayRef = useRef(null)
+  const dragRef = useRef({ isDragging: false, pointerId: null, startX: 0, startScrollLeft: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handlePointerDown = event => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+
+    const timeline = timelineRef.current
+    if (!timeline) return
+
+    dragRef.current = {
+      isDragging: true,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: timeline.scrollLeft
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsDragging(true)
+  }
+
+  const handlePointerMove = event => {
+    const drag = dragRef.current
+    const timeline = timelineRef.current
+    if (!drag.isDragging || drag.pointerId !== event.pointerId || !timeline) return
+
+    event.preventDefault()
+    timeline.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
+  }
+
+  const handlePointerUp = event => {
+    const drag = dragRef.current
+    if (!drag.isDragging || drag.pointerId !== event.pointerId) return
+
+    dragRef.current.isDragging = false
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setIsDragging(false)
+  }
+
+  useLayoutEffect(() => {
+    const timeline = timelineRef.current
+    const today = todayRef.current
+    if (!timeline || !today) return
+
+    const timelineBounds = timeline.getBoundingClientRect()
+    const todayBounds = today.getBoundingClientRect()
+    const todayOffset = todayBounds.left - timelineBounds.left + timeline.scrollLeft
+    const centeredScrollLeft = todayOffset - (timeline.clientWidth - today.offsetWidth) / 2
+    const maxScrollLeft = timeline.scrollWidth - timeline.clientWidth
+    timeline.scrollLeft = Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft))
+  }, [habit.id])
+
   const getRecentDays = () => {
     return getRecentActivityDays(habit, 14).map(day => ({
       ...day,
@@ -165,9 +253,21 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
         <StreakValue>{streak} days</StreakValue>
       </StreakHeader>
       
-      <StreakTimeline>
+      <StreakTimeline
+        ref={timelineRef}
+        data-testid="streak-timeline"
+        $isDragging={isDragging}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
         {recentDays.map((day, index) => (
-          <div key={day.date.toString()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <StreakDayItem
+            key={day.date.toString()}
+            ref={day.isToday ? todayRef : undefined}
+            data-current-day={day.isToday ? 'true' : undefined}
+          >
             <StreakDay
               $completed={day.completed}
               $isToday={day.isToday}
@@ -178,7 +278,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
               {day.dayNumber}
             </StreakDay>
             <StreakDayLabel>{day.dayName}</StreakDayLabel>
-          </div>
+          </StreakDayItem>
         ))}
       </StreakTimeline>
       
@@ -194,13 +294,6 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
         </StreakMilestone>
       )}
       
-      {longestStreak > 0 && (
-        <div style={{ textAlign: 'center', marginTop: '8px' }}>
-          <div style={{ fontSize: '14px', color: '#6B7280' }}>
-            Longest streak: {longestStreak} days
-          </div>
-        </div>
-      )}
     </StreakContainer>
   )
 }

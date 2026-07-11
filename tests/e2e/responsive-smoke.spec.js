@@ -195,6 +195,65 @@ test.describe('responsive smoke coverage', () => {
     })
   }
 
+  for (const viewport of viewports) {
+    test(`progress current streak timeline behaves consistently on ${viewport.name}`, async ({ page, request }) => {
+      const smokeState = buildSmokeState()
+      await resetAppData(request, smokeState)
+      await page.setViewportSize(viewport.size)
+      await page.goto('/progress')
+      await waitForAppReady(page)
+      await expect(page.getByText('Top Current Streak', { exact: true })).toBeVisible()
+      await expect(page.getByText(/Longest streak:/)).toHaveCount(0)
+
+      const timeline = page.getByTestId('streak-timeline').first()
+      const currentDay = timeline.locator('[data-current-day="true"]')
+
+      await expect(currentDay).toBeVisible()
+
+      const visibility = await timeline.evaluate(element => {
+        const timelineBox = element.getBoundingClientRect()
+        const currentDayBox = element.querySelector('[data-current-day="true"]').getBoundingClientRect()
+
+        return {
+          currentDayLeft: currentDayBox.left,
+          currentDayRight: currentDayBox.right,
+          timelineLeft: timelineBox.left,
+          timelineRight: timelineBox.right,
+          scrollLeft: element.scrollLeft,
+          maxScrollLeft: element.scrollWidth - element.clientWidth,
+          scrollbarHeight: getComputedStyle(element, '::-webkit-scrollbar').height
+        }
+      })
+
+      expect(visibility.currentDayLeft).toBeGreaterThanOrEqual(visibility.timelineLeft)
+      expect(visibility.currentDayRight).toBeLessThanOrEqual(visibility.timelineRight)
+      expect(visibility.scrollLeft).toBeGreaterThan(0)
+      expect(visibility.scrollLeft).toBe(visibility.maxScrollLeft)
+      expect(visibility.scrollbarHeight).toBe('8px')
+
+      await timeline.evaluate(element => {
+        element.scrollLeft = 0
+      })
+      const timelineBox = await timeline.boundingBox()
+      if (!timelineBox) throw new Error('Streak timeline is not rendered')
+
+      const dragY = timelineBox.y + Math.min(timelineBox.height / 2, 24)
+      const dragStartX = timelineBox.x + timelineBox.width * 0.75
+      await page.mouse.move(dragStartX, dragY)
+      await page.mouse.down()
+      await page.mouse.move(dragStartX - 80, dragY, { steps: 3 })
+      await page.mouse.up()
+
+      const dragResult = await timeline.evaluate(element => ({
+        scrollLeft: element.scrollLeft,
+        selectedText: window.getSelection()?.toString() || ''
+      }))
+
+      expect(dragResult.scrollLeft).toBeGreaterThan(0)
+      expect(dragResult.selectedText).toBe('')
+    })
+  }
+
   test('calendar heatmap cells keep readable contrast in dark mode', async ({ page, request }) => {
     const smokeState = buildSmokeState()
     await resetAppData(request, {

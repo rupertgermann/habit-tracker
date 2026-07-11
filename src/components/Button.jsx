@@ -1,7 +1,6 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import { motion } from 'framer-motion'
-import { keyframes } from 'styled-components'
 import AppIcon from './AppIcon'
 
 const ButtonWrapper = styled(motion.button)`
@@ -115,7 +114,7 @@ const ButtonWrapper = styled(motion.button)`
   
   ${({ $isBouncing }) =>
     $isBouncing &&
-    `
+    css`
       animation: ${bounce} 0.6s ease;
     `}
 `

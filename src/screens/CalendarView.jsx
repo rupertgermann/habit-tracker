@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterval, isSameMonth, isToday, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks, startOfYear, endOfYear, addYears, subYears } from 'date-fns'
+import { format } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Tooltip from '../components/Tooltip'
@@ -9,15 +9,9 @@ import AppIcon from '../components/AppIcon'
 import SelectDropdown from '../components/SelectDropdown'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
+import { useToast } from '../context/ToastContext'
+import { getCalendarPeriod, getCountForDate } from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON, getLegacyIconText } from '../domain/iconCatalog'
-
-const getDayHeaders = (weekStartsOn) =>
-  weekStartsOn === 1
-    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-const getLeadingEmptyCellCount = (date, weekStartsOn) =>
-  (date.getDay() - weekStartsOn + 7) % 7
 
 const filledTileTextColor = '#102016'
 
@@ -426,6 +420,10 @@ const SelectedDateActions = styled.div`
   gap: ${props => props.theme.spacing.sm};
 `
 
+const RemoveCompletionButton = styled(Button)`
+  ${({ theme }) => theme.mode === 'dark' && 'color: #000000;'}
+`
+
 const DayCount = styled.span`
   font-size: 11px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
@@ -485,18 +483,15 @@ const CalendarView = () => {
   const { weekStartsOn } = usePreferences()
   const {
     habits,
-    getCountForDate,
-    getHabitRangeStats,
-    toggleHabitCompletion,
-    incrementCompletion,
-    decrementCompletion
+    toggleYesNoCompletion,
+    incrementCountCompletion,
+    decrementCountCompletion
   } = useHabits()
+  const { showSuccessToast, showErrorToast } = useToast()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewType, setViewType] = useState('month')
   const [selectedHabitId, setSelectedHabitId] = useState(null)
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const weekOptions = { weekStartsOn }
-  const dayHeaders = getDayHeaders(weekStartsOn)
 
   useEffect(() => {
     if (habits.length === 0) return
@@ -511,12 +506,8 @@ const CalendarView = () => {
     label: (getLegacyIconText(habit.icon) ? `${getLegacyIconText(habit.icon)} ` : '') + habit.name
   }))
 
-  const getCount = (date) =>
-    selectedHabit ? getCountForDate(selectedHabit, format(date, 'yyyy-MM-dd')) : 0
-
-  const rangeStats = selectedHabit
-    ? getHabitRangeStats(selectedHabit.id, viewType, currentDate)
-    : { percentDaysSaid: 0, percentDaysMissed: 0, totalCount: 0, daysWithEntry: 0, daysWithoutEntry: 0, bestCount: 0, bestDate: null }
+  const calendarPeriod = getCalendarPeriod(selectedHabit, viewType, currentDate, new Date(), weekStartsOn)
+  const { dayHeaders, stats: rangeStats } = calendarPeriod
 
   const targetLabel = selectedHabit && selectedHabit.dailyTarget
     ? ` / ${selectedHabit.dailyTarget}`
@@ -539,25 +530,50 @@ const CalendarView = () => {
     handleSelectDate(date)
   }
 
-  const handleToggleSelectedDate = () => {
-    if (!selectedHabit) return
-    toggleHabitCompletion(selectedHabit.id, selectedDate)
+  const handleToggleSelectedDate = async () => {
+    if (!selectedHabit) return { ok: false }
+
+    const isCompleting = selectedDateCount === 0
+    const result = await toggleYesNoCompletion(selectedHabit.id, selectedDate)
+    if (!result.ok) {
+      showErrorToast(`Could not update "${selectedHabit.name}" for ${selectedDateLabel}. Please try again.`)
+      return result
+    }
+
+    showSuccessToast(
+      `"${selectedHabit.name}" marked ${isCompleting ? 'complete' : 'incomplete'} for ${selectedDateLabel}.`
+    )
+    return result
   }
 
-  const handleIncrementSelectedDate = () => {
-    if (!selectedHabit) return
-    incrementCompletion(selectedHabit.id, selectedDate)
+  const handleIncrementSelectedDate = async () => {
+    if (!selectedHabit) return { ok: false }
+
+    const result = await incrementCountCompletion(selectedHabit.id, selectedDate)
+    if (!result.ok) {
+      showErrorToast(`Could not add a log for "${selectedHabit.name}" on ${selectedDateLabel}. Please try again.`)
+      return result
+    }
+
+    showSuccessToast(`Logged "${selectedHabit.name}" for ${selectedDateLabel}.`)
+    return result
   }
 
-  const handleDecrementSelectedDate = () => {
-    if (!selectedHabit || selectedDateCount === 0) return
-    decrementCompletion(selectedHabit.id, selectedDate)
+  const handleDecrementSelectedDate = async () => {
+    if (!selectedHabit || selectedDateCount === 0) return { ok: true, changed: false }
+
+    const result = await decrementCountCompletion(selectedHabit.id, selectedDate)
+    if (!result.ok) {
+      showErrorToast(`Could not remove a log from "${selectedHabit.name}" on ${selectedDateLabel}. Please try again.`)
+      return result
+    }
+
+    showSuccessToast(`Removed one "${selectedHabit.name}" log from ${selectedDateLabel}.`)
+    return result
   }
 
-  const getDayTooltipContent = (date) => {
-    const count = getCount(date)
-    const label = format(date, 'MMMM d, yyyy')
-
+  const getDayTooltipContent = (day) => {
+    const { count, longLabel: label } = day
     if (count === 0) {
       return { title: `${label} — none`, content: [] }
     }
@@ -573,27 +589,14 @@ const CalendarView = () => {
   }
 
   const renderCalendar = () => {
-    const monthStart = startOfMonth(currentDate)
-    const monthEnd = endOfMonth(currentDate)
-    const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-
-    const firstDayOfMonth = getLeadingEmptyCellCount(monthStart, weekStartsOn)
-    const emptyCells = Array(firstDayOfMonth).fill(null)
-    const lastDayOfMonth = getLeadingEmptyCellCount(monthEnd, weekStartsOn)
-    const endEmptyCells = Array(6 - lastDayOfMonth).fill(null)
-
-    const allCells = [...emptyCells, ...days, ...endEmptyCells]
-
-    return allCells.map((date, index) => {
-      if (!date) {
-        return <div key={`empty-${index}`} />
+    return calendarPeriod.cells.map((day) => {
+      if (day.type === 'padding') {
+        return <div key={day.key} />
       }
 
-      const isCurrentMonthDay = isSameMonth(date, currentDate)
-      const isTodayDate = isToday(date)
-      const count = getCount(date)
+      const { date, count } = day
       const completionLevel = getLevel(count)
-      const tooltipData = getDayTooltipContent(date)
+      const tooltipData = getDayTooltipContent(day)
       const isSelected = isSelectedDate(date)
 
       return (
@@ -606,8 +609,8 @@ const CalendarView = () => {
           enabled={count > 0}
         >
           <DayCell
-            $isCurrentMonth={isCurrentMonthDay}
-            $isToday={isTodayDate}
+            $isCurrentMonth={true}
+            $isToday={day.isToday}
             $completionLevel={completionLevel}
             $isSelected={isSelected}
             role="button"
@@ -626,20 +629,15 @@ const CalendarView = () => {
   }
 
   const renderWeekView = () => {
-    const weekStart = startOfWeek(currentDate, weekOptions)
-    const weekEnd = endOfWeek(currentDate, weekOptions)
-    const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd })
-
-    return daysOfWeek.map((day) => {
-      const isTodayDate = isToday(day)
-      const count = getCount(day)
+    return calendarPeriod.days.map((day) => {
+      const { date, count } = day
       const completionLevel = getLevel(count)
       const tooltipData = getDayTooltipContent(day)
-      const isSelected = isSelectedDate(day)
+      const isSelected = isSelectedDate(date)
 
       return (
         <Tooltip
-          key={day.toString()}
+          key={day.dateKey}
           title={tooltipData.title}
           content={tooltipData.content}
           position="top"
@@ -647,18 +645,18 @@ const CalendarView = () => {
           enabled={count > 0}
         >
           <WeekDayCard
-            $isToday={isTodayDate}
+            $isToday={day.isToday}
             $completionLevel={completionLevel}
             $isSelected={isSelected}
             role="button"
             tabIndex={0}
             aria-pressed={isSelected}
-            aria-label={`Select ${format(day, 'MMMM d, yyyy')}`}
-            onClick={() => handleSelectDate(day)}
-            onKeyDown={(event) => handleDateKeyDown(event, day)}
+            aria-label={`Select ${day.longLabel}`}
+            onClick={() => handleSelectDate(date)}
+            onKeyDown={(event) => handleDateKeyDown(event, date)}
           >
-            <WeekDayName $completionLevel={completionLevel}>{format(day, 'EEE')}</WeekDayName>
-            <WeekDayNumber $completionLevel={completionLevel}>{format(day, 'd')}</WeekDayNumber>
+            <WeekDayName $completionLevel={completionLevel}>{day.dayName}</WeekDayName>
+            <WeekDayNumber $completionLevel={completionLevel}>{day.dayNumber}</WeekDayNumber>
             <WeekDayCompletion $completionLevel={completionLevel}>
               {count}{targetLabel}
             </WeekDayCompletion>
@@ -669,31 +667,19 @@ const CalendarView = () => {
   }
 
   const renderYearView = () => {
-    const months = eachMonthOfInterval({
-      start: startOfYear(currentDate),
-      end: endOfYear(currentDate)
-    })
-
-    return months.map((monthDate) => {
-      const monthStart = startOfMonth(monthDate)
-      const monthEnd = endOfMonth(monthDate)
-      const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-      const emptyCells = Array(getLeadingEmptyCellCount(monthStart, weekStartsOn)).fill(null)
-      const cells = [...emptyCells, ...days]
-
+    return calendarPeriod.months.map((month) => {
       return (
-        <MiniMonth key={monthDate.toString()}>
-          <MiniMonthTitle>{format(monthDate, 'MMM')}</MiniMonthTitle>
+        <MiniMonth key={month.longLabel}>
+          <MiniMonthTitle>{month.label}</MiniMonthTitle>
           <MiniGrid>
-            {cells.map((date, index) => {
-              if (!date) return <div key={`empty-${index}`} />
-              const count = getCount(date)
+            {month.cells.map((day) => {
+              if (day.type === 'padding') return <div key={day.key} />
               return (
                 <MiniDay
-                  key={date.toString()}
-                  $level={getLevel(count)}
-                  $isToday={isToday(date)}
-                  title={`${format(date, 'MMM d')} — ${count}`}
+                  key={day.dateKey}
+                  $level={getLevel(day.count)}
+                  $isToday={day.isToday}
+                  title={`${day.shortLabel} — ${day.count}`}
                 />
               )
             })}
@@ -704,15 +690,11 @@ const CalendarView = () => {
   }
 
   const goToPrevious = () => {
-    if (viewType === 'month') setCurrentDate(subMonths(currentDate, 1))
-    else if (viewType === 'week') setCurrentDate(subWeeks(currentDate, 1))
-    else setCurrentDate(subYears(currentDate, 1))
+    setCurrentDate(calendarPeriod.previousReferenceDate)
   }
 
   const goToNext = () => {
-    if (viewType === 'month') setCurrentDate(addMonths(currentDate, 1))
-    else if (viewType === 'week') setCurrentDate(addWeeks(currentDate, 1))
-    else setCurrentDate(addYears(currentDate, 1))
+    setCurrentDate(calendarPeriod.nextReferenceDate)
   }
 
   const goToToday = () => {
@@ -721,13 +703,8 @@ const CalendarView = () => {
     setSelectedDate(today)
   }
 
-  const headerLabel = viewType === 'month'
-    ? format(currentDate, 'MMMM yyyy')
-    : viewType === 'week'
-      ? `${format(startOfWeek(currentDate, weekOptions), 'MMM d')} - ${format(endOfWeek(currentDate, weekOptions), 'MMM d, yyyy')}`
-      : format(currentDate, 'yyyy')
-
-  const periodLabel = viewType === 'year' ? 'This Year' : viewType === 'week' ? 'This Week' : 'This Month'
+  const headerLabel = calendarPeriod.headerLabel
+  const periodLabel = calendarPeriod.summaryLabel
 
   if (habits.length === 0) {
     return (
@@ -847,13 +824,13 @@ const CalendarView = () => {
         <SelectedDateActions>
           {isCountHabit ? (
             <>
-              <Button
+              <RemoveCompletionButton
                 variant="secondary"
                 onClick={handleDecrementSelectedDate}
                 disabled={selectedDateCount === 0}
               >
                 Remove one
-              </Button>
+              </RemoveCompletionButton>
               <Button onClick={handleIncrementSelectedDate}>
                 Add log
               </Button>

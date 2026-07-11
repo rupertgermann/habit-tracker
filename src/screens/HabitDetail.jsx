@@ -11,7 +11,13 @@ import CountStepper from '../components/CountStepper'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
-import { getRecentActivityDays, toDateKey } from '../domain/habitTracking'
+import {
+  getCountForDate,
+  getHabitById,
+  getHabitStreak,
+  getRecentActivityDays,
+  toDateKey
+} from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const HabitDetailContainer = styled.div`
@@ -133,6 +139,12 @@ const ActionButtons = styled.div`
   gap: ${props => props.theme.spacing.sm};
 `
 
+const ActionError = styled.div`
+  margin-bottom: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.destructive};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+`
+
 const HabitInfo = styled(Card)`
   margin-bottom: ${props => props.theme.spacing.lg};
 `
@@ -208,68 +220,67 @@ const CountActionHint = styled.div`
 const HabitDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { habits, hasLoaded, getHabitById, getHabitStreak, getCountForDate, deleteHabit, toggleHabitCompletion } = useHabits()
+  const { habits, hasLoaded, mutationError, deleteHabit, toggleYesNoCompletion } = useHabits()
   const { showSuccessToast } = useToast()
-  const [habit, setHabit] = useState(null)
-  const [streak, setStreak] = useState(0)
-  const [recentDays, setRecentDays] = useState([])
   const [showConfetti, setShowConfetti] = useState(false)
+  const [actionError, setActionError] = useState('')
+
+  const habit = id ? getHabitById(habits, id) : null
+  const streak = habit ? getHabitStreak(habit) : 0
+  const recentDays = habit ? getRecentActivityDays(habit) : []
+  const visibleActionError = actionError || (
+    mutationError && mutationError.habitId === habit?.id ? mutationError.message : ''
+  )
 
   useEffect(() => {
-    if (id) {
-      const habitData = getHabitById(id)
-      if (habitData) {
-        setHabit(habitData)
-        setStreak(getHabitStreak(habitData))
-        
-        setRecentDays(getRecentActivityDays(habitData))
-      } else if (hasLoaded) {
-        navigate('/habits')
-      }
+    if (id && hasLoaded && !habit) {
+      navigate('/habits')
     }
-  }, [id, habits, hasLoaded, getHabitById, getHabitStreak, navigate])
+  }, [id, habit, hasLoaded, navigate])
 
-  const handleToggleCompletion = () => {
-    if (habit) {
-      const isCompleting = !recentDays.find(day => day.isToday)?.isCompleted
-      
-      const updatedHabit = toggleHabitCompletion(habit.id)
-      setHabit(updatedHabit)
-      setStreak(getHabitStreak(updatedHabit))
-      
-      // Update recent days
-      const updatedDays = recentDays.map(day => {
-        if (day.isToday) {
-          return {
-            ...day,
-            isCompleted: !day.isCompleted
-          }
-        }
-        return day
-      })
-      setRecentDays(updatedDays)
-      
-      if (isCompleting) {
-        showSuccessToast(`Great job! "${habit.name}" completed!`)
-        
-        // Show confetti for milestone streaks
-        if (streak > 0 && (streak + 1) % 7 === 0) {
-          setShowConfetti(true)
-          showSuccessToast(`${streak + 1} day streak! Keep it up!`)
-        }
+  const handleToggleCompletion = async () => {
+    if (!habit) return { ok: false }
+
+    const isCompleting = !recentDays.find(day => day.isToday)?.isCompleted
+    setActionError('')
+    const result = await toggleYesNoCompletion(habit.id)
+    if (!result.ok) {
+      setActionError(`Could not update "${habit.name}". Please try again.`)
+      return result
+    }
+
+    if (isCompleting) {
+      showSuccessToast(`Great job! "${habit.name}" completed!`)
+
+      const updatedStreak = getHabitStreak(result.habit)
+      if (updatedStreak > 0 && updatedStreak % 7 === 0) {
+        setShowConfetti(true)
+        showSuccessToast(`${updatedStreak} day streak! Keep it up!`)
       }
     }
+
+    return result
   }
 
   const handleEdit = () => {
     navigate(`/edit-habit/${id}`)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this habit? This action cannot be undone.')) {
-      deleteHabit(id)
+      setActionError('')
+      const result = await deleteHabit(id)
+      if (!result.ok) {
+        setActionError(`Could not delete "${habit.name}". Please try again.`)
+        return result
+      }
+
+      showSuccessToast(`"${habit.name}" deleted.`)
       navigate('/habits')
+      return result
     }
+
+    return { ok: false, cancelled: true }
   }
 
   const getCompletionRate = () => {
@@ -414,6 +425,7 @@ const HabitDetail = () => {
 
       <Section>
         <SectionTitle>Actions</SectionTitle>
+        {visibleActionError && <ActionError role="alert">{visibleActionError}</ActionError>}
         <ActionButtons>
           {isCountHabit ? (
             <CountActionPanel elevated>

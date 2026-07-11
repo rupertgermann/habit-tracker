@@ -1,5 +1,9 @@
 import {
+  addMonths,
+  addWeeks,
+  addYears,
   eachDayOfInterval,
+  eachMonthOfInterval,
   endOfMonth,
   endOfWeek,
   endOfYear,
@@ -10,7 +14,10 @@ import {
   startOfMonth,
   startOfWeek,
   startOfYear,
-  subDays
+  subDays,
+  subMonths,
+  subWeeks,
+  subYears
 } from 'date-fns'
 
 const DATE_KEY_FORMAT = 'yyyy-MM-dd'
@@ -31,6 +38,9 @@ export const toDateKey = (date = new Date()) => format(date, DATE_KEY_FORMAT)
 
 export const getCompletions = (habit) =>
   Array.isArray(habit?.completions) ? habit.completions : []
+
+export const getHabitById = (habits, id) =>
+  habits.find(habit => habit.id === id)
 
 export const getCountForDate = (habit, dateStr) =>
   getCompletions(habit).filter(completion => completion.date === dateStr).length
@@ -125,24 +135,20 @@ const getPeriodRange = (range, refDate = new Date(), weekStartsOn = 0) => {
   }
 }
 
-export const getHabitRangeStats = (habit, range, refDate = new Date(), asOfDate = new Date(), weekStartsOn = 0) => {
-  if (!habit) return emptyRangeStats
+const getRangeStatsForDays = (days) => {
+  if (days.length === 0) return emptyRangeStats
 
-  const { periodStart, periodEnd } = getPeriodRange(range, refDate, weekStartsOn)
-  const today = startOfDay(asOfDate)
-  const createdAt = habit.createdAt ? startOfDay(parseISO(habit.createdAt)) : periodStart
-  const windowStart = createdAt > periodStart ? createdAt : periodStart
-  const windowEnd = today < periodEnd ? today : periodEnd
-
-  if (windowEnd < windowStart) return emptyRangeStats
-
-  const days = getDailyCountsForRange(habit, windowStart, windowEnd)
   const totalCount = days.reduce((sum, day) => sum + day.count, 0)
   const daysWithEntry = days.filter(day => day.count > 0).length
   const daysElapsed = days.length
   const daysWithoutEntry = daysElapsed - daysWithEntry
-  const best = days.reduce((acc, day) => (day.count > acc.count ? day : acc), { count: 0, date: null })
-  const percentDaysSaid = daysElapsed > 0 ? Math.round((daysWithEntry / daysElapsed) * 100) : 0
+  const best = days.reduce(
+    (currentBest, day) => day.count > currentBest.count
+      ? { count: day.count, date: day.dateKey || day.date }
+      : currentBest,
+    { count: 0, date: null }
+  )
+  const percentDaysSaid = Math.round((daysWithEntry / daysElapsed) * 100)
 
   return {
     totalCount,
@@ -150,10 +156,148 @@ export const getHabitRangeStats = (habit, range, refDate = new Date(), asOfDate 
     daysWithoutEntry,
     daysElapsed,
     percentDaysSaid,
-    percentDaysMissed: daysElapsed > 0 ? 100 - percentDaysSaid : 0,
+    percentDaysMissed: 100 - percentDaysSaid,
     avgPerActiveDay: daysWithEntry > 0 ? Math.round((totalCount / daysWithEntry) * 10) / 10 : 0,
     bestCount: best.count,
     bestDate: best.date
+  }
+}
+
+const getSummaryWindow = (habit, periodStart, periodEnd, asOfDate) => {
+  if (!habit) return null
+
+  const today = startOfDay(asOfDate)
+  const createdAt = habit.createdAt ? startOfDay(parseISO(habit.createdAt)) : periodStart
+  const windowStart = createdAt > periodStart ? createdAt : periodStart
+  const windowEnd = today < periodEnd ? today : periodEnd
+
+  return windowEnd < windowStart ? null : { windowStart, windowEnd }
+}
+
+export const getHabitRangeStats = (habit, range, refDate = new Date(), asOfDate = new Date(), weekStartsOn = 0) => {
+  if (!habit) return emptyRangeStats
+
+  const { periodStart, periodEnd } = getPeriodRange(range, refDate, weekStartsOn)
+  const summaryWindow = getSummaryWindow(habit, periodStart, periodEnd, asOfDate)
+
+  if (!summaryWindow) return emptyRangeStats
+
+  return getRangeStatsForDays(getDailyCountsForRange(
+    habit,
+    summaryWindow.windowStart,
+    summaryWindow.windowEnd
+  ))
+}
+
+const createCalendarDay = (habit, date, asOfDate) => {
+  const dateKey = toDateKey(date)
+  const count = getCountForDate(habit, dateKey)
+
+  return {
+    type: 'day',
+    date,
+    dateKey,
+    dayNumber: format(date, 'd'),
+    dayName: format(date, 'EEE'),
+    shortLabel: format(date, 'MMM d'),
+    longLabel: format(date, 'MMMM d, yyyy'),
+    count,
+    isCompleted: count > 0,
+    isToday: dateKey === toDateKey(asOfDate)
+  }
+}
+
+const createPaddingCells = (count, placement, keyPrefix) =>
+  Array.from({ length: count }, (_, index) => ({
+    type: 'padding',
+    placement,
+    key: `${keyPrefix}-${placement}-${index}`
+  }))
+
+const createMonthProjection = (habit, monthDate, asOfDate, weekStartsOn) => {
+  const monthStart = startOfMonth(monthDate)
+  const monthEnd = endOfMonth(monthDate)
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
+    .map(date => createCalendarDay(habit, date, asOfDate))
+  const leadingCellCount = (monthStart.getDay() - getWeekOptions(weekStartsOn).weekStartsOn + 7) % 7
+  const trailingCellCount = (7 - ((leadingCellCount + days.length) % 7)) % 7
+  const keyPrefix = format(monthStart, 'yyyy-MM')
+
+  return {
+    monthStart,
+    monthEnd,
+    label: format(monthStart, 'MMM'),
+    longLabel: format(monthStart, 'MMMM yyyy'),
+    leadingCellCount,
+    trailingCellCount,
+    days,
+    cells: [
+      ...createPaddingCells(leadingCellCount, 'leading', keyPrefix),
+      ...days,
+      ...createPaddingCells(trailingCellCount, 'trailing', keyPrefix)
+    ]
+  }
+}
+
+export const getCalendarPeriod = (
+  habit,
+  range,
+  refDate = new Date(),
+  asOfDate = new Date(),
+  weekStartsOn = 0
+) => {
+  const normalizedRange = range === 'week' || range === 'year' ? range : 'month'
+  const { periodStart, periodEnd } = getPeriodRange(normalizedRange, refDate, weekStartsOn)
+  const days = eachDayOfInterval({ start: periodStart, end: periodEnd })
+    .map(date => createCalendarDay(habit, date, asOfDate))
+  const summaryWindow = getSummaryWindow(habit, periodStart, periodEnd, asOfDate)
+  const summaryDays = summaryWindow
+    ? days.filter(day => day.date >= summaryWindow.windowStart && day.date <= summaryWindow.windowEnd)
+    : []
+  const months = normalizedRange === 'year'
+    ? eachMonthOfInterval({ start: periodStart, end: periodEnd })
+      .map(month => createMonthProjection(habit, month, asOfDate, weekStartsOn))
+    : []
+  const month = normalizedRange === 'month'
+    ? createMonthProjection(habit, periodStart, asOfDate, weekStartsOn)
+    : null
+  const weekOptions = getWeekOptions(weekStartsOn)
+  const previousReferenceDate = normalizedRange === 'week'
+    ? subWeeks(refDate, 1)
+    : normalizedRange === 'year'
+      ? subYears(refDate, 1)
+      : subMonths(refDate, 1)
+  const nextReferenceDate = normalizedRange === 'week'
+    ? addWeeks(refDate, 1)
+    : normalizedRange === 'year'
+      ? addYears(refDate, 1)
+      : addMonths(refDate, 1)
+
+  return {
+    range: normalizedRange,
+    periodStart,
+    periodEnd,
+    headerLabel: normalizedRange === 'week'
+      ? `${format(periodStart, 'MMM d')} - ${format(periodEnd, 'MMM d, yyyy')}`
+      : normalizedRange === 'year'
+        ? format(periodStart, 'yyyy')
+        : format(periodStart, 'MMMM yyyy'),
+    summaryLabel: normalizedRange === 'week'
+      ? 'This Week'
+      : normalizedRange === 'year'
+        ? 'This Year'
+        : 'This Month',
+    dayHeaders: eachDayOfInterval({
+      start: startOfWeek(refDate, weekOptions),
+      end: endOfWeek(refDate, weekOptions)
+    }).map(day => format(day, 'EEE')),
+    days,
+    cells: normalizedRange === 'month' ? month.cells : days,
+    month,
+    months,
+    stats: getRangeStatsForDays(summaryDays),
+    previousReferenceDate,
+    nextReferenceDate
   }
 }
 
