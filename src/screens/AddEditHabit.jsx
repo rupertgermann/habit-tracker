@@ -205,6 +205,26 @@ const IconGroupTabs = styled.div`
   gap: ${props => props.theme.spacing.xs};
   overflow-x: auto;
   padding-bottom: ${props => props.theme.spacing.xs};
+  scrollbar-width: thin;
+  scrollbar-color: ${props => props.theme.colors.border} ${props => `${props.theme.colors.border}40`};
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: ${props => `${props.theme.colors.border}40`};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: ${props => props.theme.colors.border};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: ${props => props.theme.colors.primary};
+  }
 `
 
 const IconGroupTab = styled.button`
@@ -227,6 +247,26 @@ const IconGrid = styled.div`
   max-height: 280px;
   overflow-y: auto;
   padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.xs} ${props => props.theme.spacing.xs} 0;
+  scrollbar-width: thin;
+  scrollbar-color: ${props => props.theme.colors.border} ${props => `${props.theme.colors.border}40`};
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: ${props => `${props.theme.colors.border}40`};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: ${props => props.theme.colors.border};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: ${props => props.theme.colors.primary};
+  }
 `
 
 const IconOption = styled.button`
