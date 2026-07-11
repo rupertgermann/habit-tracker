@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useLayoutEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { getRecentActivityDays } from '../domain/habitTracking'
@@ -31,9 +31,40 @@ const StreakValue = styled.div`
 
 const StreakTimeline = styled.div`
   display: flex;
+  flex-wrap: nowrap;
   gap: ${props => props.theme.spacing.xs};
+  width: 100%;
   overflow-x: auto;
   padding: ${props => props.theme.spacing.sm} 0;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: ${props => props.theme.colors.border} ${props => `${props.theme.colors.border}40`};
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: ${props => `${props.theme.colors.border}40`};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: ${props => props.theme.colors.border};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: ${props => props.theme.colors.primary};
+  }
+`
+
+const StreakDayItem = styled.div`
+  flex: 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `
 
 const StreakDay = styled(motion.div)`
@@ -104,6 +135,22 @@ const MilestoneDescription = styled.div`
 `
 
 const StreakVisualization = ({ habit, streak, longestStreak }) => {
+  const timelineRef = useRef(null)
+  const todayRef = useRef(null)
+
+  useLayoutEffect(() => {
+    const timeline = timelineRef.current
+    const today = todayRef.current
+    if (!timeline || !today) return
+
+    const timelineBounds = timeline.getBoundingClientRect()
+    const todayBounds = today.getBoundingClientRect()
+    const todayOffset = todayBounds.left - timelineBounds.left + timeline.scrollLeft
+    const centeredScrollLeft = todayOffset - (timeline.clientWidth - today.offsetWidth) / 2
+    const maxScrollLeft = timeline.scrollWidth - timeline.clientWidth
+    timeline.scrollLeft = Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft))
+  }, [habit.id])
+
   const getRecentDays = () => {
     return getRecentActivityDays(habit, 14).map(day => ({
       ...day,
@@ -165,9 +212,13 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
         <StreakValue>{streak} days</StreakValue>
       </StreakHeader>
       
-      <StreakTimeline>
+      <StreakTimeline ref={timelineRef} data-testid="streak-timeline">
         {recentDays.map((day, index) => (
-          <div key={day.date.toString()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <StreakDayItem
+            key={day.date.toString()}
+            ref={day.isToday ? todayRef : undefined}
+            data-current-day={day.isToday ? 'true' : undefined}
+          >
             <StreakDay
               $completed={day.completed}
               $isToday={day.isToday}
@@ -178,7 +229,7 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
               {day.dayNumber}
             </StreakDay>
             <StreakDayLabel>{day.dayName}</StreakDayLabel>
-          </div>
+          </StreakDayItem>
         ))}
       </StreakTimeline>
       
