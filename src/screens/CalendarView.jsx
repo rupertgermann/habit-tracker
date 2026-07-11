@@ -420,6 +420,10 @@ const SelectedDateActions = styled.div`
   gap: ${props => props.theme.spacing.sm};
 `
 
+const RemoveCompletionButton = styled(Button)`
+  ${({ theme }) => theme.mode === 'dark' && 'color: #000000;'}
+`
+
 const DayCount = styled.span`
   font-size: 11px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
@@ -820,13 +824,13 @@ const CalendarView = () => {
         <SelectedDateActions>
           {isCountHabit ? (
             <>
-              <Button
+              <RemoveCompletionButton
                 variant="secondary"
                 onClick={handleDecrementSelectedDate}
                 disabled={selectedDateCount === 0}
               >
                 Remove one
-              </Button>
+              </RemoveCompletionButton>
               <Button onClick={handleIncrementSelectedDate}>
                 Add log
               </Button>
