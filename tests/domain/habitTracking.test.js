@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import {
   decrementCompletionForDate,
+  getCalendarPeriod,
   getCountForDate,
+  getHabitById,
   getHabitRangeStats,
   getHabitStreak,
   getTrackingStats,
@@ -152,6 +154,111 @@ export const tests = [
       }
 
       assert.equal(getHabitStreak(habit, refDate), 2)
+    }
+  },
+  {
+    name: 'habit reads ignore legacy persisted streak fields',
+    run() {
+      const habit = {
+        id: 'legacy-streak',
+        streak: 99,
+        longestStreak: 999,
+        completions: [
+          { date: '2026-06-28', completedAt: '2026-06-28T08:00:00.000Z' }
+        ]
+      }
+
+      assert.equal(getHabitById([habit], habit.id), habit)
+      assert.equal(getHabitStreak(habit, refDate), 1)
+    }
+  },
+  {
+    name: 'week Calendar Periods respect week start and expose Completion facts',
+    run() {
+      const habit = createCountHabit()
+      const sundayWeek = getCalendarPeriod(habit, 'week', refDate, refDate, 0)
+      const mondayWeek = getCalendarPeriod(habit, 'week', refDate, refDate, 1)
+
+      assert.equal(sundayWeek.headerLabel, 'Jun 28 - Jul 4, 2026')
+      assert.deepEqual(sundayWeek.dayHeaders, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+      assert.equal(sundayWeek.days[0].dateKey, '2026-06-28')
+      assert.equal(sundayWeek.days[0].count, 2)
+      assert.equal(sundayWeek.days[0].isCompleted, true)
+      assert.equal(sundayWeek.days[0].isToday, true)
+
+      assert.deepEqual(mondayWeek.dayHeaders, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+      assert.equal(mondayWeek.days[0].dateKey, '2026-06-22')
+      assert.equal(mondayWeek.days[6].dateKey, '2026-06-28')
+      assert.equal(mondayWeek.days[6].count, 2)
+    }
+  },
+  {
+    name: 'month Calendar Periods pad leap months into complete weeks',
+    run() {
+      const leapDate = new Date('2024-02-15T12:00:00.000Z')
+      const period = getCalendarPeriod(null, 'month', leapDate, leapDate, 1)
+
+      assert.equal(period.headerLabel, 'February 2024')
+      assert.equal(period.month.days.length, 29)
+      assert.equal(period.month.leadingCellCount, 3)
+      assert.equal(period.month.trailingCellCount, 3)
+      assert.equal(period.cells.length, 35)
+      assert.equal(period.cells[0].placement, 'leading')
+      assert.equal(period.cells.at(-1).placement, 'trailing')
+      assert.equal(period.stats.daysElapsed, 0)
+    }
+  },
+  {
+    name: 'Yes/No Calendar Periods expose binary facts for completed and empty dates',
+    run() {
+      const habit = {
+        id: 'binary-calendar',
+        type: 'binary',
+        createdAt: '2026-06-01T08:00:00.000Z',
+        completions: [{ date: '2026-06-14', completedAt: '2026-06-14T08:00:00.000Z' }]
+      }
+      const period = getCalendarPeriod(habit, 'month', refDate, refDate)
+      const completedDay = period.days.find(day => day.dateKey === '2026-06-14')
+      const emptyDay = period.days.find(day => day.dateKey === '2026-06-15')
+
+      assert.deepEqual(
+        { count: completedDay.count, isCompleted: completedDay.isCompleted },
+        { count: 1, isCompleted: true }
+      )
+      assert.deepEqual(
+        { count: emptyDay.count, isCompleted: emptyDay.isCompleted },
+        { count: 0, isCompleted: false }
+      )
+    }
+  },
+  {
+    name: 'Calendar Period summaries share created-date and future-date semantics',
+    run() {
+      const habit = createCountHabit()
+      const period = getCalendarPeriod(habit, 'month', refDate, refDate)
+      const directStats = getHabitRangeStats(habit, 'month', refDate, refDate)
+
+      assert.deepEqual(period.stats, directStats)
+      assert.equal(period.stats.daysElapsed, 3)
+      assert.equal(period.stats.totalCount, 3)
+      assert.equal(period.stats.bestDate, '2026-06-28')
+      assert.equal(period.previousReferenceDate.getMonth(), 4)
+      assert.equal(period.nextReferenceDate.getMonth(), 6)
+    }
+  },
+  {
+    name: 'year Calendar Periods expose twelve padded months and year navigation',
+    run() {
+      const yearDate = new Date('2026-12-15T12:00:00.000Z')
+      const period = getCalendarPeriod(createCountHabit(), 'year', yearDate, yearDate)
+
+      assert.equal(period.headerLabel, '2026')
+      assert.equal(period.months.length, 12)
+      assert.equal(period.months[0].longLabel, 'January 2026')
+      assert.equal(period.months[11].longLabel, 'December 2026')
+      assert.equal(period.months.every(month => month.cells.length % 7 === 0), true)
+      assert.equal(period.previousReferenceDate.getFullYear(), 2025)
+      assert.equal(period.nextReferenceDate.getFullYear(), 2027)
     }
   }
 ]

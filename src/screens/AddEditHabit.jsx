@@ -7,6 +7,7 @@ import Input from '../components/Input'
 import CategorySelector from '../components/CategorySelector'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import { getHabitById } from '../domain/habitTracking'
 import {
   DEFAULT_HABIT_ICON,
   allIconOptions,
@@ -322,7 +323,7 @@ const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const AddEditHabit = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addHabit, updateHabit, getHabitById } = useHabits()
+  const { habits, addHabit, updateHabit } = useHabits()
   const isEditing = Boolean(id)
 
   const [formData, setFormData] = useState({
@@ -382,7 +383,7 @@ const AddEditHabit = () => {
 
   useEffect(() => {
     if (isEditing && id) {
-      const habit = getHabitById(id)
+      const habit = getHabitById(habits, id)
       if (habit) {
         setFormData({
           name: habit.name,
@@ -399,7 +400,7 @@ const AddEditHabit = () => {
         })
       }
     }
-  }, [isEditing, id, getHabitById])
+  }, [isEditing, id, habits])
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({

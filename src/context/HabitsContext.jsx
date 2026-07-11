@@ -1,19 +1,10 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
 import { habitsApi } from '../api/habitsApi'
 import {
-  decrementCompletionForDate,
-  getCountForDate as getHabitCountForDate,
-  getDailyCountsForRange as getHabitDailyCountsForRange,
-  getHabitRangeStats as getTrackingRangeStats,
-  getHabitStreak as getTrackingHabitStreak,
-  getMonthlyCompletionData as getTrackingMonthlyCompletionData,
-  getTodayHabits as getTrackingTodayHabits,
-  getTrackingStats,
-  getWeeklyCompletionData as getTrackingWeeklyCompletionData,
-  incrementCompletionForDate,
-  toggleBinaryCompletionForDate
-} from '../domain/habitTracking'
-import { usePreferences } from './PreferencesContext.jsx'
+  createCompletionPersistence,
+  createCountCompletionWriter,
+  createYesNoCompletionWriter
+} from '../domain/completionWrites'
 
 const HabitsContext = createContext()
 
@@ -30,7 +21,8 @@ const initialState = {
   ],
   isLoading: false,
   hasLoaded: false,
-  error: null
+  error: null,
+  mutationError: null
 }
 
 const habitsReducer = (state, action) => {
@@ -54,10 +46,11 @@ const habitsReducer = (state, action) => {
           habit.id === action.payload.id ? action.payload : habit
         )
       }
-    case 'DELETE_HABIT':
+    case 'DELETE_HABIT_SUCCESS':
       return {
         ...state,
-        habits: state.habits.filter(habit => habit.id !== action.payload)
+        habits: action.payload.habits,
+        journalEntries: action.payload.journalEntries
       }
     case 'ADD_CATEGORY':
       return { ...state, categories: [...state.categories, action.payload] }
@@ -87,14 +80,24 @@ const habitsReducer = (state, action) => {
         ...state,
         journalEntries: state.journalEntries.filter(entry => entry.id !== action.payload)
       }
+    case 'SET_MUTATION_ERROR':
+      return { ...state, mutationError: action.payload }
+    case 'CLEAR_MUTATION_ERROR':
+      return { ...state, mutationError: null }
     default:
       return state
   }
 }
 
-export const HabitsProvider = ({ children }) => {
+const productionCompletionPersistence = createCompletionPersistence({
+  updateHabit: habit => habitsApi.updateHabit(habit)
+})
+
+export const HabitsProvider = ({
+  children,
+  completionPersistence = productionCompletionPersistence
+}) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
-  const { weekStartsOn } = usePreferences()
 
   // Load full state from the SQLite-backed API on mount
   useEffect(() => {
@@ -121,9 +124,7 @@ export const HabitsProvider = ({ children }) => {
       ...habitData,
       category: habitData.category || 'other',
       createdAt: new Date().toISOString(),
-      completions: [],
-      streak: 0,
-      longestStreak: 0
+      completions: []
     }
     dispatch({ type: 'ADD_HABIT', payload: newHabit })
     habitsApi.createHabit(newHabit).catch(err => console.error('Failed to create habit:', err))
@@ -184,91 +185,55 @@ export const HabitsProvider = ({ children }) => {
     return updatedHabit
   }
 
-  const deleteHabit = (id) => {
-    dispatch({ type: 'DELETE_HABIT', payload: id })
-
-    // Remove any journal entries linked to this habit to prevent orphan data
-    const updatedEntries = state.journalEntries.filter(entry => entry.habitId !== id)
-    dispatch({ type: 'FETCH_JOURNAL_ENTRIES_SUCCESS', payload: updatedEntries })
-
-    // Server cascades journal-entry deletion for this habit
-    habitsApi.deleteHabit(id).catch(err => console.error('Failed to delete habit:', err))
+  const deleteHabit = async (id) => {
+    try {
+      const result = await habitsApi.deleteHabit(id)
+      dispatch({
+        type: 'DELETE_HABIT_SUCCESS',
+        payload: {
+          habits: result.state.habits,
+          journalEntries: result.state.journalEntries
+        }
+      })
+      return result
+    } catch (error) {
+      console.error('Failed to delete habit:', error)
+      return { ok: false, error }
+    }
   }
 
-  const toggleHabitCompletion = (habitId, date = new Date()) => {
+  const toggleYesNoCompletion = async (habitId, date = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
-    if (!habit) return
+    dispatch({ type: 'CLEAR_MUTATION_ERROR' })
+    const writer = createYesNoCompletionWriter({
+      persistence: completionPersistence,
+      replaceHabit: replacement => dispatch({ type: 'UPDATE_HABIT', payload: replacement }),
+      onFailure: () => dispatch({
+        type: 'SET_MUTATION_ERROR',
+        payload: {
+          habitId,
+          message: `Could not update "${habit?.name || 'Habit'}". Please try again.`
+        }
+      })
+    })
 
-    const updatedHabit = toggleBinaryCompletionForDate(habit, date)
-    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
-    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to toggle habit completion:', err))
-    return updatedHabit
+    const result = await writer.toggle({ habit, date })
+    return result
   }
 
-  // Append one occurrence for a date (count-type habits log multiple per day)
-  const incrementCompletion = (habitId, date = new Date()) => {
+  const getCountCompletionWriter = () => createCountCompletionWriter({
+    persistence: completionPersistence,
+    replaceHabit: replacement => dispatch({ type: 'UPDATE_HABIT', payload: replacement })
+  })
+
+  const incrementCountCompletion = async (habitId, date = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
-    if (!habit) return
-
-    const updatedHabit = incrementCompletionForDate(habit, date)
-    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
-    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to increment completion:', err))
-    return updatedHabit
+    return getCountCompletionWriter().increment({ habit, date })
   }
 
-  // Remove the most recent occurrence logged for a date
-  const decrementCompletion = (habitId, date = new Date()) => {
+  const decrementCountCompletion = async (habitId, date = new Date()) => {
     const habit = state.habits.find(h => h.id === habitId)
-    if (!habit) return
-
-    const updatedHabit = decrementCompletionForDate(habit, date)
-    if (updatedHabit === habit) return
-
-    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
-    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to decrement completion:', err))
-    return updatedHabit
-  }
-
-  // Number of occurrences logged on a given yyyy-MM-dd date
-  const getCountForDate = (habit, dateStr) => {
-    return getHabitCountForDate(habit, dateStr)
-  }
-
-  // Per-day counts for a habit across an inclusive date interval
-  const getDailyCountsForRange = (habitId, start, end) => {
-    const habit = state.habits.find(h => h.id === habitId)
-    return getHabitDailyCountsForRange(habit, start, end)
-  }
-
-  // Stats for a habit over a period: 'week' | 'month' | 'year'
-  const getHabitRangeStats = (habitId, range, refDate = new Date()) => {
-    const habit = state.habits.find(h => h.id === habitId)
-    return getTrackingRangeStats(habit, range, refDate, new Date(), weekStartsOn)
-  }
-
-  const getHabitById = (id) => {
-    return state.habits.find(habit => habit.id === id)
-  }
-
-  const getTodayHabits = () => {
-    return getTrackingTodayHabits(state.habits)
-  }
-
-  // Strict consecutive-day streak using UTC dates
-  const getHabitStreak = (habit) => {
-    return getTrackingHabitStreak(habit)
-  }
-
-  const getWeeklyCompletionData = () => {
-    return getTrackingWeeklyCompletionData(state.habits, new Date(), weekStartsOn)
-  }
-
-  const getMonthlyCompletionData = () => {
-    return getTrackingMonthlyCompletionData(state.habits)
-  }
-
-  const getStats = () => {
-    return getTrackingStats(state.habits)
+    return getCountCompletionWriter().decrement({ habit, date })
   }
 
   const addCategory = (categoryData) => {
@@ -304,14 +269,6 @@ export const HabitsProvider = ({ children }) => {
     habitsApi.deleteCategory(id).catch(err => console.error('Failed to delete category:', err))
   }
 
-  const getHabitsByCategory = (categoryId) => {
-    return state.habits.filter(habit => habit.category === categoryId)
-  }
-
-  const getCategoryById = (id) => {
-    return state.categories.find(category => category.id === id)
-  }
-
   const value = {
     ...state,
     addHabit,
@@ -323,23 +280,12 @@ export const HabitsProvider = ({ children }) => {
     getJournalEntriesByDate,
     getJournalEntriesByDateRange,
     getJournalEntryForHabit,
-    toggleHabitCompletion,
-    incrementCompletion,
-    decrementCompletion,
-    getCountForDate,
-    getDailyCountsForRange,
-    getHabitRangeStats,
-    getHabitById,
-    getTodayHabits,
-    getHabitStreak,
-    getWeeklyCompletionData,
-    getMonthlyCompletionData,
-    getStats,
+    toggleYesNoCompletion,
+    incrementCountCompletion,
+    decrementCountCompletion,
     addCategory,
     updateCategory,
-    deleteCategory,
-    getHabitsByCategory,
-    getCategoryById
+    deleteCategory
   }
 
   return (

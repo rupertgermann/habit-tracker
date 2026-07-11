@@ -135,18 +135,6 @@ function getState() {
   }
 }
 
-function deleteJournalEntriesForHabit(habitId) {
-  const rows = db.prepare('SELECT id, data FROM journal_entries').all()
-  const del = db.prepare('DELETE FROM journal_entries WHERE id = ?')
-  const tx = db.transaction(() => {
-    for (const row of rows) {
-      const entry = JSON.parse(row.data)
-      if (entry.habitId === habitId) del.run(row.id)
-    }
-  })
-  tx()
-}
-
 function replaceAll({ habits = [], categories = [], journalEntries = [], settings = {} }) {
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM habits').run()
@@ -198,7 +186,6 @@ module.exports = {
   upsertRow,
   upsertSetting,
   deleteRow,
-  deleteJournalEntriesForHabit,
   replaceAll,
   clearAll
 }

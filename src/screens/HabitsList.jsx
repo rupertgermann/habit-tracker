@@ -10,6 +10,7 @@ import EmptyState from '../components/EmptyState'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
+import { getHabitStreak, getTodayHabits } from '../domain/habitTracking'
 import { DEFAULT_CATEGORY_ICON, DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const HabitsListContainer = styled.div`
@@ -239,8 +240,8 @@ const FloatingActionButton = styled(motion.button)`
 
 const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   const navigate = useNavigate()
-  const { habits, categories, toggleHabitCompletion, getTodayHabits, getHabitStreak } = useHabits()
-  const { showSuccessToast } = useToast()
+  const { habits, categories, toggleYesNoCompletion } = useHabits()
+  const { showSuccessToast, showErrorToast } = useToast()
   const [filter, setFilter] = useState('all')
   const [filteredHabits, setFilteredHabits] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -248,8 +249,8 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
-    setTodayHabits(getTodayHabits())
-  }, [getTodayHabits])
+    setTodayHabits(getTodayHabits(habits))
+  }, [habits])
 
   useEffect(() => {
     let filtered = [...habits]
@@ -272,24 +273,31 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
     setSelectedCategory(prev => (prev === id ? null : id))
   }
 
-  const handleToggleHabit = (habitId, e) => {
+  const handleToggleHabit = async (habitId, e) => {
     e.stopPropagation()
     const habit = habits.find(h => h.id === habitId)
     const todayHabit = todayHabits.find(h => h.id === habitId)
+    if (!habit || !todayHabit) return { ok: false }
+
     const isCompleting = !todayHabit?.isCompleted
-    
-    toggleHabitCompletion(habitId)
-    setTodayHabits(getTodayHabits())
+
+    const result = await toggleYesNoCompletion(habitId)
+    if (!result.ok) {
+      showErrorToast(`Could not update "${habit.name}". Please try again.`)
+      return result
+    }
     
     if (isCompleting) {
       showSuccessToast(`Great job! "${habit.name}" completed!`)
       
       // Show confetti for milestone completions
-      const completedCount = todayHabits.filter(h => h.id === habitId ? !h.isCompleted : h.isCompleted).length + 1
+      const completedCount = todayHabits.filter(h => h.id === habitId ? true : h.isCompleted).length
       if (completedCount % 5 === 0) {
         setShowConfetti(true)
       }
     }
+
+    return result
   }
 
   const handleHabitClick = (habitId) => {
@@ -438,6 +446,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
                 <CheckButton
                   $checked={getHabitStatus(habit)}
                   onClick={(e) => handleToggleHabit(habit.id, e)}
+                  aria-label={`${getHabitStatus(habit) ? 'Mark as incomplete' : 'Mark as complete'}: ${habit.name}`}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >

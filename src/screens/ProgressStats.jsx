@@ -7,6 +7,13 @@ import CircularProgress from '../components/CircularProgress'
 import StreakVisualization from '../components/StreakVisualization'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import { usePreferences } from '../context/PreferencesContext.jsx'
+import {
+  getHabitStreak,
+  getMonthlyCompletionData,
+  getTrackingStats,
+  getWeeklyCompletionData
+} from '../domain/habitTracking'
 
 const ProgressContainer = styled.div`
   width: 100%;
@@ -176,7 +183,8 @@ const EmptyStateText = styled.p`
 `
 
 const ProgressStats = () => {
-  const { habits, getWeeklyCompletionData, getMonthlyCompletionData, getStats, getHabitStreak } = useHabits()
+  const { habits } = useHabits()
+  const { weekStartsOn } = usePreferences()
   const [timePeriod, setTimePeriod] = useState('week')
   const [weeklyData, setWeeklyData] = useState([])
   const [monthlyData, setMonthlyData] = useState([])
@@ -184,19 +192,18 @@ const ProgressStats = () => {
   const [longestStreak, setLongestStreak] = useState(0)
 
   useEffect(() => {
-    setWeeklyData(getWeeklyCompletionData())
-    setMonthlyData(getMonthlyCompletionData())
-    setStats(getStats())
+    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
+    setMonthlyData(getMonthlyCompletionData(habits))
+    setStats(getTrackingStats(habits))
     
     // Calculate longest streak across all habits
     if (habits.length > 0) {
       const maxStreak = Math.max(...habits.map(habit => {
-        const streak = getHabitStreak(habit)
-        return Math.max(streak, habit.longestStreak || 0)
+        return getHabitStreak(habit)
       }), 0)
       setLongestStreak(maxStreak)
     }
-  }, [getWeeklyCompletionData, getMonthlyCompletionData, getStats, habits, getHabitStreak])
+  }, [habits, weekStartsOn])
 
   const getInsights = () => {
     const insights = []
@@ -307,14 +314,13 @@ const ProgressStats = () => {
           <ChartTitle>Current Streaks</ChartTitle>
           {habits.map(habit => {
             const streak = getHabitStreak(habit)
-            const habitLongestStreak = Math.max(streak, habit.longestStreak || 0)
             
             return (
               <Card key={habit.id} elevated style={{ marginBottom: '16px' }}>
                 <StreakVisualization
                   habit={habit}
                   streak={streak}
-                  longestStreak={habitLongestStreak}
+                  longestStreak={streak}
                 />
               </Card>
             )

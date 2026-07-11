@@ -2,8 +2,10 @@ const path = require('path')
 const express = require('express')
 const cors = require('cors')
 const store = require('./db')
+const { createHabitDeletion } = require('./habitDeletion')
 
 const app = express()
+const deleteHabit = createHabitDeletion({ db: store.db, getState: store.getState })
 const HOST = process.env.HOST || '127.0.0.1'
 const PORT = process.env.PORT || 3301
 const E2E_DB_DIR = path.join(process.cwd(), '.tmp', 'e2e')
@@ -60,9 +62,7 @@ app.put('/api/habits/:id', asyncWrap((req, res) => {
 }))
 
 app.delete('/api/habits/:id', asyncWrap((req, res) => {
-  store.deleteJournalEntriesForHabit(req.params.id)
-  store.deleteRow('habits', req.params.id)
-  res.status(204).end()
+  res.json(deleteHabit(req.params.id))
 }))
 
 // Categories

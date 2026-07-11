@@ -2,6 +2,7 @@ import { createServer } from 'vite'
 
 const testModules = [
   '/tests/domain/habitTracking.test.js',
+  '/tests/domain/completionWrites.test.js',
   '/tests/domain/journalTimeline.test.js',
   '/tests/context/preferencesContext.test.js',
   '/tests/context/themeContext.test.js'
