@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from 'react'
+import React, { useLayoutEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
 import { getRecentActivityDays } from '../domain/habitTracking'
@@ -38,6 +38,9 @@ const StreakTimeline = styled.div`
   padding: ${props => props.theme.spacing.sm} 0;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: ${props => props.$isDragging ? 'grabbing' : 'grab'};
   scrollbar-width: thin;
   scrollbar-color: ${props => props.theme.colors.border} ${props => `${props.theme.colors.border}40`};
 
@@ -137,6 +140,44 @@ const MilestoneDescription = styled.div`
 const StreakVisualization = ({ habit, streak, longestStreak }) => {
   const timelineRef = useRef(null)
   const todayRef = useRef(null)
+  const dragRef = useRef({ isDragging: false, pointerId: null, startX: 0, startScrollLeft: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handlePointerDown = event => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+
+    const timeline = timelineRef.current
+    if (!timeline) return
+
+    dragRef.current = {
+      isDragging: true,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: timeline.scrollLeft
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsDragging(true)
+  }
+
+  const handlePointerMove = event => {
+    const drag = dragRef.current
+    const timeline = timelineRef.current
+    if (!drag.isDragging || drag.pointerId !== event.pointerId || !timeline) return
+
+    event.preventDefault()
+    timeline.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
+  }
+
+  const handlePointerUp = event => {
+    const drag = dragRef.current
+    if (!drag.isDragging || drag.pointerId !== event.pointerId) return
+
+    dragRef.current.isDragging = false
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setIsDragging(false)
+  }
 
   useLayoutEffect(() => {
     const timeline = timelineRef.current
@@ -212,7 +253,15 @@ const StreakVisualization = ({ habit, streak, longestStreak }) => {
         <StreakValue>{streak} days</StreakValue>
       </StreakHeader>
       
-      <StreakTimeline ref={timelineRef} data-testid="streak-timeline">
+      <StreakTimeline
+        ref={timelineRef}
+        data-testid="streak-timeline"
+        $isDragging={isDragging}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
         {recentDays.map((day, index) => (
           <StreakDayItem
             key={day.date.toString()}

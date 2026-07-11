@@ -228,6 +228,27 @@ test.describe('responsive smoke coverage', () => {
       expect(visibility.scrollLeft).toBeGreaterThan(0)
       expect(visibility.scrollLeft).toBe(visibility.maxScrollLeft)
       expect(visibility.scrollbarHeight).toBe('8px')
+
+      await timeline.evaluate(element => {
+        element.scrollLeft = 0
+      })
+      const timelineBox = await timeline.boundingBox()
+      if (!timelineBox) throw new Error('Streak timeline is not rendered')
+
+      const dragY = timelineBox.y + Math.min(timelineBox.height / 2, 24)
+      const dragStartX = timelineBox.x + timelineBox.width * 0.75
+      await page.mouse.move(dragStartX, dragY)
+      await page.mouse.down()
+      await page.mouse.move(dragStartX - 80, dragY, { steps: 3 })
+      await page.mouse.up()
+
+      const dragResult = await timeline.evaluate(element => ({
+        scrollLeft: element.scrollLeft,
+        selectedText: window.getSelection()?.toString() || ''
+      }))
+
+      expect(dragResult.scrollLeft).toBeGreaterThan(0)
+      expect(dragResult.selectedText).toBe('')
     })
   }
 
