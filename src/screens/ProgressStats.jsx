@@ -288,8 +288,6 @@ const ProgressStats = () => {
           progress={stats.completionRate}
           size={150}
           strokeWidth={12}
-          animated={stats.completionRate === 100}
-          daily={true}
           label={`${stats.todayCompletions}/${stats.totalHabits} habits`}
         />
       </ProgressCard>
