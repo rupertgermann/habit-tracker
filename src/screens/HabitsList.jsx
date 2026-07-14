@@ -34,6 +34,7 @@ const Title = styled.h1`
 
 const FilterTabs = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
   border-bottom: 1px solid ${props => props.theme.colors.border};
@@ -113,6 +114,13 @@ const FilterTab = styled.button`
     background-color: ${props => props.theme.colors.primary};
     transform: scaleX(${props => props.$active ? 1 : 0});
     transition: transform 0.2s ease;
+  }
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: ${props => props.theme.spacing.sm};
+    padding-left: ${props => props.theme.spacing.sm};
   }
 `
 

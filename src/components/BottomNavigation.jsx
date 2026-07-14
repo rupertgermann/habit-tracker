@@ -7,215 +7,98 @@ import AppIcon from './AppIcon'
 
 const NavContainer = styled.nav`
   position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: 12px;
   z-index: 100;
-  height: calc(76px + env(safe-area-inset-bottom, 0px));
+  min-height: 64px;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: stretch;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: ${props => props.theme.colors.surface};
-  border-top: 2px solid ${props => props.theme.colors.borderStrong};
+  align-items: center;
+  padding: 6px;
+  background: ${props => props.theme.colors.surface}F2;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 22px;
+  box-shadow: ${props => props.theme.shadows.medium};
+  backdrop-filter: blur(18px);
 
   @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    top: 0;
-    right: auto;
-    bottom: 0;
-    width: 184px;
-    height: 100vh;
+    position: absolute;
+    top: 0; right: 0; bottom: auto; left: 0;
+    min-height: 88px;
     display: flex;
-    flex-direction: column;
-    padding: 0;
-    border-top: 0;
-    border-right: 2px solid ${props => props.theme.colors.borderStrong};
+    gap: 8px;
+    padding: 14px clamp(24px, 5vw, 72px);
+    border: 0;
+    border-bottom: 1px solid ${props => props.theme.colors.border};
+    border-radius: 0;
+    box-shadow: none;
   }
 `
 
-const Brand = styled.div`
+const Brand = styled.button`
   display: none;
-
+  background: transparent;
+  color: ${props => props.theme.colors.text.primary};
+  text-align: left;
   @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    height: 184px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 22px 18px 18px;
-    background: ${props => props.theme.colors.primary};
-    color: ${props => props.theme.colors.onPrimary};
-    border-bottom: 2px solid ${props => props.theme.colors.borderStrong};
+    min-width: 210px;
+    display: grid;
+    margin-right: auto;
   }
-`
-
-const BrandCode = styled.span`
-  font-family: ${props => props.theme.typography.monoFamily};
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.78;
 `
 
 const BrandName = styled.strong`
-  color: inherit;
   font-family: ${props => props.theme.typography.displayFamily};
-  font-size: 2.05rem;
-  line-height: 0.82;
-  letter-spacing: -0.08em;
-  text-transform: uppercase;
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: -.035em;
 `
 
-const NavList = styled.div`
-  display: contents;
-
-  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    display: grid;
-    gap: 0;
-    padding: 16px 0;
-  }
+const BrandLine = styled.span`
+  color: ${props => props.theme.colors.text.secondary};
+  font-size: .72rem;
+  letter-spacing: .04em;
 `
 
 const NavItem = styled(motion.button)`
-  position: relative;
   min-width: 0;
-  min-height: 74px;
+  min-height: 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 2px;
-  overflow: hidden;
+  gap: 3px;
+  padding: 5px 2px;
   background: ${props => props.$active ? props.theme.colors.primary : 'transparent'};
   color: ${props => props.$active ? props.theme.colors.onPrimary : props.theme.colors.text.secondary};
-  border-right: 1px solid ${props => props.theme.colors.border};
-  font-family: ${props => props.theme.typography.monoFamily};
-  transition:
-    background var(--duration-fast) ease,
-    color var(--duration-fast) ease,
-    transform var(--duration-fast) ease;
-
-  &:last-child { border-right: 0; }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: 4px;
-    background: ${props => props.theme.colors.secondary};
-    transform: scaleX(${props => props.$active ? 1 : 0});
-    transform-origin: left;
-    transition: transform var(--duration-base) var(--ease-out);
-  }
-
-  &:hover:not(:disabled) {
-    background: ${props => props.$active ? props.theme.colors.primaryHover : props.theme.colors.surfaceAlt};
-    color: ${props => props.$active ? props.theme.colors.onPrimary : props.theme.colors.text.primary};
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(2px);
-  }
-
+  border-radius: 16px;
+  transition: background var(--duration-fast), color var(--duration-fast), transform var(--duration-fast);
+  &:hover:not(:disabled) { background: ${props => props.$active ? props.theme.colors.primaryHover : props.theme.colors.surfaceAlt}; color: ${props => props.$active ? props.theme.colors.onPrimary : props.theme.colors.text.primary}; }
+  &:active:not(:disabled) { transform: scale(.95); }
   @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    width: 100%;
-    min-height: 62px;
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) 16px;
-    justify-items: start;
-    gap: 10px;
-    padding: 10px 16px;
-    border-right: 0;
-    border-bottom: 1px solid ${props => props.theme.colors.border};
-
-    &::after {
-      top: 0;
-      right: auto;
-      bottom: 0;
-      left: 0;
-      width: 5px;
-      height: auto;
-      transform: scaleY(${props => props.$active ? 1 : 0});
-      transform-origin: bottom;
-    }
-
-    &:active:not(:disabled) { transform: translateX(2px); }
+    min-height: 48px;
+    flex-direction: row;
+    gap: 7px;
+    padding: 0 12px;
+    border-radius: 999px;
   }
-`
-
-const NavIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 `
 
 const NavLabel = styled.span`
   max-width: 100%;
   overflow: hidden;
-  font-size: clamp(0.5rem, 2.4vw, 0.62rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: clamp(.46rem, 2.3vw, .64rem);
+  font-weight: 500;
   line-height: 1;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
-
-  @media (max-width: 345px) {
-    font-size: 0.48rem;
-  }
-
-  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    font-size: 0.66rem;
-    letter-spacing: 0.035em;
-  }
-`
-
-const StopNumber = styled.span`
-  display: none;
-
-  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    display: inline;
-    justify-self: end;
-    font-size: 0.56rem;
-    opacity: 0.6;
-  }
-`
-
-const RailStatus = styled.div`
-  display: none;
-
-  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    margin-top: auto;
-    display: grid;
-    grid-template-columns: 9px 1fr;
-    align-items: center;
-    gap: 9px;
-    padding: 16px 18px;
-    border-top: 1px solid ${props => props.theme.colors.border};
-    color: ${props => props.theme.colors.text.secondary};
-    font-family: ${props => props.theme.typography.monoFamily};
-    font-size: 0.58rem;
-    letter-spacing: 0.08em;
-    line-height: 1.4;
-    text-transform: uppercase;
-
-    &::before {
-      content: '';
-      width: 9px;
-      height: 9px;
-      background: ${props => props.theme.colors.secondary};
-      border: 1px solid ${props => props.theme.colors.borderStrong};
-      box-shadow: 0 0 0 3px ${props => props.theme.colors.secondary}22;
-    }
-  }
+  @media (min-width: ${props => props.theme.breakpoints.tablet}) { font-size: .76rem; }
 `
 
 const navItems = [
-  { id: 'dashboard', label: 'Today', icon: 'chart-bar', path: '/' },
-  { id: 'habits', label: 'Habits', icon: 'checkbox', path: '/habits' },
+  { id: 'dashboard', label: 'Today', icon: 'sun', path: '/' },
+  { id: 'habits', label: 'Habits', icon: 'seedling', path: '/habits' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar', path: '/calendar' },
   { id: 'journal', label: 'Journal', icon: 'notebook', path: '/journal' },
   { id: 'progress', label: 'Progress', icon: 'chart-line', path: '/progress' },
@@ -225,35 +108,19 @@ const navItems = [
 const BottomNavigation = () => {
   const navigate = useNavigate()
   const { activeTab, setActiveTab } = useNavigation()
-
-  const handleTabClick = item => {
-    setActiveTab(item.id)
-    navigate(item.path)
-  }
-
+  const go = item => { setActiveTab(item.id); navigate(item.path) }
   return (
     <NavContainer aria-label="Primary navigation">
-      <Brand aria-hidden="true">
-        <BrandCode>Daily signal / 01</BrandCode>
-        <BrandName>Habit<br />Control</BrandName>
+      <Brand type="button" onClick={() => go(navItems[0])} aria-label="Go to today">
+        <BrandName>Still / daily</BrandName>
+        <BrandLine>Small rituals, clearly noticed</BrandLine>
       </Brand>
-      <NavList>
-        {navItems.map((item, index) => (
-          <NavItem
-            key={item.id}
-            type="button"
-            $active={activeTab === item.id}
-            onClick={() => handleTabClick(item)}
-            aria-label={item.label}
-            aria-current={activeTab === item.id ? 'page' : undefined}
-          >
-            <NavIcon aria-hidden="true"><AppIcon name={item.icon} size={20} stroke={2} /></NavIcon>
-            <NavLabel>{item.label}</NavLabel>
-            <StopNumber>{String(index + 1).padStart(2, '0')}</StopNumber>
-          </NavItem>
-        ))}
-      </NavList>
-      <RailStatus>Local record online</RailStatus>
+      {navItems.map(item => (
+        <NavItem key={item.id} type="button" $active={activeTab === item.id} onClick={() => go(item)} aria-label={item.label} aria-current={activeTab === item.id ? 'page' : undefined} whileTap={{ scale: .95 }}>
+          <AppIcon name={item.icon} size={19} stroke={1.8} aria-hidden="true" />
+          <NavLabel>{item.label}</NavLabel>
+        </NavItem>
+      ))}
     </NavContainer>
   )
 }

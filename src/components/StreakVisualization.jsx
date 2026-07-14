@@ -24,7 +24,7 @@ const StreakTitle = styled.h3`
 `
 
 const StreakValue = styled.div`
-  font-size: ${props => props.theme.typography.fontSize.headingLarge};
+  font-size: clamp(2rem, 4vw, 3.2rem);
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.theme.colors.primary};
 `

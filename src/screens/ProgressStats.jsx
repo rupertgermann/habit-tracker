@@ -28,7 +28,7 @@ const ProgressContainer = styled.div`
 `
 
 const Header = styled.div`
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.md};
 
   @media (max-width: ${props => props.theme.breakpoints.narrow}) {
     margin-bottom: ${props => props.theme.spacing.sm};
@@ -78,7 +78,7 @@ const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: ${props => props.theme.spacing.sm};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.md};
 
   @media (max-width: ${props => props.theme.breakpoints.narrow}) {
     gap: ${props => props.theme.spacing.xs};
@@ -87,11 +87,13 @@ const StatsGrid = styled.div`
 `
 
 const ProgressCard = styled(Card)`
-  padding: ${props => props.theme.spacing.xl};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  svg { width: 112px; height: 112px; }
 
   @media (max-width: ${props => props.theme.breakpoints.narrow}) {
     padding: ${props => props.theme.spacing.md};
@@ -106,7 +108,7 @@ const ProgressCard = styled(Card)`
 
 const ProgressTitle = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.sm};
   text-align: center;
 
   @media (max-width: ${props => props.theme.breakpoints.narrow}) {
@@ -121,7 +123,7 @@ const StreakSection = styled.div`
 
 const StatCard = styled(Card)`
   text-align: center;
-  padding: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md};
 
   @media (max-width: ${props => props.theme.breakpoints.narrow}) {
     min-width: 0;
@@ -346,7 +348,7 @@ const ProgressStats = () => {
             const streak = getHabitStreak(habit)
             
             return (
-              <Card key={habit.id} elevated style={{ marginBottom: '16px' }}>
+              <Card key={habit.id} elevated padding="small" style={{ marginBottom: '16px' }}>
                 <StreakVisualization
                   habit={habit}
                   streak={streak}

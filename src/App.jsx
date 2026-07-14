@@ -24,7 +24,7 @@ const AppFrame = styled.div`
   padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
 
   @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    padding: 0 0 0 184px;
+    padding: 88px 0 0;
   }
 `
 
