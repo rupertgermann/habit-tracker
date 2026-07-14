@@ -1,129 +1,40 @@
 const typography = {
-  displayFamily: 'Futura, "Avenir Next Condensed", "Century Gothic", Avantgarde, sans-serif',
-  fontFamily: 'Optima, Candara, "Avenir Next", "Segoe UI", sans-serif',
-  monoFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", monospace',
-  fontSize: {
-    headingLarge: 'clamp(2.4rem, 6vw, 5rem)',
-    headingMedium: 'clamp(1.45rem, 3vw, 2.4rem)',
-    bodyLarge: '1rem',
-    bodyMedium: '0.875rem',
-    bodySmall: '0.72rem'
-  },
-  fontWeight: {
-    regular: 400,
-    medium: 600,
-    bold: 800
-  },
-  lineHeight: {
-    tight: 0.94,
-    normal: 1.5,
-    relaxed: 1.72
-  }
-}
-
-const spacing = {
-  xs: '5px',
-  sm: '10px',
-  md: '16px',
-  lg: '24px',
-  xl: '36px',
-  xxl: '52px',
-  xxxl: '88px'
+  displayFamily: 'Syne, "Arial Black", Impact, sans-serif',
+  fontFamily: '"Space Grotesk", "Avenir Next", sans-serif',
+  monoFamily: '"Space Mono", "SFMono-Regular", Consolas, monospace',
+  fontSize: { headingLarge: 'clamp(2.35rem, 6vw, 4.8rem)', headingMedium: 'clamp(1.6rem, 4vw, 3rem)', bodyLarge: '1rem', bodyMedium: '.875rem', bodySmall: '.72rem' },
+  fontWeight: { regular: 400, medium: 500, bold: 700 },
+  lineHeight: { tight: .9, normal: 1.5, relaxed: 1.7 }
 }
 
 const foundations = {
   typography,
-  spacing,
-  borderRadius: {
-    small: '2px',
-    medium: '2px',
-    large: '4px',
-    round: '999px'
-  },
-  breakpoints: {
-    narrow: '480px',
-    mobile: '768px',
-    tablet: '1024px'
-  },
-  motion: {
-    fast: '120ms',
-    base: '240ms',
-    slow: '620ms',
-    easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
-    spring: 'cubic-bezier(0.2, 0.9, 0.2, 1.2)'
-  }
+  spacing: { xs: '5px', sm: '10px', md: '16px', lg: '24px', xl: '36px', xxl: '54px', xxxl: '86px' },
+  borderRadius: { small: '2px', medium: '6px', large: '12px', round: '999px' },
+  breakpoints: { narrow: '480px', mobile: '768px', tablet: '1024px' },
+  motion: { fast: '120ms', base: '260ms', slow: '760ms', easeOut: 'cubic-bezier(.16,1,.3,1)', spring: 'cubic-bezier(.2,.9,.2,1.25)' }
 }
 
 export const lightTheme = {
-  ...foundations,
-  mode: 'light',
+  ...foundations, mode: 'light',
   colors: {
-    primary: '#1546E8',
-    primaryHover: '#0B2FB0',
-    secondary: '#E6F600',
-    destructive: '#D94132',
-    success: '#0A7652',
-    warning: '#9B5D00',
-    focus: '#E5482F',
-    background: '#E9EBE4',
-    surface: '#F8F9F4',
-    surfaceAlt: '#DDE0D7',
-    ink: '#111411',
-    text: {
-      primary: '#111411',
-      secondary: '#565C54'
-    },
-    white: '#F8F9F4',
-    onPrimary: '#FFFFFF',
-    border: '#A9AEA4',
-    borderStrong: '#111411',
-    shadow: {
-      subtle: 'rgba(17, 20, 17, 0.10)',
-      medium: 'rgba(17, 20, 17, 0.16)',
-      strong: 'rgba(17, 20, 17, 0.26)'
-    }
+    primary: '#3457D5', primaryHover: '#2344B5', secondary: '#C6E84D', destructive: '#C44252', success: '#24755E', warning: '#8E641A', focus: '#B34BDE',
+    background: '#E6ECF4', surface: '#F6F8FC', surfaceAlt: '#D7DFEB', ink: '#111827', text: { primary: '#111827', secondary: '#5A6678' },
+    white: '#F6F8FC', onPrimary: '#FFFFFF', border: '#B8C3D2', borderStrong: '#5B687B',
+    shadow: { subtle: 'rgba(24,38,61,.1)', medium: 'rgba(24,38,61,.18)', strong: 'rgba(24,38,61,.27)' }
   },
-  shadows: {
-    subtle: '0 1px 0 rgba(17, 20, 17, 0.18)',
-    medium: '6px 6px 0 rgba(17, 20, 17, 0.18)',
-    strong: '10px 10px 0 rgba(17, 20, 17, 0.24)'
-  }
+  shadows: { subtle: '0 0 0 1px rgba(24,38,61,.08)', medium: '0 18px 50px rgba(24,38,61,.14)', strong: '0 30px 90px rgba(24,38,61,.22)' }
 }
 
 export const darkTheme = {
-  ...foundations,
-  mode: 'dark',
+  ...foundations, mode: 'dark',
   colors: {
-    primary: '#5C7CFF',
-    primaryHover: '#8FA3FF',
-    secondary: '#E6F600',
-    destructive: '#FF7869',
-    success: '#60D7AE',
-    warning: '#FFC15C',
-    focus: '#FF795F',
-    background: '#0D100E',
-    surface: '#171B18',
-    surfaceAlt: '#242A25',
-    ink: '#F2F4ED',
-    text: {
-      primary: '#F2F4ED',
-      secondary: '#AEB6AA'
-    },
-    white: '#171B18',
-    onPrimary: '#FFFFFF',
-    border: '#424A42',
-    borderStrong: '#F2F4ED',
-    shadow: {
-      subtle: 'rgba(0, 0, 0, 0.30)',
-      medium: 'rgba(0, 0, 0, 0.46)',
-      strong: 'rgba(0, 0, 0, 0.62)'
-    }
+    primary: '#7D9BFF', primaryHover: '#A2B6FF', secondary: '#D2F65B', destructive: '#FF7786', success: '#68D8B4', warning: '#F2C86F', focus: '#D88CFF',
+    background: '#070B14', surface: '#0D1423', surfaceAlt: '#151F33', ink: '#F3F6FC', text: { primary: '#F3F6FC', secondary: '#8F9BB0' },
+    white: '#0D1423', onPrimary: '#080D18', border: '#26334B', borderStrong: '#596987',
+    shadow: { subtle: 'rgba(0,0,0,.3)', medium: 'rgba(0,0,0,.48)', strong: 'rgba(0,0,0,.65)' }
   },
-  shadows: {
-    subtle: '0 1px 0 rgba(255, 255, 255, 0.10)',
-    medium: '6px 6px 0 rgba(0, 0, 0, 0.55)',
-    strong: '10px 10px 0 rgba(0, 0, 0, 0.72)'
-  }
+  shadows: { subtle: '0 0 0 1px rgba(125,155,255,.12)', medium: '0 18px 50px rgba(0,0,0,.38)', strong: '0 30px 90px rgba(0,0,0,.6)' }
 }
 
 export const theme = lightTheme
