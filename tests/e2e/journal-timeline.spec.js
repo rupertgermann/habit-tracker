@@ -32,6 +32,42 @@ const moodButton = (page, moodName) =>
   })
 
 test.describe('journal timeline regression coverage', () => {
+  test('journal controls and empty state reflow cleanly on narrow mobile screens', async ({ page, request }) => {
+    await page.setViewportSize({ width: 320, height: 720 })
+    await resetAppData(request)
+
+    await page.goto('/journal')
+    await waitForAppReady(page)
+
+    const title = page.getByRole('heading', { name: 'Journal', exact: true })
+    const backButton = page.getByRole('button', { name: 'Back to Dashboard', exact: true })
+    const previousButton = page.getByRole('button', { name: 'Previous', exact: true })
+    const nextButton = page.getByRole('button', { name: 'Next', exact: true })
+    const weekRange = page.locator('h2').filter({ hasText: ' - ' })
+    const emptyPanel = page
+      .getByText('No journal entries this week', { exact: true })
+      .locator('..')
+
+    const [titleBox, backBox, previousBox, nextBox, rangeBox, emptyBox] = await Promise.all([
+      title.boundingBox(),
+      backButton.boundingBox(),
+      previousButton.boundingBox(),
+      nextButton.boundingBox(),
+      weekRange.boundingBox(),
+      emptyPanel.boundingBox()
+    ])
+
+    for (const box of [titleBox, backBox, previousBox, nextBox, rangeBox, emptyBox]) {
+      expect(box).not.toBeNull()
+    }
+
+    expect(backBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height + 8)
+    expect(rangeBox.y + rangeBox.height).toBeLessThanOrEqual(previousBox.y)
+    expect(Math.abs(previousBox.y - nextBox.y)).toBeLessThanOrEqual(1)
+    expect(rangeBox.height).toBeLessThanOrEqual(40)
+    expect(emptyBox.width).toBeGreaterThanOrEqual(256)
+  })
+
   test('creates, searches, edits, and deletes habit journal entries through the app surface', async ({ page, request }) => {
     await page.setViewportSize({ width: 390, height: 900 })
 

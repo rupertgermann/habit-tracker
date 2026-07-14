@@ -18,6 +18,11 @@ const JournalContainer = styled.div`
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 800px;
   margin: 0 auto;
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    padding: ${props => props.theme.spacing.md};
+    padding-bottom: ${props => props.theme.spacing.xxxl};
+  }
 `
 
 const Header = styled.div`
@@ -27,6 +32,18 @@ const Header = styled.div`
   margin-bottom: ${props => props.theme.spacing.xl};
   padding-bottom: ${props => props.theme.spacing.md};
   border-bottom: 2px solid ${props => props.theme.colors.borderStrong};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: ${props => props.theme.spacing.sm};
+    margin-bottom: ${props => props.theme.spacing.md};
+    padding-bottom: ${props => props.theme.spacing.md};
+
+    button {
+      width: 100%;
+    }
+  }
 `
 
 const Title = styled.h1`
@@ -35,22 +52,48 @@ const Title = styled.h1`
 
 const SearchContainer = styled.div`
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    margin-bottom: ${props => props.theme.spacing.md};
+  }
 `
 
 const WeekNavigation = styled.div`
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'previous range next';
   align-items: center;
+  gap: ${props => props.theme.spacing.md};
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'range range'
+      'previous next';
+    gap: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+    margin-bottom: ${props => props.theme.spacing.md};
+  }
 `
 
 const WeekRange = styled.h2`
+  grid-area: range;
+  margin: 0;
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
+  text-align: center;
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    font-size: 1.25rem;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
 `
 
 const NavButton = styled(Button)`
+  grid-area: ${props => props.$area};
   padding: ${props => props.theme.spacing.sm};
+  justify-self: ${props => props.$area === 'previous' ? 'start' : 'end'};
 `
 
 const JournalEntriesGrid = styled.div`
@@ -68,6 +111,11 @@ const EntryHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: ${props => props.theme.spacing.sm};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    flex-direction: column;
+    gap: ${props => props.theme.spacing.xs};
+  }
 `
 
 const EntryDate = styled.div`
@@ -109,6 +157,17 @@ const NoEntries = styled.div`
   text-align: center;
   padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.lg};
   color: ${props => props.theme.colors.text.secondary};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    padding: 0;
+
+    > div {
+      width: 100%;
+      min-height: 280px;
+      margin-top: ${props => props.theme.spacing.lg};
+      padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.md};
+    }
+  }
 `
 
 const StatsContainer = styled.div`
@@ -191,14 +250,14 @@ const JournalView = () => {
       </SearchContainer>
       
       <WeekNavigation>
-        <NavButton variant="ghost" onClick={handlePrevWeek}>
+        <NavButton $area="previous" variant="ghost" onClick={handlePrevWeek}>
           <AppIcon name="chevron-left" size={16} />
           Previous
         </NavButton>
         <WeekRange>
           {format(currentWeekStart, 'MMM d')} - {format(timeline.weekEnd, 'MMM d, yyyy')}
         </WeekRange>
-        <NavButton variant="ghost" onClick={handleNextWeek}>
+        <NavButton $area="next" variant="ghost" onClick={handleNextWeek}>
           Next
           <AppIcon name="chevron-right" size={16} />
         </NavButton>
@@ -243,12 +302,14 @@ const JournalView = () => {
             {searchTerm ? (
               <EmptyState
                 icon={<AppIcon name="search" size={64} />}
+                illustrationSize={96}
                 title="No matching entries"
                 description="Try adjusting your search terms."
               />
             ) : (
               <EmptyState
                 icon={<AppIcon name="notebook" size={64} />}
+                illustrationSize={96}
                 title="No journal entries this week"
                 description="Start reflecting on your habits to see your entries here."
               />
