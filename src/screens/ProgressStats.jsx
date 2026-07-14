@@ -21,15 +21,27 @@ const ProgressContainer = styled.div`
   padding-bottom: ${props => props.theme.spacing.xxxl};
   max-width: 600px;
   margin: 0 auto;
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    padding: ${props => props.theme.spacing.md} 14px ${props => props.theme.spacing.xxxl};
+  }
 `
 
 const Header = styled.div`
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    margin-bottom: ${props => props.theme.spacing.sm};
+  }
 `
 
 const Title = styled.h1`
   font-size: ${props => props.theme.typography.fontSize.headingLarge};
   margin-bottom: ${props => props.theme.spacing.sm};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    font-size: 2rem;
+  }
 `
 
 const TimePeriodSelector = styled.div`
@@ -53,7 +65,7 @@ const PeriodButton = styled.button`
     $active &&
     `
       background-color: ${theme.colors.primary};
-      color: ${theme.colors.white};
+      color: ${theme.colors.onPrimary};
       border-color: ${theme.colors.primary};
     `}
   
@@ -67,6 +79,11 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(3, 1fr);
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    gap: ${props => props.theme.spacing.xs};
+    margin-bottom: ${props => props.theme.spacing.sm};
+  }
 `
 
 const ProgressCard = styled(Card)`
@@ -75,12 +92,27 @@ const ProgressCard = styled(Card)`
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    padding: ${props => props.theme.spacing.md};
+    margin-bottom: ${props => props.theme.spacing.sm};
+
+    svg {
+      width: 112px;
+      height: 112px;
+    }
+  }
 `
 
 const ProgressTitle = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   margin-bottom: ${props => props.theme.spacing.lg};
   text-align: center;
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    margin-bottom: ${props => props.theme.spacing.sm};
+    font-size: 1.2rem;
+  }
 `
 
 const StreakSection = styled.div`
@@ -90,6 +122,11 @@ const StreakSection = styled.div`
 const StatCard = styled(Card)`
   text-align: center;
   padding: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    min-width: 0;
+    padding: ${props => props.theme.spacing.sm} 5px;
+  }
 `
 
 const StatValue = styled.div`
@@ -97,6 +134,10 @@ const StatValue = styled.div`
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
+
+  @media (max-width: ${props => props.theme.breakpoints.narrow}) {
+    font-size: 1.55rem;
+  }
 `
 
 const StatLabel = styled.div`

@@ -19,7 +19,7 @@ const controlStyles = css`
   font-size: ${props => props.theme.typography.fontSize.bodyLarge};
   color: ${props => props.theme.colors.text.primary};
   background-color: ${props => props.theme.colors.white};
-  transition: all 0.2s ease;
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
   
   &::placeholder {
     color: ${props => props.theme.colors.text.secondary};
@@ -28,7 +28,7 @@ const controlStyles = css`
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}20;
+    box-shadow: inset 5px 0 0 ${props => props.theme.colors.primary};
   }
   
   &:disabled {
@@ -88,8 +88,11 @@ const ClearButton = styled.button`
 `
 
 const InputLabel = styled.label`
-  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  font-family: ${props => props.theme.typography.monoFamily};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: ${props => props.$error ? props.theme.colors.destructive : props.theme.colors.text.primary};
 `
 

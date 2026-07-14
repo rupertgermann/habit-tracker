@@ -6,6 +6,7 @@ import Input from './Input'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
 import { format } from 'date-fns'
+import AppIcon from './AppIcon'
 
 const JournalContainer = styled.div`
   margin-bottom: ${props => props.theme.spacing.lg};
@@ -59,8 +60,9 @@ const MoodOption = styled.button`
   }
 `
 
-const MoodEmoji = styled.span`
-  font-size: 24px;
+const MoodIcon = styled.span`
+  display: inline-flex;
+  color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
@@ -206,7 +208,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
                 $selected={selectedMood === mood.id}
                 onClick={() => setSelectedMood(mood.id)}
               >
-                <MoodEmoji>{mood.emoji}</MoodEmoji>
+                <MoodIcon $color={mood.color}><AppIcon name={mood.icon || 'mood-smile'} size={24} /></MoodIcon>
                 <MoodLabel>{mood.name}</MoodLabel>
               </MoodOption>
             ))}
@@ -248,7 +250,8 @@ const JournalEntry = ({ habitId, date, habitName }) => {
         <JournalEntryCard elevated>
           <EntryHeader>
             <EntryMood>
-              {getMoodById(existingEntry.moodId)?.emoji} {getMoodById(existingEntry.moodId)?.name}
+              {getMoodById(existingEntry.moodId) && <AppIcon name={getMoodById(existingEntry.moodId).icon || 'mood-smile'} size={18} />}
+              {getMoodById(existingEntry.moodId)?.name}
             </EntryMood>
             <EntryTime>
               {format(new Date(existingEntry.createdAt), 'h:mm a')}

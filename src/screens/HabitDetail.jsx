@@ -115,7 +115,7 @@ const DayCircle = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$completed ? props.theme.colors.white : props.theme.colors.text.secondary};
+  color: ${props => props.$completed ? props.theme.colors.onPrimary : props.theme.colors.text.secondary};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   position: relative;

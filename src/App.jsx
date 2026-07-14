@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ThemeProvider as StyledThemeProvider } from 'styled-components'
+import styled, { ThemeProvider as StyledThemeProvider } from 'styled-components'
 import { GlobalStyles } from './styles/GlobalStyles'
 import Dashboard from './screens/Dashboard'
 import HabitsList from './screens/HabitsList'
@@ -18,6 +18,15 @@ import { ToastProvider } from './context/ToastContext.jsx'
 import { ThemeProvider, useTheme } from './context/ThemeContext.jsx'
 import { NavigationProvider } from './context/NavigationContext.jsx'
 import { PreferencesProvider } from './context/PreferencesContext.jsx'
+
+const AppFrame = styled.div`
+  min-height: 100vh;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+
+  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
+    padding: 0 0 0 184px;
+  }
+`
 
 function AppContent() {
   const [isWideLayout, setIsWideLayout] = useState(false)
@@ -39,13 +48,7 @@ function AppContent() {
     <StyledThemeProvider theme={theme}>
       <GlobalStyles />
       <ToastProvider>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-          paddingTop: isWideLayout ? '64px' : '0',
-          paddingBottom: isWideLayout ? '0' : '80px'
-        }}>
+        <AppFrame>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/habits" element={isWideLayout ? <TabletSplitView /> : <HabitsList />} />
@@ -61,7 +64,7 @@ function AppContent() {
             <Route path="/journal" element={<JournalView />} />
           </Routes>
           <BottomNavigation />
-        </div>
+        </AppFrame>
       </ToastProvider>
     </StyledThemeProvider>
   )

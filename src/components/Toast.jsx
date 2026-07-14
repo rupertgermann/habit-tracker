@@ -37,18 +37,22 @@ const getToastBackgroundColor = (theme, variant) => {
   }
 }
 
+const getToastTextColor = (theme, variant) =>
+  variant === 'warning' ? '#111411' : (theme?.colors?.onPrimary ?? '#FFFFFF')
+
 const ToastContainer = styled(motion.div)`
   position: fixed;
   bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
   background-color: ${props => getToastBackgroundColor(props.theme, props.$variant)};
-  color: ${props => getColor(props.theme, 'white')};
+  color: ${props => getToastTextColor(props.theme, props.$variant)};
   padding: ${props => {
     const theme = props.theme?.spacing ? props.theme : lightTheme
     return `${theme.spacing.md} ${theme.spacing.lg}`
   }};
   border-radius: ${props => (props.theme?.borderRadius ? props.theme : lightTheme).borderRadius.medium};
+  border: 2px solid ${props => getTextColor(props.theme, 'primary')};
   box-shadow: ${props => (props.theme?.shadows ? props.theme : lightTheme).shadows.strong};
   z-index: 1000;
   display: flex;

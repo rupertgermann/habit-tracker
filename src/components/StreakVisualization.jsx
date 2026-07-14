@@ -86,7 +86,7 @@ const StreakDay = styled(motion.div)`
     $completed
       ? `
           background-color: ${theme.colors.primary};
-          color: ${theme.colors.white};
+          color: ${theme.colors.onPrimary};
         `
       : `
           background-color: ${theme.colors.border};

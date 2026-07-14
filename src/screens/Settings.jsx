@@ -135,7 +135,7 @@ const Avatar = styled.div`
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  color: ${props => props.theme.colors.white};
+  color: ${props => props.theme.colors.onPrimary};
   font-size: 32px;
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   line-height: 1;

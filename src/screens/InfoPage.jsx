@@ -153,13 +153,13 @@ const ExternalAction = styled.a`
   padding: 0 ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.small};
   background-color: ${props => props.theme.colors.primary};
-  color: ${props => props.theme.colors.white};
+  color: ${props => props.theme.colors.onPrimary};
   font-size: ${props => props.theme.typography.fontSize.bodyMedium};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   text-decoration: none;
 
   &:hover {
-    background-color: #5CAD6C;
+    background-color: ${props => props.theme.colors.primaryHover};
   }
 
   &:focus {

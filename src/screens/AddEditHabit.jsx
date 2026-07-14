@@ -133,7 +133,7 @@ const DayButton = styled.button`
     $selected &&
     `
       background-color: ${theme.colors.primary};
-      color: ${theme.colors.white};
+      color: ${theme.colors.onPrimary};
       border-color: ${theme.colors.primary};
     `}
   

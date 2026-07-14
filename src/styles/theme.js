@@ -1,132 +1,129 @@
-export const lightTheme = {
-  mode: 'light',
-  colors: {
-    primary: '#4CAF50', // Darker green for better contrast
-    secondary: '#FFC107', // Darker yellow for better contrast
-    destructive: '#F44336', // Darker red for better contrast
-    background: '#FFFFFF', // Pure white for better contrast
-    text: {
-      primary: '#212121', // Darker text for better contrast
-      secondary: '#424242' // Darker secondary text for better contrast
-    },
-    white: '#FFFFFF',
-    border: '#BDBDBD', // Darker border for better contrast
-    shadow: {
-      subtle: 'rgba(0, 0, 0, 0.08)',
-      medium: 'rgba(0, 0, 0, 0.12)',
-      strong: 'rgba(0, 0, 0, 0.18)'
-    }
+const typography = {
+  displayFamily: 'Futura, "Avenir Next Condensed", "Century Gothic", Avantgarde, sans-serif',
+  fontFamily: 'Optima, Candara, "Avenir Next", "Segoe UI", sans-serif',
+  monoFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+  fontSize: {
+    headingLarge: 'clamp(2.4rem, 6vw, 5rem)',
+    headingMedium: 'clamp(1.45rem, 3vw, 2.4rem)',
+    bodyLarge: '1rem',
+    bodyMedium: '0.875rem',
+    bodySmall: '0.72rem'
   },
-  typography: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: {
-      headingLarge: '24px',
-      headingMedium: '20px',
-      bodyLarge: '16px',
-      bodyMedium: '14px',
-      bodySmall: '12px'
-    },
-    fontWeight: {
-      regular: 400,
-      medium: 500,
-      bold: 700
-    },
-    lineHeight: {
-      tight: 1.2,
-      normal: 1.4,
-      relaxed: 1.5
-    }
+  fontWeight: {
+    regular: 400,
+    medium: 600,
+    bold: 800
   },
-  spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '16px',
-    lg: '20px',
-    xl: '24px',
-    xxl: '32px',
-    xxxl: '48px'
-  },
+  lineHeight: {
+    tight: 0.94,
+    normal: 1.5,
+    relaxed: 1.72
+  }
+}
+
+const spacing = {
+  xs: '5px',
+  sm: '10px',
+  md: '16px',
+  lg: '24px',
+  xl: '36px',
+  xxl: '52px',
+  xxxl: '88px'
+}
+
+const foundations = {
+  typography,
+  spacing,
   borderRadius: {
-    small: '8px',
-    medium: '12px',
-    large: '16px',
-    round: '50%'
-  },
-  shadows: {
-    subtle: '0 1px 2px rgba(0, 0, 0, 0.05)',
-    medium: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    strong: '0 4px 8px rgba(0, 0, 0, 0.15)'
+    small: '2px',
+    medium: '2px',
+    large: '4px',
+    round: '999px'
   },
   breakpoints: {
+    narrow: '480px',
     mobile: '768px',
     tablet: '1024px'
+  },
+  motion: {
+    fast: '120ms',
+    base: '240ms',
+    slow: '620ms',
+    easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    spring: 'cubic-bezier(0.2, 0.9, 0.2, 1.2)'
+  }
+}
+
+export const lightTheme = {
+  ...foundations,
+  mode: 'light',
+  colors: {
+    primary: '#1546E8',
+    primaryHover: '#0B2FB0',
+    secondary: '#E6F600',
+    destructive: '#D94132',
+    success: '#0A7652',
+    warning: '#9B5D00',
+    focus: '#E5482F',
+    background: '#E9EBE4',
+    surface: '#F8F9F4',
+    surfaceAlt: '#DDE0D7',
+    ink: '#111411',
+    text: {
+      primary: '#111411',
+      secondary: '#565C54'
+    },
+    white: '#F8F9F4',
+    onPrimary: '#FFFFFF',
+    border: '#A9AEA4',
+    borderStrong: '#111411',
+    shadow: {
+      subtle: 'rgba(17, 20, 17, 0.10)',
+      medium: 'rgba(17, 20, 17, 0.16)',
+      strong: 'rgba(17, 20, 17, 0.26)'
+    }
+  },
+  shadows: {
+    subtle: '0 1px 0 rgba(17, 20, 17, 0.18)',
+    medium: '6px 6px 0 rgba(17, 20, 17, 0.18)',
+    strong: '10px 10px 0 rgba(17, 20, 17, 0.24)'
   }
 }
 
 export const darkTheme = {
+  ...foundations,
   mode: 'dark',
   colors: {
-    primary: '#66BB6A', // Lighter green for better contrast on dark
-    secondary: '#FFD54F', // Lighter yellow for better contrast on dark
-    destructive: '#EF5350', // Lighter red for better contrast on dark
-    background: '#121212', // Darker background for better contrast
+    primary: '#5C7CFF',
+    primaryHover: '#8FA3FF',
+    secondary: '#E6F600',
+    destructive: '#FF7869',
+    success: '#60D7AE',
+    warning: '#FFC15C',
+    focus: '#FF795F',
+    background: '#0D100E',
+    surface: '#171B18',
+    surfaceAlt: '#242A25',
+    ink: '#F2F4ED',
     text: {
-      primary: '#FFFFFF', // Pure white for better contrast
-      secondary: '#E0E0E0' // Lighter secondary text for better contrast
+      primary: '#F2F4ED',
+      secondary: '#AEB6AA'
     },
-    white: '#1E1E1E',
-    border: '#616161', // Lighter border for better contrast
+    white: '#171B18',
+    onPrimary: '#FFFFFF',
+    border: '#424A42',
+    borderStrong: '#F2F4ED',
     shadow: {
-      subtle: 'rgba(0, 0, 0, 0.3)',
-      medium: 'rgba(0, 0, 0, 0.4)',
-      strong: 'rgba(0, 0, 0, 0.5)'
+      subtle: 'rgba(0, 0, 0, 0.30)',
+      medium: 'rgba(0, 0, 0, 0.46)',
+      strong: 'rgba(0, 0, 0, 0.62)'
     }
-  },
-  typography: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: {
-      headingLarge: '24px',
-      headingMedium: '20px',
-      bodyLarge: '16px',
-      bodyMedium: '14px',
-      bodySmall: '12px'
-    },
-    fontWeight: {
-      regular: 400,
-      medium: 500,
-      bold: 700
-    },
-    lineHeight: {
-      tight: 1.2,
-      normal: 1.4,
-      relaxed: 1.5
-    }
-  },
-  spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '16px',
-    lg: '20px',
-    xl: '24px',
-    xxl: '32px',
-    xxxl: '48px'
-  },
-  borderRadius: {
-    small: '8px',
-    medium: '12px',
-    large: '16px',
-    round: '50%'
   },
   shadows: {
-    subtle: '0 1px 2px rgba(0, 0, 0, 0.05)',
-    medium: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    strong: '0 4px 8px rgba(0, 0, 0, 0.15)'
-  },
-  breakpoints: {
-    mobile: '768px',
-    tablet: '1024px'
+    subtle: '0 1px 0 rgba(255, 255, 255, 0.10)',
+    medium: '6px 6px 0 rgba(0, 0, 0, 0.55)',
+    strong: '10px 10px 0 rgba(0, 0, 0, 0.72)'
   }
 }
 
-// Default theme
 export const theme = lightTheme

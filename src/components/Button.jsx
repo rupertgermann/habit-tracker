@@ -10,10 +10,17 @@ const ButtonWrapper = styled(motion.button)`
   gap: ${props => props.theme.spacing.sm};
   border: none;
   border-radius: ${props => props.theme.borderRadius.small};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  font-family: ${props => props.theme.typography.monoFamily};
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
   position: relative;
   overflow: hidden;
   
@@ -22,46 +29,58 @@ const ButtonWrapper = styled(motion.button)`
       case 'primary':
         return `
           background-color: ${theme.colors.primary};
-          color: ${theme.colors.white};
+          color: ${theme.colors.onPrimary};
+          border: 1px solid ${theme.colors.borderStrong};
+          box-shadow: 3px 3px 0 ${theme.colors.borderStrong};
           
           &:hover:not(:disabled) {
-            background-color: #5CAD6C;
+            background-color: ${theme.colors.primaryHover};
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 ${theme.colors.borderStrong};
           }
         `
       case 'secondary':
         return `
           background-color: ${theme.colors.secondary};
-          color: ${theme.colors.text.primary};
+          color: #111411;
+          border: 1px solid ${theme.colors.borderStrong};
+          box-shadow: 3px 3px 0 ${theme.colors.borderStrong};
           
           &:hover:not(:disabled) {
-            background-color: #F4D04A;
+            filter: brightness(0.95);
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 ${theme.colors.borderStrong};
           }
         `
       case 'ghost':
         return `
           background-color: transparent;
           color: ${theme.colors.primary};
+          border: 1px solid transparent;
           
           &:hover:not(:disabled) {
-            background-color: ${theme.colors.primary}10;
+            background-color: ${theme.colors.surfaceAlt};
+            border-color: ${theme.colors.primary};
           }
         `
       case 'destructive':
         return `
           background-color: ${theme.colors.destructive};
-          color: ${theme.colors.white};
+          color: #FFFFFF;
+          border: 1px solid ${theme.colors.borderStrong};
           
           &:hover:not(:disabled) {
-            background-color: #F17676;
+            filter: brightness(0.9);
           }
         `
       default:
         return `
           background-color: ${theme.colors.primary};
-          color: ${theme.colors.white};
+          color: ${theme.colors.onPrimary};
+          border: 1px solid ${theme.colors.borderStrong};
           
           &:hover:not(:disabled) {
-            background-color: #5CAD6C;
+            background-color: ${theme.colors.primaryHover};
           }
         `
     }
@@ -103,13 +122,9 @@ const ButtonWrapper = styled(motion.button)`
       opacity: 0.5;
     `}
   
-  &:focus {
-    outline: 2px solid ${props => props.theme.colors.primary};
-    outline-offset: 2px;
-  }
-  
   &:active {
-    transform: scale(0.98);
+    transform: translate(1px, 1px) !important;
+    box-shadow: 1px 1px 0 ${props => props.theme.colors.borderStrong};
   }
   
   ${({ $isBouncing }) =>
@@ -122,7 +137,7 @@ const ButtonWrapper = styled(motion.button)`
 const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid ${props => props.theme.colors.white};
+  border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -189,8 +204,6 @@ const Button = ({
       aria-label={ariaLabel || (typeof children === 'string' ? children : undefined)}
       aria-disabled={disabled || loading}
       aria-busy={loading}
-      whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
-      whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
       $isBouncing={isBouncing}
       {...props}
     >

@@ -13,20 +13,20 @@ import { useToast } from '../context/ToastContext'
 import { getCalendarPeriod, getCountForDate } from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON, getLegacyIconText } from '../domain/iconCatalog'
 
-const filledTileTextColor = '#102016'
+const filledTileTextColor = '#FFFFFF'
 
 const darkCompletionLevelStyles = {
   1: {
-    background: '#183F21',
-    border: '#2F7D3D'
+    background: '#243B88',
+    border: '#5C7CFF'
   },
   2: {
-    background: '#245C2D',
-    border: '#43A047'
+    background: '#3554BF',
+    border: '#8FA3FF'
   },
   3: {
-    background: '#2D6F37',
-    border: '#66BB6A'
+    background: '#4567E0',
+    border: '#AFC0FF'
   }
 }
 

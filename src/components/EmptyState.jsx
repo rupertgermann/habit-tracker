@@ -5,6 +5,7 @@ import Button from './Button'
 import AppIcon from './AppIcon'
 
 const EmptyStateContainer = styled(motion.div)`
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -12,14 +13,20 @@ const EmptyStateContainer = styled(motion.div)`
   text-align: center;
   padding: ${props => props.theme.spacing.xxl};
   min-height: 300px;
+  margin-top: ${props => props.theme.spacing.xl};
+  background: ${props => props.theme.colors.surface};
+  border: 2px solid ${props => props.theme.colors.borderStrong};
+  box-shadow: ${props => props.theme.shadows.strong};
 `
 
 const EmptyStateIconWrap = styled.div`
   width: ${props => props.$size}px;
   height: ${props => props.$size}px;
-  border-radius: ${props => props.theme.borderRadius.large};
-  background-color: ${props => props.theme.colors.primary}15;
-  color: ${props => props.theme.colors.primary};
+  border-radius: 50%;
+  background-color: ${props => props.theme.colors.secondary};
+  color: #111411;
+  border: 2px solid ${props => props.theme.colors.borderStrong};
+  box-shadow: 0 0 0 9px ${props => props.theme.colors.surface}, 0 0 0 11px ${props => props.theme.colors.borderStrong};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -56,6 +63,7 @@ const EmptyStateTitle = styled.h3`
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   margin-bottom: ${props => props.theme.spacing.md};
   color: ${props => props.theme.colors.text.primary};
+  text-transform: uppercase;
 `
 
 const EmptyStateDescription = styled.p`

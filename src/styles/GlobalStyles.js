@@ -1,36 +1,119 @@
 import { createGlobalStyle } from 'styled-components'
 
 export const GlobalStyles = createGlobalStyle`
-  * {
-    margin: 0;
-    padding: 0;
+  *, *::before, *::after {
     box-sizing: border-box;
   }
 
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    color-scheme: ${props => props.theme.mode};
+    --color-bg: ${props => props.theme.colors.background};
+    --color-surface: ${props => props.theme.colors.surface};
+    --color-surface-alt: ${props => props.theme.colors.surfaceAlt};
+    --color-text: ${props => props.theme.colors.text.primary};
+    --color-muted: ${props => props.theme.colors.text.secondary};
+    --color-accent: ${props => props.theme.colors.primary};
+    --color-signal: ${props => props.theme.colors.secondary};
+    --color-focus: ${props => props.theme.colors.focus};
+    --color-success: ${props => props.theme.colors.success};
+    --color-warning: ${props => props.theme.colors.warning};
+    --color-danger: ${props => props.theme.colors.destructive};
+    --font-display: ${props => props.theme.typography.displayFamily};
+    --font-body: ${props => props.theme.typography.fontFamily};
+    --font-mono: ${props => props.theme.typography.monoFamily};
+    --text-xs: 0.68rem;
+    --leading-xs: 1.25;
+    --text-sm: 0.82rem;
+    --leading-sm: 1.4;
+    --text-base: 1rem;
+    --leading-base: 1.5;
+    --text-lg: 1.35rem;
+    --leading-lg: 1.15;
+    --text-xl: clamp(2rem, 4vw, 3.4rem);
+    --leading-xl: 0.98;
+    --text-2xl: clamp(3.4rem, 9vw, 8rem);
+    --leading-2xl: 0.82;
+    --space-1: ${props => props.theme.spacing.xs};
+    --space-2: ${props => props.theme.spacing.sm};
+    --space-3: ${props => props.theme.spacing.md};
+    --space-4: ${props => props.theme.spacing.lg};
+    --space-6: ${props => props.theme.spacing.xl};
+    --space-8: ${props => props.theme.spacing.xxl};
+    --radius-sm: ${props => props.theme.borderRadius.small};
+    --radius-md: ${props => props.theme.borderRadius.medium};
+    --radius-lg: ${props => props.theme.borderRadius.large};
+    --shadow-sm: ${props => props.theme.shadows.subtle};
+    --shadow-md: ${props => props.theme.shadows.medium};
+    --shadow-lg: ${props => props.theme.shadows.strong};
+    --duration-fast: ${props => props.theme.motion.fast};
+    --duration-base: ${props => props.theme.motion.base};
+    --duration-slow: ${props => props.theme.motion.slow};
+    --ease-out: ${props => props.theme.motion.easeOut};
+    --ease-spring: ${props => props.theme.motion.spring};
+  }
+
+  html {
+    min-width: 320px;
+    min-height: 100%;
+    background: var(--color-bg);
+    scroll-behavior: smooth;
+  }
+
   body {
-    font-family: ${props => props.theme.typography.fontFamily};
-    background-color: ${props => props.theme.colors.background};
-    color: ${props => props.theme.colors.text.primary};
-    line-height: ${props => props.theme.typography.lineHeight.normal};
+    min-width: 320px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-color: var(--color-bg);
+    background-image:
+      linear-gradient(${props => props.theme.colors.text.primary}0C 1px, transparent 1px),
+      linear-gradient(90deg, ${props => props.theme.colors.text.primary}0C 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-base);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(110deg, transparent 0 62%, ${props => props.theme.colors.primary}08 62% 63%, transparent 63%),
+      radial-gradient(circle at 83% 14%, ${props => props.theme.colors.secondary}16 0 8%, transparent 8.2%);
   }
 
   #root {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    isolation: isolate;
+  }
+
+  ::selection {
+    background: var(--color-signal);
+    color: #111411;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-weight: ${props => props.theme.typography.fontWeight.bold};
-    line-height: ${props => props.theme.typography.lineHeight.tight};
-    margin-bottom: ${props => props.theme.spacing.sm};
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: var(--leading-xl);
+    letter-spacing: -0.055em;
+    text-wrap: balance;
   }
 
   h1 {
     font-size: ${props => props.theme.typography.fontSize.headingLarge};
+    text-transform: uppercase;
   }
 
   h2 {
@@ -38,140 +121,52 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   p {
-    margin-bottom: ${props => props.theme.spacing.md};
+    margin-bottom: var(--space-3);
   }
 
   a {
-    color: ${props => props.theme.colors.primary};
-    text-decoration: none;
-    transition: opacity 0.2s ease;
+    color: var(--color-accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.24em;
+    transition: color var(--duration-fast) ease, background var(--duration-fast) ease;
+  }
 
-    &:hover {
-      opacity: 0.8;
-    }
+  a:hover {
+    color: ${props => props.theme.colors.primaryHover};
+  }
+
+  button, input, textarea, select {
+    font: inherit;
   }
 
   button {
-    font-family: inherit;
+    min-height: 44px;
+    border: 0;
     cursor: pointer;
-    border: none;
-    outline: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
   }
 
-  input, textarea {
-    font-family: inherit;
-    outline: none;
+  button:disabled, input:disabled, textarea:disabled, select:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  input, textarea, select {
+    color: var(--color-text);
+    background: var(--color-surface);
     border: 1px solid ${props => props.theme.colors.border};
-    border-radius: ${props => props.theme.borderRadius.small};
-    padding: ${props => props.theme.spacing.md};
-    font-size: ${props => props.theme.typography.fontSize.bodyLarge};
-    background-color: ${props => props.theme.colors.white};
-    transition: border-color 0.2s ease;
-
-    &:focus {
-      border-color: ${props => props.theme.colors.primary};
-    }
-
-    &::placeholder {
-      color: ${props => props.theme.colors.text.secondary};
-    }
+    border-radius: var(--radius-sm);
   }
 
-  /* Mobile-first responsive design */
-  @media (min-width: ${props => props.theme.breakpoints.mobile}) {
-    body {
-      font-size: ${props => props.theme.typography.fontSize.bodyLarge};
-    }
+  input::placeholder, textarea::placeholder {
+    color: var(--color-muted);
+    opacity: 0.76;
   }
 
-  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    /* Tablet styles */
-    .app-container {
-      max-width: 1024px;
-      margin: 0 auto;
-    }
+  :focus-visible {
+    outline: 3px solid var(--color-focus) !important;
+    outline-offset: 3px !important;
   }
 
-  /* Utility classes */
-  .text-center {
-    text-align: center;
-  }
-
-  .text-left {
-    text-align: left;
-  }
-
-  .text-right {
-    text-align: right;
-  }
-
-  .mb-sm {
-    margin-bottom: ${props => props.theme.spacing.sm};
-  }
-
-  .mb-md {
-    margin-bottom: ${props => props.theme.spacing.md};
-  }
-
-  .mb-lg {
-    margin-bottom: ${props => props.theme.spacing.lg};
-  }
-
-  .mt-sm {
-    margin-top: ${props => props.theme.spacing.sm};
-  }
-
-  .mt-md {
-    margin-top: ${props => props.theme.spacing.md};
-  }
-
-  .mt-lg {
-    margin-top: ${props => props.theme.spacing.lg};
-  }
-
-  /* Animation classes */
-  .fade-in {
-    animation: fadeIn 0.3s ease-in;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .bounce {
-    animation: bounce 0.3s ease-out;
-  }
-
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-10px);
-    }
-    60% {
-      transform: translateY(-5px);
-    }
-  }
-
-  /* Accessibility */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -184,9 +179,44 @@ export const GlobalStyles = createGlobalStyle`
     border: 0;
   }
 
-  /* Focus styles for keyboard navigation */
-  *:focus-visible {
-    outline: 2px solid ${props => props.theme.colors.primary};
-    outline-offset: 2px;
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .text-right { text-align: right; }
+  .mb-sm { margin-bottom: var(--space-2); }
+  .mb-md { margin-bottom: var(--space-3); }
+  .mb-lg { margin-bottom: var(--space-4); }
+  .mt-sm { margin-top: var(--space-2); }
+  .mt-md { margin-top: var(--space-3); }
+  .mt-lg { margin-top: var(--space-4); }
+
+  .fade-in {
+    animation: signal-in var(--duration-slow) var(--ease-out) both;
+  }
+
+  @keyframes signal-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 479px) {
+    body { font-size: 15px; }
+  }
+
+  @media (min-width: 768px) {
+    body { font-size: 16px; }
+  }
+
+  @media (min-width: 1024px) {
+    body { font-size: 17px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 `

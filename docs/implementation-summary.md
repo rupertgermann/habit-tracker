@@ -11,9 +11,9 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Dashboard
 
 - **Location**: `src/screens/Dashboard.jsx`
-- Shows total habits, today's completion rate, circular progress, motivational messaging, today's habits, weekly overview, and journal entry point.
-- Supports binary check-off and count-habit steppers from the same daily list.
-- Uses `Confetti`, `ToastContext`, and `CircularProgress` for feedback and completion celebrations.
+- Uses the Signal Room system: an oversized daily score, ten-cell meter, seven-day frequency panel, contextual broadcast, and connected Habit circuit.
+- Supports Yes/No Completion directly from circuit station markers and Count Habit steppers from the same daily route.
+- Includes intentional loading, local-service failure, empty, and partial-data states alongside `Confetti` and `ToastContext` feedback.
 
 ### Habit Management
 
@@ -80,7 +80,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - `src/context/HabitsContext.jsx` owns habit, category, completion, and journal state.
 - `src/context/ThemeContext.jsx` owns light/dark theme state.
 - `src/context/PreferencesContext.jsx` owns calendar and journal week-start preference.
-- `src/context/NavigationContext.jsx` keeps bottom navigation in sync with routes.
+- `src/context/NavigationContext.jsx` keeps the desktop control rail and mobile route strip in sync with routes.
 - `src/styles/theme.js` contains light/dark theme tokens and exposes `theme.mode`.
 - `src/styles/GlobalStyles.js` applies base typography, focus styles, and responsive rules.
 
@@ -160,7 +160,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ## Accessibility and Responsive Behavior
 
 - Interactive controls use labels, focus styles, and keyboard-reachable elements.
-- The bottom navigation supports the main mobile routes.
+- Navigation is a fixed left control rail on desktop and a six-stop bottom route strip on mobile.
 - Wide viewports switch habit list/detail workflows into a split layout.
 - Playwright smoke tests assert no root overflow across mobile and desktop viewports.
 - Dark-mode tests assert contrast-sensitive calendar cells and settings controls remain readable.

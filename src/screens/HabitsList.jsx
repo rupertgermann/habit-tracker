@@ -203,7 +203,7 @@ const CheckButton = styled(motion.button)`
   border-radius: ${props => props.theme.borderRadius.round};
   border: 2px solid ${props => props.$checked ? props.theme.colors.primary : props.theme.colors.border};
   background-color: ${props => props.$checked ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.theme.colors.white};
+  color: ${props => props.theme.colors.onPrimary};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -224,7 +224,7 @@ const FloatingActionButton = styled(motion.button)`
   height: 56px;
   border-radius: ${props => props.theme.borderRadius.round};
   background-color: ${props => props.theme.colors.primary};
-  color: ${props => props.theme.colors.white};
+  color: ${props => props.theme.colors.onPrimary};
   border: none;
   display: flex;
   align-items: center;
@@ -234,7 +234,7 @@ const FloatingActionButton = styled(motion.button)`
   z-index: 50;
   
   &:hover {
-    background-color: #5CAD6C;
+    background-color: ${props => props.theme.colors.primaryHover};
   }
 `
 

@@ -14,16 +14,21 @@ const StepperWrapper = styled.div`
 `
 
 const StepButton = styled(motion.button)`
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: ${props => props.theme.borderRadius.round};
   border: 2px solid ${props => props.theme.colors.primary};
   background-color: ${props => props.$variant === 'plus' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.$variant === 'plus' ? props.theme.colors.white : props.theme.colors.primary};
+  color: ${props => props.$variant === 'plus' ? props.theme.colors.onPrimary : props.theme.colors.primary};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: ${props => props.$variant === 'plus' ? props.theme.colors.primaryHover : props.theme.colors.surfaceAlt};
+  }
 
   &:disabled {
     opacity: 0.4;

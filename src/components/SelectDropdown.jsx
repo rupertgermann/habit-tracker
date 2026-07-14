@@ -23,14 +23,14 @@ const SelectButton = styled.button`
   padding: 0 ${props => props.theme.spacing.md};
   color: ${props => props.theme.colors.text.primary};
   background-color: ${props => props.theme.colors.white};
-  font-family: ${props => props.theme.typography.fontFamily};
+  font-family: ${props => props.theme.typography.monoFamily};
   font-size: ${props => props.theme.typography.fontSize.bodyMedium};
   cursor: pointer;
 
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}20;
+    box-shadow: inset 5px 0 0 ${props => props.theme.colors.primary};
   }
 `
 
@@ -61,8 +61,8 @@ const SelectMenu = styled.div`
   max-height: 240px;
   overflow-y: auto;
   padding: ${props => props.theme.spacing.xs};
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.small};
+  border: 1px solid ${props => props.theme.colors.borderStrong};
+  border-radius: 0;
   background-color: ${props => props.theme.colors.white};
   box-shadow: ${props => props.theme.shadows.strong};
 `
@@ -75,7 +75,9 @@ const SelectOption = styled.button`
   border: 0;
   border-radius: ${props => props.theme.borderRadius.small};
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
-  color: ${props => props.$selected ? props.theme.colors.white : props.theme.colors.text.primary};
+  color: ${props => props.$selected
+    ? (props.theme.mode === 'dark' ? '#111411' : props.theme.colors.onPrimary)
+    : props.theme.colors.text.primary};
   background-color: ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.white};
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.bodyMedium};
@@ -85,7 +87,9 @@ const SelectOption = styled.button`
   &:hover,
   &:focus {
     outline: none;
-    color: ${props => props.$selected ? props.theme.colors.white : props.theme.colors.text.primary};
+    color: ${props => props.$selected
+      ? (props.theme.mode === 'dark' ? '#111411' : props.theme.colors.onPrimary)
+      : props.theme.colors.text.primary};
     background-color: ${props => props.$selected ? props.theme.colors.primary : `${props.theme.colors.primary}20`};
   }
 `

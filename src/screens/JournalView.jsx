@@ -220,7 +220,7 @@ const JournalView = () => {
           {timeline.stats.mostCommonMood && (
             <StatCard elevated>
               <StatValue>
-                {timeline.stats.mostCommonMood.emoji}
+                <AppIcon name={timeline.stats.mostCommonMood.icon || 'mood-smile'} size={30} />
               </StatValue>
               <StatLabel>Most Common Mood</StatLabel>
             </StatCard>
@@ -262,7 +262,7 @@ const JournalView = () => {
                   </EntryDate>
                   {mood && (
                     <EntryMood>
-                      {mood.emoji} {mood.name}
+                      <AppIcon name={mood.icon || 'mood-smile'} size={17} /> {mood.name}
                     </EntryMood>
                   )}
                 </EntryHeader>
