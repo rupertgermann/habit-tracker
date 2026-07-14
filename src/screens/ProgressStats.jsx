@@ -17,14 +17,21 @@ import {
 
 const ProgressContainer = styled.div`
   width: 100%;
-  padding: ${props => props.theme.spacing.lg};
+  padding: clamp(22px, 5vw, 48px);
   padding-bottom: ${props => props.theme.spacing.xxxl};
-  max-width: 600px;
+  max-width: 680px;
   margin: 0 auto;
 `
 
 const Header = styled.div`
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 2px solid ${props => props.theme.colors.borderStrong};
+
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    margin-bottom: ${props => props.theme.spacing.md};
+    padding-bottom: ${props => props.theme.spacing.sm};
+  }
 `
 
 const Title = styled.h1`
@@ -67,6 +74,10 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(3, 1fr);
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    margin-bottom: ${props => props.theme.spacing.md};
+  }
 `
 
 const ProgressCard = styled(Card)`
@@ -75,12 +86,31 @@ const ProgressCard = styled(Card)`
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: ${props => props.theme.spacing.md};
+    padding: ${props => props.theme.spacing.md};
+    margin-bottom: ${props => props.theme.spacing.md};
+
+    svg {
+      width: 110px;
+      height: 110px;
+    }
+  }
 `
 
 const ProgressTitle = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   margin-bottom: ${props => props.theme.spacing.lg};
   text-align: center;
+
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    max-width: 6ch;
+    margin: 0;
+    text-align: left;
+  }
 `
 
 const StreakSection = styled.div`
@@ -90,6 +120,10 @@ const StreakSection = styled.div`
 const StatCard = styled(Card)`
   text-align: center;
   padding: ${props => props.theme.spacing.lg};
+
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    padding: ${props => props.theme.spacing.sm};
+  }
 `
 
 const StatValue = styled.div`

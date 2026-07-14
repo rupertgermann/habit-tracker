@@ -13,7 +13,8 @@ const ButtonWrapper = styled(motion.button)`
   font-family: ${props => props.theme.typography.fontFamily};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   cursor: pointer;
-  transition: all 0.2s ease;
+  letter-spacing: 0.025em;
+  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast) ease, color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
   position: relative;
   overflow: hidden;
   
@@ -22,10 +23,13 @@ const ButtonWrapper = styled(motion.button)`
       case 'primary':
         return `
           background-color: ${theme.colors.primary};
-          color: ${theme.colors.white};
+          color: ${theme.colors.onPrimary};
+          box-shadow: 3px 3px 0 ${theme.colors.borderStrong};
           
           &:hover:not(:disabled) {
-            background-color: #5CAD6C;
+            background-color: ${theme.colors.primaryHover};
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0 ${theme.colors.borderStrong};
           }
         `
       case 'secondary':
@@ -34,13 +38,14 @@ const ButtonWrapper = styled(motion.button)`
           color: ${theme.colors.text.primary};
           
           &:hover:not(:disabled) {
-            background-color: #F4D04A;
+            filter: brightness(0.94);
           }
         `
       case 'ghost':
         return `
           background-color: transparent;
           color: ${theme.colors.primary};
+          border-bottom: 1px solid currentColor;
           
           &:hover:not(:disabled) {
             background-color: ${theme.colors.primary}10;
@@ -49,7 +54,7 @@ const ButtonWrapper = styled(motion.button)`
       case 'destructive':
         return `
           background-color: ${theme.colors.destructive};
-          color: ${theme.colors.white};
+          color: ${theme.colors.onPrimary};
           
           &:hover:not(:disabled) {
             background-color: #F17676;
@@ -58,10 +63,11 @@ const ButtonWrapper = styled(motion.button)`
       default:
         return `
           background-color: ${theme.colors.primary};
-          color: ${theme.colors.white};
+          color: ${theme.colors.onPrimary};
+          box-shadow: 3px 3px 0 ${theme.colors.borderStrong};
           
           &:hover:not(:disabled) {
-            background-color: #5CAD6C;
+            background-color: ${theme.colors.primaryHover};
           }
         `
     }
@@ -71,19 +77,19 @@ const ButtonWrapper = styled(motion.button)`
     switch ($size) {
       case 'small':
         return `
-          height: 32px;
+          min-height: 36px;
           padding: 0 ${theme.spacing.sm};
           font-size: ${theme.typography.fontSize.bodySmall};
         `
       case 'large':
         return `
-          height: 48px;
+          min-height: 50px;
           padding: 0 ${theme.spacing.xl};
           font-size: ${theme.typography.fontSize.bodyLarge};
         `
       default:
         return `
-          height: 40px;
+          min-height: 44px;
           padding: 0 ${theme.spacing.md};
           font-size: ${theme.typography.fontSize.bodyMedium};
         `
@@ -103,13 +109,9 @@ const ButtonWrapper = styled(motion.button)`
       opacity: 0.5;
     `}
   
-  &:focus {
-    outline: 2px solid ${props => props.theme.colors.primary};
-    outline-offset: 2px;
-  }
-  
   &:active {
-    transform: scale(0.98);
+    transform: translate(2px, 2px);
+    box-shadow: none;
   }
   
   ${({ $isBouncing }) =>
@@ -122,7 +124,7 @@ const ButtonWrapper = styled(motion.button)`
 const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid ${props => props.theme.colors.white};
+  border: 2px solid ${props => props.theme.colors.onPrimary};
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

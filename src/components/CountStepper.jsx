@@ -9,21 +9,25 @@ import AppIcon from './AppIcon'
 const StepperWrapper = styled.div`
   display: flex;
   align-items: center;
-  gap: ${props => props.theme.spacing.sm};
+  gap: 6px;
   flex-shrink: 0;
 `
 
 const StepButton = styled(motion.button)`
-  width: 32px;
-  height: 32px;
-  border-radius: ${props => props.theme.borderRadius.round};
-  border: 2px solid ${props => props.theme.colors.primary};
+  width: 44px;
+  height: 44px;
+  border-radius: ${props => props.theme.borderRadius.small};
+  border: 1px solid ${props => props.theme.colors.primary};
   background-color: ${props => props.$variant === 'plus' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.$variant === 'plus' ? props.theme.colors.white : props.theme.colors.primary};
+  color: ${props => props.$variant === 'plus' ? props.theme.colors.onPrimary : props.theme.colors.primary};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: ${props => props.$variant === 'plus' ? props.theme.colors.primaryHover : props.theme.colors.surfaceAlt};
+  }
 
   &:disabled {
     opacity: 0.4;
@@ -32,7 +36,7 @@ const StepButton = styled(motion.button)`
 `
 
 const CountValue = styled.div`
-  min-width: 40px;
+  min-width: 34px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -43,6 +47,7 @@ const CountNumber = styled.span`
   font-size: ${props => props.theme.typography.fontSize.bodyLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.theme.colors.text.primary};
+  font-family: ${props => props.theme.typography.monoFamily};
 `
 
 const CountTarget = styled.span`

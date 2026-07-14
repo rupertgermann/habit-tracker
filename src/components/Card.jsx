@@ -3,16 +3,16 @@ import styled from 'styled-components'
 import { motion } from 'framer-motion'
 
 const CardWrapper = styled(motion.div)`
-  background-color: ${props => props.theme.colors.white};
+  background-color: ${props => props.theme.colors.surface};
   border-radius: ${props => props.theme.borderRadius.medium};
   box-shadow: ${props => {
     if (props.$elevated) return props.theme.shadows.medium
     if (props.$border) return 'none'
     return props.theme.shadows.subtle
   }};
-  border: ${props => props.$border ? `1px solid ${props.theme.colors.border}` : 'none'};
+  border: 1px solid ${props => props.$border ? props.theme.colors.borderStrong : props.theme.colors.border};
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) ease, border-color var(--duration-fast) ease;
   
   ${({ $padding, theme }) => {
     switch ($padding) {
@@ -33,12 +33,13 @@ const CardWrapper = styled(motion.div)`
       cursor: pointer;
       
       &:hover {
-        transform: translateY(-2px);
+        transform: translate(-2px, -2px);
         box-shadow: ${theme.shadows.medium};
+        border-color: ${theme.colors.borderStrong};
       }
       
       &:active {
-        transform: translateY(0);
+        transform: translate(1px, 1px);
       }
     `}
 `

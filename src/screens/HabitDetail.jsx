@@ -22,9 +22,9 @@ import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const HabitDetailContainer = styled.div`
   width: 100%;
-  padding: ${props => props.theme.spacing.lg};
+  padding: clamp(22px, 5vw, 48px);
   padding-bottom: ${props => props.theme.spacing.xxxl};
-  max-width: 600px;
+  max-width: 780px;
   margin: 0 auto;
 `
 
@@ -34,7 +34,9 @@ const Header = styled.div`
   align-items: center;
   gap: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 2px solid ${props => props.theme.colors.borderStrong};
 `
 
 const Title = styled.h1`

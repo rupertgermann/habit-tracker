@@ -179,6 +179,37 @@ const StreakVisualization = ({ habit, streak }) => {
     setIsDragging(false)
   }
 
+  const handleMouseDown = event => {
+    if (event.button !== 0) return
+
+    const timeline = timelineRef.current
+    if (!timeline) return
+
+    dragRef.current = {
+      isDragging: true,
+      pointerId: null,
+      startX: event.clientX,
+      startScrollLeft: timeline.scrollLeft
+    }
+    setIsDragging(true)
+  }
+
+  const handleMouseMove = event => {
+    const drag = dragRef.current
+    const timeline = timelineRef.current
+    if (!drag.isDragging || drag.pointerId !== null || !timeline) return
+
+    event.preventDefault()
+    timeline.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
+  }
+
+  const handleMouseUp = () => {
+    if (!dragRef.current.isDragging || dragRef.current.pointerId !== null) return
+
+    dragRef.current.isDragging = false
+    setIsDragging(false)
+  }
+
   useLayoutEffect(() => {
     const timeline = timelineRef.current
     const today = todayRef.current
@@ -261,6 +292,10 @@ const StreakVisualization = ({ habit, streak }) => {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         {recentDays.map((day, index) => (
           <StreakDayItem

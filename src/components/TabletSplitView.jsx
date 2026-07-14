@@ -8,7 +8,7 @@ import AppIcon from './AppIcon'
 
 const SplitViewContainer = styled.div`
   display: flex;
-  height: calc(100vh - 64px);
+  height: 100vh;
   overflow: hidden;
 `
 

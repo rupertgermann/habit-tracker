@@ -10,20 +10,26 @@ const EmptyStateContainer = styled(motion.div)`
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: ${props => props.theme.spacing.xxl};
+  max-width: 680px;
+  margin: clamp(32px, 8vw, 96px) auto 0;
+  padding: clamp(34px, 7vw, 72px) ${props => props.theme.spacing.lg};
   min-height: 300px;
+  background: ${props => props.theme.colors.surface};
+  border: 1px solid ${props => props.theme.colors.borderStrong};
+  box-shadow: ${props => props.theme.shadows.strong};
 `
 
 const EmptyStateIconWrap = styled.div`
   width: ${props => props.$size}px;
   height: ${props => props.$size}px;
-  border-radius: ${props => props.theme.borderRadius.large};
-  background-color: ${props => props.theme.colors.primary}15;
+  border-radius: 50%;
+  background-color: ${props => props.theme.colors.primary}12;
   color: ${props => props.theme.colors.primary};
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: ${props => props.theme.spacing.xl};
+  border: 1px solid currentColor;
 `
 
 const emptyStateIconByType = {

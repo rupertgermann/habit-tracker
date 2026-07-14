@@ -17,16 +17,16 @@ const filledTileTextColor = '#102016'
 
 const darkCompletionLevelStyles = {
   1: {
-    background: '#183F21',
-    border: '#2F7D3D'
+    background: '#67301F',
+    border: '#B85137'
   },
   2: {
-    background: '#245C2D',
-    border: '#43A047'
+    background: '#7A3825',
+    border: '#D45B3C'
   },
   3: {
-    background: '#2D6F37',
-    border: '#66BB6A'
+    background: '#954127',
+    border: '#FF6B4A'
   }
 }
 
@@ -82,9 +82,9 @@ const getHeatmapMutedTextColor = (level, theme) =>
 
 const CalendarContainer = styled.div`
   width: 100%;
-  padding: ${props => props.theme.spacing.lg};
+  padding: clamp(22px, 5vw, 48px);
   padding-bottom: ${props => props.theme.spacing.xxxl};
-  max-width: 600px;
+  max-width: 780px;
   margin: 0 auto;
 `
 
@@ -94,7 +94,9 @@ const Header = styled.div`
   align-items: center;
   gap: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 2px solid ${props => props.theme.colors.borderStrong};
 `
 
 const Title = styled.h1`

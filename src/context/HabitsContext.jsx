@@ -13,11 +13,11 @@ const initialState = {
   categories: [],
   journalEntries: [],
   moodOptions: [
-    { id: 'very-bad', name: 'Very Bad', emoji: '😔', color: '#F28A8A' },
-    { id: 'bad', name: 'Bad', emoji: '😕', color: '#FBBF24' },
-    { id: 'neutral', name: 'Neutral', emoji: '😐', color: '#6B7280' },
-    { id: 'good', name: 'Good', emoji: '😊', color: '#6CC47C' },
-    { id: 'very-good', name: 'Very Good', emoji: '😄', color: '#34D399' }
+    { id: 'very-bad', name: 'Very Bad', icon: 'circle-x', color: '#B42318' },
+    { id: 'bad', name: 'Bad', icon: 'minus', color: '#A86E14' },
+    { id: 'neutral', name: 'Neutral', icon: 'notes', color: '#6B7280' },
+    { id: 'good', name: 'Good', icon: 'circle-check', color: '#377A58' },
+    { id: 'very-good', name: 'Very Good', icon: 'sparkles', color: '#167B63' }
   ],
   isLoading: false,
   hasLoaded: false,

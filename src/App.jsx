@@ -18,6 +18,36 @@ import { ToastProvider } from './context/ToastContext.jsx'
 import { ThemeProvider, useTheme } from './context/ThemeContext.jsx'
 import { NavigationProvider } from './context/NavigationContext.jsx'
 import { PreferencesProvider } from './context/PreferencesContext.jsx'
+import styled from 'styled-components'
+
+const SkipLink = styled.a`
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 10px 14px;
+  background: ${props => props.theme.colors.text.primary};
+  color: ${props => props.theme.colors.background};
+  transform: translateY(-180%);
+  transition: transform ${props => props.theme.motion.fast} ${props => props.theme.motion.easeOut};
+
+  &:focus {
+    transform: translateY(0);
+  }
+`
+
+const AppFrame = styled.div`
+  min-height: 100vh;
+  padding-bottom: 92px;
+
+  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
+    padding: 0 0 0 112px;
+  }
+`
+
+const Main = styled.main`
+  min-height: 100vh;
+`
 
 function AppContent() {
   const [isWideLayout, setIsWideLayout] = useState(false)
@@ -39,29 +69,26 @@ function AppContent() {
     <StyledThemeProvider theme={theme}>
       <GlobalStyles />
       <ToastProvider>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-          paddingTop: isWideLayout ? '64px' : '0',
-          paddingBottom: isWideLayout ? '0' : '80px'
-        }}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/habits" element={isWideLayout ? <TabletSplitView /> : <HabitsList />} />
-            <Route path="/calendar" element={<CalendarView />} />
-            <Route path="/habit/:id" element={isWideLayout ? <TabletSplitView /> : <HabitDetail />} />
-            <Route path="/progress" element={<ProgressStats />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/privacy" element={<InfoPage page="privacy" />} />
-            <Route path="/terms" element={<InfoPage page="terms" />} />
-            <Route path="/support" element={<InfoPage page="support" />} />
-            <Route path="/add-habit" element={<AddEditHabit />} />
-            <Route path="/edit-habit/:id" element={<AddEditHabit />} />
-            <Route path="/journal" element={<JournalView />} />
-          </Routes>
+        <SkipLink href="#main-content">Skip to today</SkipLink>
+        <AppFrame>
+          <Main id="main-content" tabIndex="-1">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/habits" element={isWideLayout ? <TabletSplitView /> : <HabitsList />} />
+              <Route path="/calendar" element={<CalendarView />} />
+              <Route path="/habit/:id" element={isWideLayout ? <TabletSplitView /> : <HabitDetail />} />
+              <Route path="/progress" element={<ProgressStats />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/privacy" element={<InfoPage page="privacy" />} />
+              <Route path="/terms" element={<InfoPage page="terms" />} />
+              <Route path="/support" element={<InfoPage page="support" />} />
+              <Route path="/add-habit" element={<AddEditHabit />} />
+              <Route path="/edit-habit/:id" element={<AddEditHabit />} />
+              <Route path="/journal" element={<JournalView />} />
+            </Routes>
+          </Main>
           <BottomNavigation />
-        </div>
+        </AppFrame>
       </ToastProvider>
     </StyledThemeProvider>
   )

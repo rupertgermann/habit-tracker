@@ -1,16 +1,55 @@
 import { createGlobalStyle } from 'styled-components'
 
 export const GlobalStyles = createGlobalStyle`
-  * {
-    margin: 0;
-    padding: 0;
+  *, *::before, *::after {
     box-sizing: border-box;
   }
 
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    color-scheme: ${props => props.theme.mode};
+    --color-bg: ${props => props.theme.colors.background};
+    --color-surface: ${props => props.theme.colors.surface};
+    --color-surface-alt: ${props => props.theme.colors.surfaceAlt};
+    --color-text: ${props => props.theme.colors.text.primary};
+    --color-muted: ${props => props.theme.colors.text.secondary};
+    --color-accent: ${props => props.theme.colors.primary};
+    --color-focus: ${props => props.theme.colors.focus};
+    --color-success: ${props => props.theme.colors.success};
+    --color-warning: ${props => props.theme.colors.warning};
+    --color-danger: ${props => props.theme.colors.destructive};
+    --font-display: ${props => props.theme.typography.displayFamily};
+    --font-body: ${props => props.theme.typography.fontFamily};
+    --font-mono: ${props => props.theme.typography.monoFamily};
+    --duration-fast: ${props => props.theme.motion.fast};
+    --duration-base: ${props => props.theme.motion.base};
+    --duration-slow: ${props => props.theme.motion.slow};
+    --ease-out: ${props => props.theme.motion.easeOut};
+    --ease-spring: ${props => props.theme.motion.spring};
+  }
+
+  html {
+    min-width: 320px;
+    background: ${props => props.theme.colors.background};
+    scroll-behavior: smooth;
+  }
+
   body {
+    min-width: 320px;
+    min-height: 100vh;
     font-family: ${props => props.theme.typography.fontFamily};
     background-color: ${props => props.theme.colors.background};
+    background-image:
+      radial-gradient(circle at 18% 12%, ${props => props.theme.colors.primary}0A 0 1px, transparent 1.5px),
+      linear-gradient(90deg, ${props => props.theme.colors.text.primary}06 1px, transparent 1px),
+      linear-gradient(${props => props.theme.colors.text.primary}04 1px, transparent 1px);
+    background-size: 17px 17px, 48px 48px, 48px 48px;
     color: ${props => props.theme.colors.text.primary};
+    font-size: 16px;
     line-height: ${props => props.theme.typography.lineHeight.normal};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -19,14 +58,20 @@ export const GlobalStyles = createGlobalStyle`
 
   #root {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    isolation: isolate;
+  }
+
+  ::selection {
+    background: ${props => props.theme.colors.secondary};
+    color: #201D18;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: ${props => props.theme.typography.displayFamily};
     font-weight: ${props => props.theme.typography.fontWeight.bold};
     line-height: ${props => props.theme.typography.lineHeight.tight};
-    margin-bottom: ${props => props.theme.spacing.sm};
+    letter-spacing: -0.035em;
+    text-wrap: balance;
   }
 
   h1 {
@@ -43,135 +88,46 @@ export const GlobalStyles = createGlobalStyle`
 
   a {
     color: ${props => props.theme.colors.primary};
-    text-decoration: none;
-    transition: opacity 0.2s ease;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    transition: color var(--duration-fast) ease;
+  }
 
-    &:hover {
-      opacity: 0.8;
-    }
+  a:hover {
+    color: ${props => props.theme.colors.primaryHover};
+  }
+
+  button, input, textarea, select {
+    font: inherit;
   }
 
   button {
-    font-family: inherit;
     cursor: pointer;
-    border: none;
-    outline: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
+    border: 0;
   }
 
-  input, textarea {
-    font-family: inherit;
-    outline: none;
+  button:disabled, input:disabled, textarea:disabled, select:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+
+  input, textarea, select {
+    color: ${props => props.theme.colors.text.primary};
+    background: ${props => props.theme.colors.surface};
     border: 1px solid ${props => props.theme.colors.border};
     border-radius: ${props => props.theme.borderRadius.small};
-    padding: ${props => props.theme.spacing.md};
-    font-size: ${props => props.theme.typography.fontSize.bodyLarge};
-    background-color: ${props => props.theme.colors.white};
-    transition: border-color 0.2s ease;
-
-    &:focus {
-      border-color: ${props => props.theme.colors.primary};
-    }
-
-    &::placeholder {
-      color: ${props => props.theme.colors.text.secondary};
-    }
   }
 
-  /* Mobile-first responsive design */
-  @media (min-width: ${props => props.theme.breakpoints.mobile}) {
-    body {
-      font-size: ${props => props.theme.typography.fontSize.bodyLarge};
-    }
+  input::placeholder, textarea::placeholder {
+    color: ${props => props.theme.colors.text.secondary};
+    opacity: 0.72;
   }
 
-  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    /* Tablet styles */
-    .app-container {
-      max-width: 1024px;
-      margin: 0 auto;
-    }
+  :focus-visible {
+    outline: 3px solid ${props => props.theme.colors.focus};
+    outline-offset: 3px;
   }
 
-  /* Utility classes */
-  .text-center {
-    text-align: center;
-  }
-
-  .text-left {
-    text-align: left;
-  }
-
-  .text-right {
-    text-align: right;
-  }
-
-  .mb-sm {
-    margin-bottom: ${props => props.theme.spacing.sm};
-  }
-
-  .mb-md {
-    margin-bottom: ${props => props.theme.spacing.md};
-  }
-
-  .mb-lg {
-    margin-bottom: ${props => props.theme.spacing.lg};
-  }
-
-  .mt-sm {
-    margin-top: ${props => props.theme.spacing.sm};
-  }
-
-  .mt-md {
-    margin-top: ${props => props.theme.spacing.md};
-  }
-
-  .mt-lg {
-    margin-top: ${props => props.theme.spacing.lg};
-  }
-
-  /* Animation classes */
-  .fade-in {
-    animation: fadeIn 0.3s ease-in;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .bounce {
-    animation: bounce 0.3s ease-out;
-  }
-
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-10px);
-    }
-    60% {
-      transform: translateY(-5px);
-    }
-  }
-
-  /* Accessibility */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -184,9 +140,44 @@ export const GlobalStyles = createGlobalStyle`
     border: 0;
   }
 
-  /* Focus styles for keyboard navigation */
-  *:focus-visible {
-    outline: 2px solid ${props => props.theme.colors.primary};
-    outline-offset: 2px;
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .text-right { text-align: right; }
+  .mb-sm { margin-bottom: ${props => props.theme.spacing.sm}; }
+  .mb-md { margin-bottom: ${props => props.theme.spacing.md}; }
+  .mb-lg { margin-bottom: ${props => props.theme.spacing.lg}; }
+  .mt-sm { margin-top: ${props => props.theme.spacing.sm}; }
+  .mt-md { margin-top: ${props => props.theme.spacing.md}; }
+  .mt-lg { margin-top: ${props => props.theme.spacing.lg}; }
+
+  .fade-in {
+    animation: field-note-in var(--duration-slow) var(--ease-out) both;
+  }
+
+  @keyframes field-note-in {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 479px) {
+    body { font-size: 15px; }
+  }
+
+  @media (min-width: 768px) {
+    body { font-size: 16px; }
+  }
+
+  @media (min-width: 1024px) {
+    body { font-size: 17px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 `

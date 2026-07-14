@@ -7,161 +7,179 @@ import AppIcon from './AppIcon'
 
 const NavContainer = styled.nav`
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background-color: ${props => props.theme.colors.white};
-  box-shadow: ${props => props.theme.shadows.medium};
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 100;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: center;
-  gap: 0;
-  padding: 0 ${props => props.theme.spacing.xs};
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  z-index: 100;
+  min-height: 68px;
+  padding: 5px;
+  background: ${props => props.theme.colors.text.primary};
+  color: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.text.primary};
+  box-shadow: ${props => props.theme.shadows.strong};
 
   @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    top: 0;
-    bottom: auto;
-    height: 64px;
-    display: flex;
-    justify-content: center;
-    gap: ${props => props.theme.spacing.sm};
-    padding: 0 ${props => props.theme.spacing.lg};
-    border-bottom: 1px solid ${props => props.theme.colors.border};
+    inset: 0 auto 0 0;
+    width: 112px;
+    min-height: 100vh;
+    grid-template-columns: 1fr;
+    grid-template-rows: 112px repeat(6, minmax(72px, 1fr)) 72px;
+    gap: 2px;
+    padding: 0 10px 16px;
+    border: 0;
+    border-right: 1px solid ${props => props.theme.colors.border};
+    box-shadow: none;
   }
+`
+
+const BrandMark = styled.div`
+  display: none;
+
+  @media (min-width: ${props => props.theme.breakpoints.tablet}) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: ${props => props.theme.colors.background};
+    border-bottom: 1px solid ${props => props.theme.colors.background}33;
+  }
+`
+
+const BrandMonogram = styled.span`
+  font-family: ${props => props.theme.typography.displayFamily};
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+`
+
+const BrandCaption = styled.span`
+  font-family: ${props => props.theme.typography.monoFamily};
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 `
 
 const NavItem = styled(motion.button)`
-  background: none;
-  border: none;
+  position: relative;
+  min-width: 0;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${props => props.theme.spacing.xs};
-  cursor: pointer;
-  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.xs};
-  border-radius: ${props => props.theme.borderRadius.small};
-  transition: all 0.2s ease;
-  min-width: 0;
-  width: 100%;
-  
-  ${({ $active, theme }) =>
-    $active
-      ? `
-          color: ${theme.colors.primary};
-        `
-      : `
-          color: ${theme.colors.text.secondary};
-        `}
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.background};
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 2px;
+  background: ${props => props.$active ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.$active ? props.theme.colors.onPrimary : props.theme.colors.background};
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) var(--ease-out);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid currentColor;
+    opacity: ${props => props.$active ? 0.42 : 0};
+    pointer-events: none;
   }
-  
-  &:focus {
-    outline: 2px solid ${props => props.theme.colors.primary};
-    outline-offset: 2px;
+
+  &:hover:not(:disabled) {
+    background: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.surfaceAlt};
+    color: ${props => props.$active ? props.theme.colors.onPrimary : '#201D18'};
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(2px);
   }
 
   @media (min-width: ${props => props.theme.breakpoints.tablet}) {
-    width: auto;
-    min-width: 92px;
-    flex-direction: row;
-    justify-content: center;
-    padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+    min-height: 72px;
+    width: 100%;
+    padding: 8px 4px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: -10px;
+      top: 18%;
+      bottom: 18%;
+      width: 4px;
+      background: ${props => props.$active ? props.theme.colors.secondary : 'transparent'};
+    }
   }
 `
 
-const NavIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  line-height: 1;
-  display: flex;
+const NavIcon = styled.span`
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 `
 
 const NavLabel = styled.span`
-  font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  line-height: 1;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: ${props => props.theme.typography.monoFamily};
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  text-transform: uppercase;
 
-  @media (max-width: 360px) {
+  @media (max-width: 370px) {
     display: none;
   }
 `
 
 const navItems = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: 'chart-bar',
-    path: '/'
-  },
-  {
-    id: 'habits',
-    label: 'Habits',
-    icon: 'checkbox',
-    path: '/habits'
-  },
-  {
-    id: 'calendar',
-    label: 'Calendar',
-    icon: 'calendar',
-    path: '/calendar'
-  },
-  {
-    id: 'journal',
-    label: 'Journal',
-    icon: 'notebook',
-    path: '/journal'
-  },
-  {
-    id: 'progress',
-    label: 'Progress',
-    icon: 'chart-line',
-    path: '/progress'
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: 'settings',
-    path: '/settings'
-  }
+  { id: 'dashboard', label: 'Today', icon: 'chart-bar', path: '/' },
+  { id: 'habits', label: 'Habits', icon: 'checkbox', path: '/habits' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar', path: '/calendar' },
+  { id: 'journal', label: 'Journal', icon: 'notebook', path: '/journal' },
+  { id: 'progress', label: 'Progress', icon: 'chart-line', path: '/progress' },
+  { id: 'settings', label: 'Settings', icon: 'settings', path: '/settings' }
 ]
 
 const BottomNavigation = () => {
   const navigate = useNavigate()
   const { activeTab, setActiveTab } = useNavigation()
 
-  const handleTabClick = (item) => {
+  const handleTabClick = item => {
     setActiveTab(item.id)
     navigate(item.path)
   }
 
   return (
-    <NavContainer>
-      {navItems.map((item) => (
-        <NavItem
-          key={item.id}
-          $active={activeTab === item.id}
-          onClick={() => handleTabClick(item)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label={item.label}
-        >
-          <NavIcon>
-            <AppIcon name={item.icon} size={24} />
-          </NavIcon>
-          <NavLabel>{item.label}</NavLabel>
-        </NavItem>
-      ))}
+    <NavContainer aria-label="Primary navigation">
+      <BrandMark aria-hidden="true">
+        <BrandMonogram>R/7</BrandMonogram>
+        <BrandCaption>Rhythm log</BrandCaption>
+      </BrandMark>
+      {navItems.map(item => {
+        const isActive = activeTab === item.id
+        return (
+          <NavItem
+            key={item.id}
+            $active={isActive}
+            onClick={() => handleTabClick(item)}
+            aria-label={item.label === 'Today' ? 'Dashboard' : item.label}
+            aria-current={isActive ? 'page' : undefined}
+            whileTap={{ scale: 0.96 }}
+          >
+            <NavIcon aria-hidden="true">
+              <AppIcon name={item.icon} size={22} stroke={1.8} />
+            </NavIcon>
+            <NavLabel>{item.label}</NavLabel>
+          </NavItem>
+        )
+      })}
     </NavContainer>
   )
 }

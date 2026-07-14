@@ -11,9 +11,9 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Dashboard
 
 - **Location**: `src/screens/Dashboard.jsx`
-- Shows total habits, today's completion rate, circular progress, motivational messaging, today's habits, weekly overview, and journal entry point.
+- Uses an editorial daily-record composition with an inverse Completion dial, a seven-day rhythm rail, a state-aware field note, today's Habits, and Calendar/Journal entry points.
 - Supports binary check-off and count-habit steppers from the same daily list.
-- Uses `Confetti`, `ToastContext`, and `CircularProgress` for feedback and completion celebrations.
+- Includes authored loading, offline, and empty states alongside `Confetti` and `ToastContext` feedback.
 
 ### Habit Management
 
@@ -80,9 +80,9 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - `src/context/HabitsContext.jsx` owns habit, category, completion, and journal state.
 - `src/context/ThemeContext.jsx` owns light/dark theme state.
 - `src/context/PreferencesContext.jsx` owns calendar and journal week-start preference.
-- `src/context/NavigationContext.jsx` keeps bottom navigation in sync with routes.
-- `src/styles/theme.js` contains light/dark theme tokens and exposes `theme.mode`.
-- `src/styles/GlobalStyles.js` applies base typography, focus styles, and responsive rules.
+- `src/context/NavigationContext.jsx` keeps the mobile dock and desktop rail in sync with routes.
+- `src/styles/theme.js` contains the paper/ink light and dark tokens, editorial/body/mono type stacks, motion, shape, and breakpoint values.
+- `src/styles/GlobalStyles.js` applies the drafting-grid texture, global typography, focus styles, reduced-motion fallback, and responsive rules.
 
 ### Backend
 
@@ -160,7 +160,8 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ## Accessibility and Responsive Behavior
 
 - Interactive controls use labels, focus styles, and keyboard-reachable elements.
-- The bottom navigation supports the main mobile routes.
+- Primary navigation is a floating bottom dock on mobile and a fixed left rail on wide layouts.
+- The app includes a keyboard-visible skip link, `aria-current` route state, and a semantic main landmark.
 - Wide viewports switch habit list/detail workflows into a split layout.
 - Playwright smoke tests assert no root overflow across mobile and desktop viewports.
 - Dark-mode tests assert contrast-sensitive calendar cells and settings controls remain readable.
