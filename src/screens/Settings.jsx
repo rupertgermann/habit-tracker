@@ -168,8 +168,8 @@ const AvatarInput = styled.input`
 `
 
 const ProfileInfo = styled.div`
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 160px;
+  min-width: 160px;
 `
 
 const ProfileName = styled.h2`
