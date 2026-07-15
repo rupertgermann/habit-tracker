@@ -46,6 +46,37 @@ test.beforeEach(async ({ request }) => {
   await resetAppData(request)
 })
 
+test('design selection switches immediately and persists in the database', async ({ page, request }) => {
+  await resetAppData(request, {
+    settings: {
+      theme: 'light',
+      design: 'quiet-momentum'
+    }
+  })
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  const designGroup = page.getByRole('radiogroup', { name: 'App design' })
+  await expect(designGroup.getByRole('radio')).toHaveCount(5)
+  await expect(designGroup.getByRole('radio', { name: 'Quiet Momentum' })).toBeChecked()
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'quiet-momentum')
+
+  await designGroup.getByText('Orbit', { exact: true }).click()
+  await expect(designGroup.getByRole('radio', { name: 'Orbit' })).toBeChecked()
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'orbit')
+  await expect.poll(async () => {
+    const state = await getState(request)
+    return state.settings?.design
+  }).toBe('orbit')
+  await expectNoRootOverflow(page)
+
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByRole('radio', { name: 'Orbit' })).toBeChecked()
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'orbit')
+})
+
 test('profile and calendar preferences use the database instead of legacy localStorage', async ({ page, request }) => {
   await resetAppData(request, {
     settings: {

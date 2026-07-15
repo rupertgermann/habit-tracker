@@ -16,6 +16,14 @@ const viewports = [
   { name: 'desktop', size: { width: 1280, height: 900 } }
 ]
 
+const designIds = [
+  'standard',
+  'rhythm-ledger',
+  'orbit',
+  'quiet-momentum',
+  'sunday-club'
+]
+
 const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const buildSmokeState = () => {
@@ -194,6 +202,34 @@ test.describe('responsive smoke coverage', () => {
       await assertNoConsoleErrors()
     })
   }
+
+  test('every design dashboard renders without overflow at mobile and desktop sizes', async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    const assertNoConsoleErrors = installConsoleErrorGuard(page)
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport.size)
+
+      for (const design of designIds) {
+        await resetAppData(request, {
+          ...smokeState,
+          settings: {
+            theme: 'light',
+            design
+          }
+        })
+        await page.goto('/')
+        await waitForAppReady(page)
+
+        await expect(page.locator('html')).toHaveAttribute('data-design', design)
+        await expect(page.getByText(smokeState.primaryHabitName)).toBeVisible()
+        await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible()
+        await expectNoRootOverflow(page)
+      }
+    }
+
+    await assertNoConsoleErrors()
+  })
 
   for (const viewport of viewports) {
     test(`progress current streak timeline behaves consistently on ${viewport.name}`, async ({ page, request }) => {

@@ -146,7 +146,7 @@ const BottomNavigation = () => {
   }
 
   return (
-    <NavContainer>
+    <NavContainer aria-label="Primary navigation">
       {navItems.map((item) => (
         <NavItem
           key={item.id}
