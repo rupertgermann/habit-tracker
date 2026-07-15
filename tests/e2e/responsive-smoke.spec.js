@@ -231,6 +231,71 @@ test.describe('responsive smoke coverage', () => {
     await assertNoConsoleErrors()
   })
 
+  test("today's progress card uses the right layout across designs and responsive widths", async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    const progressViewports = [
+      { width: 390, height: 844, wide: false },
+      { width: 768, height: 1024, wide: true },
+      { width: 1024, height: 768, wide: true },
+      { width: 1280, height: 800, wide: true },
+      { width: 1440, height: 900, wide: true }
+    ]
+
+    for (const design of designIds) {
+      await resetAppData(request, {
+        ...smokeState,
+        settings: {
+          theme: 'light',
+          design
+        }
+      })
+      await page.goto('/progress')
+      await waitForAppReady(page)
+      await expect(page.locator('html')).toHaveAttribute('data-design', design)
+
+      const progressTitle = page.getByRole('heading', { name: "Today's Progress", exact: true })
+      const progressCard = progressTitle.locator('..')
+      await expect(progressTitle).toBeVisible()
+
+      for (const viewport of progressViewports) {
+        await page.setViewportSize(viewport)
+        const layout = await progressCard.evaluate(element => {
+          const title = element.querySelector('h2')
+          const progress = element.querySelector('svg')?.parentElement
+          const titleRect = title.getBoundingClientRect()
+          const progressRect = progress.getBoundingClientRect()
+
+          return {
+            titleBottom: titleRect.bottom,
+            titleRight: titleRect.right,
+            titleCenterX: titleRect.left + titleRect.width / 2,
+            titleCenterY: titleRect.top + titleRect.height / 2,
+            progressLeft: progressRect.left,
+            progressTop: progressRect.top,
+            progressCenterX: progressRect.left + progressRect.width / 2,
+            progressCenterY: progressRect.top + progressRect.height / 2
+          }
+        })
+        const context = `${design} at ${viewport.width}px`
+
+        if (viewport.wide) {
+          expect(layout.titleRight, `${context} title precedes ring`).toBeLessThan(layout.progressLeft)
+          expect(
+            Math.abs(layout.titleCenterY - layout.progressCenterY),
+            `${context} title and ring share a row`
+          ).toBeLessThanOrEqual(24)
+        } else {
+          expect(layout.titleBottom, `${context} title precedes ring`).toBeLessThan(layout.progressTop)
+          expect(
+            Math.abs(layout.titleCenterX - layout.progressCenterX),
+            `${context} title and ring stay centered`
+          ).toBeLessThanOrEqual(2)
+        }
+        await expectNoRootOverflow(page)
+      }
+    }
+  })
+
   for (const viewport of viewports) {
     test(`progress current streak timeline behaves consistently on ${viewport.name}`, async ({ page, request }) => {
       const smokeState = buildSmokeState()
