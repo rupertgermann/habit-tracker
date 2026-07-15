@@ -1,7 +1,7 @@
 {
   "name": "habit-tracker",
   "version": "1.0.1",
-  "description": "An AI-assisted, full-stack habit tracker with React, SQLite persistence, dark mode, and browser regression coverage",
+  "description": "An AI-assisted full-stack habit tracker with five design modes, React, SQLite persistence, and browser regression coverage",
   "license": "MIT",
   "main": "index.js",
   "scripts": {

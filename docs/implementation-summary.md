@@ -11,9 +11,10 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Dashboard
 
 - **Location**: `src/screens/Dashboard.jsx`, `src/screens/DashboardRhythmLedger.jsx`, `src/screens/DashboardOrbit.jsx`, `src/screens/DashboardQuietMomentum.jsx`, `src/screens/DashboardSundayClub.jsx`
-- Shows total habits, today's completion rate, circular progress, motivational messaging, today's habits, weekly overview, and journal entry point.
-- Supports binary check-off and count-habit steppers from the same daily list.
-- Uses `Confetti`, `ToastContext`, and `CircularProgress` for feedback and completion celebrations.
+- Every Dashboard consumes the same Habit, Completion, Streak, and weekly summary data while presenting a distinct authored composition.
+- Standard uses familiar cards and circular progress; Rhythm Ledger uses an editorial rhythm rail; Orbit uses a trajectory console; Quiet Momentum uses a restrained botanical composition; Sunday Club uses punch-card interactions.
+- Every design supports quick yes/no Completion changes and Count Habit steppers from the daily list.
+- `Confetti` and `ToastContext` provide shared completion feedback across the design variants.
 - `src/App.jsx` selects the dashboard, navigation geometry, global texture, and responsive shell for the persisted design.
 
 ### Habit Management
@@ -77,7 +78,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Frontend
 
-- `src/App.jsx` defines routes and provider order.
+- `src/App.jsx` defines routes, provider order, and the Dashboard/navigation/global-style mapping for each design.
 - `src/api/habitsApi.js` centralizes REST requests.
 - `src/context/HabitsContext.jsx` owns habit, category, completion, and journal state.
 - `src/context/ThemeContext.jsx` owns the persisted design and light/dark theme state.
@@ -133,9 +134,10 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 | `npm run dev:client` | Start only Vite on `3300`. |
 | `npm run dev:e2e` | Start the isolated e2e runtime on `3341/3340`. |
 | `npm run test:domain` | Run domain and context tests through Vite SSR. |
+| `npm run test:server` | Run the Node server integration tests. |
 | `npm run test:e2e` | Run Playwright tests against the isolated e2e runtime. |
-| `npm run test` | Run domain tests and e2e tests. |
-| `npm run screenshots` | Generate README screenshots from seeded example data. |
+| `npm run test` | Run the domain, server, and e2e test suites. |
+| `npm run screenshots` | Generate the design gallery and dark-mode README screenshots from seeded synthetic data. |
 | `npm run build` | Build the production bundle. |
 | `npm run preview` | Preview the production bundle. |
 
@@ -144,7 +146,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Domain and Context Tests
 
 - **Location**: `tests/domain/`, `tests/context/`, `scripts/run-domain-tests.mjs`
-- Covers count-habit completions, binary toggles, date-targeted mutations, streaks, weekly completion data, journal timeline filtering, week-start normalization, and design/theme preference resolution.
+- Covers Count Habit completions, Yes/No Habit toggles, date-targeted mutations, streaks, weekly completion data, journal timeline filtering, week-start normalization, and design/theme preference resolution.
 
 ### Browser Tests
 
@@ -157,12 +159,14 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 - **Location**: `scripts/capture-readme-screenshots.mjs`, `docs/images/`
 - Seeds example habits and journal entries into `.tmp/screenshots/habit-tracker.db`.
-- Captures light dashboard, dark dashboard, and dark calendar screenshots for the README.
+- Captures wide Dashboard screenshots for Standard, Rhythm Ledger, Orbit, Quiet Momentum, and Sunday Club.
+- Captures the Appearance picker plus mobile Standard dark-mode and Calendar dark-mode surfaces.
+- Uses isolated `3330/3331` servers and synthetic profile data so documentation assets never depend on the user's database.
 
 ## Accessibility and Responsive Behavior
 
-- Interactive controls use labels, focus styles, and keyboard-reachable elements.
-- The bottom navigation supports the main mobile routes.
+- A skip-to-main link and keyboard-reachable controls provide a direct path into each screen's content.
+- Every design exposes the main routes through an accessible primary navigation with a touch-safe mobile layout.
 - Wide viewports switch habit list/detail workflows into a split layout.
 - Playwright smoke tests assert no root overflow across mobile and desktop viewports.
 - Dark-mode tests assert contrast-sensitive calendar cells and settings controls remain readable.
