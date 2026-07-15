@@ -40,11 +40,35 @@ const WeekNavigation = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (max-width: 479px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'range range'
+      'previous next';
+    gap: ${props => props.theme.spacing.sm};
+
+    > button:first-child {
+      grid-area: previous;
+      justify-self: start;
+    }
+
+    > button:last-child {
+      grid-area: next;
+      justify-self: end;
+    }
+  }
 `
 
 const WeekRange = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
+
+  @media (max-width: 479px) {
+    grid-area: range;
+    text-align: center;
+  }
 `
 
 const NavButton = styled(Button)`

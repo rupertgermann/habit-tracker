@@ -302,6 +302,70 @@ test.describe('responsive smoke coverage', () => {
     }
   })
 
+  test('journal week controls adapt across designs and responsive widths', async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    const journalViewports = [
+      { width: 390, height: 844, phone: true },
+      { width: 768, height: 1024, phone: false },
+      { width: 1024, height: 768, phone: false },
+      { width: 1280, height: 800, phone: false },
+      { width: 1440, height: 900, phone: false }
+    ]
+
+    for (const design of designIds) {
+      await resetAppData(request, {
+        ...smokeState,
+        settings: {
+          theme: 'light',
+          design
+        }
+      })
+      await page.setViewportSize(journalViewports[0])
+      await page.goto('/journal')
+      await waitForAppReady(page)
+      await expect(page.locator('html')).toHaveAttribute('data-design', design)
+
+      const weekDate = page.getByRole('heading', { level: 2 })
+      const previous = page.getByRole('button', { name: 'Previous', exact: true })
+      const next = page.getByRole('button', { name: 'Next', exact: true })
+      const thisWeek = page.getByRole('button', { name: 'Go to This Week', exact: true })
+      await expect(weekDate).toBeVisible()
+
+      for (const viewport of journalViewports) {
+        await page.setViewportSize(viewport)
+        const layout = await Promise.all([weekDate, previous, next, thisWeek].map(locator => (
+          locator.evaluate(element => {
+            const rect = element.getBoundingClientRect()
+            return {
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              left: rect.left,
+              centerY: rect.top + rect.height / 2
+            }
+          })
+        )))
+        const context = `${design} at ${viewport.width}px`
+
+        if (viewport.phone) {
+          expect(layout[0].bottom, `${context} date precedes navigation`)
+            .toBeLessThanOrEqual(Math.min(layout[1].top, layout[2].top))
+        } else {
+          expect(Math.abs(layout[0].centerY - layout[1].centerY), `${context} date shares desktop row`)
+            .toBeLessThanOrEqual(4)
+          expect(Math.abs(layout[0].centerY - layout[2].centerY), `${context} date shares desktop row`)
+            .toBeLessThanOrEqual(4)
+        }
+        expect(Math.abs(layout[1].centerY - layout[2].centerY), `${context} navigation alignment`)
+          .toBeLessThanOrEqual(2)
+        expect(layout[1].right, `${context} navigation order`).toBeLessThan(layout[2].left)
+        expect(layout[3].top, `${context} this-week action remains separate`)
+          .toBeGreaterThanOrEqual(Math.max(layout[1].bottom, layout[2].bottom))
+        await expectNoRootOverflow(page)
+      }
+    }
+  })
+
   for (const viewport of viewports) {
     test(`progress current streak timeline behaves consistently on ${viewport.name}`, async ({ page, request }) => {
       const smokeState = buildSmokeState()
