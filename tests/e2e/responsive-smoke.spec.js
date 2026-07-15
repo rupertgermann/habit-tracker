@@ -262,6 +262,7 @@ test.describe('responsive smoke coverage', () => {
         const layout = await progressCard.evaluate(element => {
           const title = element.querySelector('h2')
           const progress = element.querySelector('svg')?.parentElement
+          const percentage = progress.querySelector('span')
           const titleRect = title.getBoundingClientRect()
           const progressRect = progress.getBoundingClientRect()
 
@@ -272,11 +273,16 @@ test.describe('responsive smoke coverage', () => {
             titleCenterY: titleRect.top + titleRect.height / 2,
             progressLeft: progressRect.left,
             progressTop: progressRect.top,
+            progressWidth: progressRect.width,
             progressCenterX: progressRect.left + progressRect.width / 2,
-            progressCenterY: progressRect.top + progressRect.height / 2
+            progressCenterY: progressRect.top + progressRect.height / 2,
+            percentageFontSize: Number.parseFloat(getComputedStyle(percentage).fontSize)
           }
         })
         const context = `${design} at ${viewport.width}px`
+
+        expect(layout.percentageFontSize, `${context} percentage fits its ring`)
+          .toBeLessThanOrEqual(layout.progressWidth * 0.32)
 
         if (viewport.wide) {
           expect(layout.titleRight, `${context} title precedes ring`).toBeLessThan(layout.progressLeft)
