@@ -1,5 +1,5 @@
 // Preserved from design snapshot 7c9a357e5f9fb6191abb4640dd256eb8272a8b31.
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
@@ -12,14 +12,6 @@ import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
 import { useToast } from '../context/ToastContext'
-import {
-  getHabitStreak,
-  getTodayHabits,
-  getTrackingStats,
-  getWeeklyCompletionData,
-  isCompletedOnDate,
-  toDateKey
-} from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const DashboardContainer = styled.div`
@@ -552,29 +544,24 @@ const entrance = {
 const Dashboard = () => {
   const navigate = useNavigate()
   const {
-    habits,
-    toggleYesNoCompletion,
+    dashboardHabitTracking,
     isLoading,
     hasLoaded,
     error
   } = useHabits()
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
-  const [todayHabits, setTodayHabits] = useState([])
-  const [weeklyData, setWeeklyData] = useState([])
-  const [stats, setStats] = useState({})
   const [showConfetti, setShowConfetti] = useState(false)
-
-  useEffect(() => {
-    setTodayHabits(getTodayHabits(habits))
-    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
-    setStats(getTrackingStats(habits))
-  }, [habits, weekStartsOn])
-
-  const maxWeeklyHabits = Math.max(habits.length, 1)
-  const completedToday = stats.todayCompletions || 0
-  const totalHabits = stats.totalHabits || 0
-  const completionRate = stats.completionRate || 0
+  const referenceDate = new Date()
+  const {
+    todayHabits,
+    weeklyCompletionFacts: weeklyData,
+    totalHabits,
+    todayCompletedCount: completedToday,
+    completionRate,
+    topCurrentStreak
+  } = dashboardHabitTracking.getSnapshot({ referenceDate, weekStartsOn })
+  const maxWeeklyHabits = Math.max(totalHabits, 1)
 
   const issueNumber = useMemo(() => format(new Date(), "II/'W'II"), [])
 
@@ -582,27 +569,22 @@ const Dashboard = () => {
     const habit = todayHabits.find(item => item.id === habitId)
     if (!habit) return { ok: false }
 
-    const isCompleting = !habit.isCompleted
-    const result = await toggleYesNoCompletion(habitId)
+    const result = await dashboardHabitTracking.toggleYesNo({
+      habitId,
+      referenceDate: new Date()
+    })
 
     if (!result.ok) {
       showErrorToast(`Could not update "${habit.name}". Please try again.`)
       return result
     }
 
-    const updatedHabits = todayHabits.map(todayHabit => (
-      todayHabit.id === habitId
-        ? { ...result.habit, isCompleted: isCompletedOnDate(result.habit, toDateKey()) }
-        : todayHabit
-    ))
-
-    if (isCompleting) {
+    if (result.completionState === 'complete') {
       showSuccessToast(`"${habit.name}" is in the record.`)
-      const completedCount = updatedHabits.filter(item => item.isCompleted).length
-      if (completedCount === stats.totalHabits && stats.totalHabits > 0) {
+      if (result.allComplete) {
         setShowConfetti(true)
         showSuccessToast('The page is complete. Every habit is logged.')
-      } else if (completedCount % 3 === 0) {
+      } else if (result.intermediateMilestone) {
         setShowConfetti(true)
       }
     }
@@ -613,7 +595,7 @@ const Dashboard = () => {
   const motivationalMessage = (() => {
     if (completionRate === 100) return { title: 'A full page.', text: 'Every practice made its mark today. Leave the record as proof.' }
     if (completionRate >= 75) return { title: 'Nearly inked.', text: 'The shape of the day is clear. One deliberate pass will close it.' }
-    if ((stats.maxStreak || 0) >= 7) return { title: 'The rhythm holds.', text: `${stats.maxStreak} days of evidence. Protect the ordinary action that keeps it alive.` }
+    if (topCurrentStreak >= 7) return { title: 'The rhythm holds.', text: `${topCurrentStreak} days of evidence. Protect the ordinary action that keeps it alive.` }
     if (completionRate >= 50) return { title: 'Past the middle.', text: 'Enough is done to create momentum. Choose the smallest next mark.' }
     return { title: 'Begin where you are.', text: 'A useful record starts with one honest completion, not a perfect plan.' }
   })()
@@ -650,7 +632,7 @@ const Dashboard = () => {
     )
   }
 
-  if (habits.length === 0) {
+  if (totalHabits === 0) {
     return (
       <DashboardContainer>
         <PageHeader>
@@ -727,7 +709,7 @@ const Dashboard = () => {
             </RhythmRail>
             <BoardStats>
               <BoardStat><dd>{totalHabits}</dd><dt>Total Habits</dt></BoardStat>
-              <BoardStat><dd>{stats.maxStreak || 0}</dd><dt>Longest live streak</dt></BoardStat>
+              <BoardStat><dd>{topCurrentStreak}</dd><dt>Longest live streak</dt></BoardStat>
             </BoardStats>
           </RhythmArea>
         </ProgressBoard>
@@ -757,7 +739,6 @@ const Dashboard = () => {
         </SectionHeader>
         <HabitsList>
           {todayHabits.map((habit, index) => {
-            const liveHabit = habits.find(item => item.id === habit.id) || habit
             return (
               <HabitItem
                 key={habit.id}
@@ -773,11 +754,11 @@ const Dashboard = () => {
                   </HabitIcon>
                   <HabitDetails>
                     <HabitName>{habit.name}</HabitName>
-                    <HabitMeta><AppIcon name="flame" size={14} /> {getHabitStreak(liveHabit)} day streak</HabitMeta>
+                    <HabitMeta><AppIcon name="flame" size={14} /> {habit.currentStreak} day streak</HabitMeta>
                   </HabitDetails>
                 </HabitInfo>
-                {liveHabit.type === 'count' ? (
-                  <CountStepper habit={liveHabit} />
+                {habit.type === 'count' ? (
+                  <CountStepper habit={habit} />
                 ) : (
                   <CheckButton
                     $checked={habit.isCompleted}

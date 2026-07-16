@@ -1,5 +1,5 @@
 // Preserved from design snapshot 24ddae65079ecdf2bbb8249c57b3c2b9df66d4f8.
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
@@ -12,14 +12,6 @@ import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
 import { useToast } from '../context/ToastContext'
-import {
-  getHabitStreak,
-  getTodayHabits,
-  getTrackingStats,
-  getWeeklyCompletionData,
-  isCompletedOnDate,
-  toDateKey
-} from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const Shell = styled(motion.main)`
@@ -245,38 +237,33 @@ const LoadingLine = styled.div`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { habits, toggleYesNoCompletion, isLoading, hasLoaded, error } = useHabits()
+  const { dashboardHabitTracking, isLoading, hasLoaded, error } = useHabits()
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
-  const [todayHabits, setTodayHabits] = useState([])
-  const [weeklyData, setWeeklyData] = useState([])
-  const [stats, setStats] = useState({})
   const [showConfetti, setShowConfetti] = useState(false)
-
-  useEffect(() => {
-    setTodayHabits(getTodayHabits(habits))
-    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
-    setStats(getTrackingStats(habits))
-  }, [habits, weekStartsOn])
-
-  const completionRate = stats.completionRate || 0
-  const completedToday = stats.todayCompletions || 0
-  const totalHabits = stats.totalHabits || 0
-  const liveStreak = stats.maxStreak || 0
+  const referenceDate = new Date()
+  const {
+    todayHabits,
+    weeklyCompletionFacts: weeklyData,
+    totalHabits,
+    todayCompletedCount: completedToday,
+    completionRate,
+    topCurrentStreak: liveStreak
+  } = dashboardHabitTracking.getSnapshot({ referenceDate, weekStartsOn })
   const maxWeeklyHabits = Math.max(totalHabits, 1)
 
   const handleToggleHabit = async habitId => {
     const habit = todayHabits.find(item => item.id === habitId)
     if (!habit) return { ok: false }
-    const isCompleting = !habit.isCompleted
-    const result = await toggleYesNoCompletion(habitId)
+    const result = await dashboardHabitTracking.toggleYesNo({
+      habitId,
+      referenceDate: new Date()
+    })
     if (!result.ok) { showErrorToast(`Could not update "${habit.name}". Please try again.`); return result }
-    const updated = todayHabits.map(item => item.id === habitId ? { ...result.habit, isCompleted: isCompletedOnDate(result.habit, toDateKey()) } : item)
-    if (isCompleting) {
+    if (result.completionState === 'complete') {
       showSuccessToast(`"${habit.name}" is complete.`)
-      const count = updated.filter(item => item.isCompleted).length
-      if (count === totalHabits && totalHabits > 0) { setShowConfetti(true); showSuccessToast('Every ritual is complete. Let the day settle.') }
-      else if (count % 3 === 0) setShowConfetti(true)
+      if (result.allComplete) { setShowConfetti(true); showSuccessToast('Every ritual is complete. Let the day settle.') }
+      else if (result.intermediateMilestone) setShowConfetti(true)
     }
     return result
   }
@@ -293,7 +280,7 @@ const Dashboard = () => {
 
   if (isLoading && !hasLoaded) return <Shell aria-busy="true">{pageHeader}<StatePanel><AppIcon name="activity" size={38} /><h2>Gathering today’s rituals</h2><p>Your private record is opening quietly.</p><LoadingLine /><span className="sr-only">Loading habits</span></StatePanel></Shell>
   if (error) return <Shell>{pageHeader}<StatePanel role="alert"><AppIcon name="circle-x" size={38} /><h2>Your record is resting.</h2><p>Nothing changed while the local service was unavailable.</p><Button onClick={() => window.location.reload()}>Try again</Button></StatePanel></Shell>
-  if (habits.length === 0) return <Shell>{pageHeader}<EmptyState type="habits" title="Begin with one ritual" description="Choose a recurring behavior small enough to repeat tomorrow. It will have room to grow here." actionText="Create a habit" onAction={() => navigate('/add-habit')} /></Shell>
+  if (totalHabits === 0) return <Shell>{pageHeader}<EmptyState type="habits" title="Begin with one ritual" description="Choose a recurring behavior small enough to repeat tomorrow. It will have room to grow here." actionText="Create a habit" onAction={() => navigate('/add-habit')} /></Shell>
 
   return (
     <Shell initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -316,14 +303,13 @@ const Dashboard = () => {
         <SectionHeader><div><Kicker>Tuesday’s rituals</Kicker><h2 id="today-habits-title">What will you return to?</h2></div><Button variant="ghost" onClick={() => navigate('/add-habit')} icon="plus">Add Habit</Button></SectionHeader>
         <HabitList>
           {todayHabits.map((habit, index) => {
-            const liveHabit = habits.find(item => item.id === habit.id) || habit
-            const isCountHabit = liveHabit.type === 'count'
+            const isCountHabit = habit.type === 'count'
             const isComplete = Boolean(habit.isCompleted)
             return (
               <HabitRow key={habit.id} onClick={() => navigate(`/habit/${habit.id}`)} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45, delay: index * .05 }}>
                 {isCountHabit ? <StaticToggle $active={isComplete} aria-hidden="true"><AppIcon name={isComplete ? 'check' : 'repeat'} size={18} /></StaticToggle> : <Toggle type="button" $active={isComplete} aria-label={`${isComplete ? 'Mark as incomplete' : 'Mark as complete'}: ${habit.name}`} onClick={event => { event.stopPropagation(); handleToggleHabit(habit.id) }}>{isComplete && <AppIcon name="check" size={19} stroke={2.4} />}</Toggle>}
-                <HabitInfo><HabitGlyph $color={habit.color} aria-hidden="true"><AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={22} /></HabitGlyph><div><h3>{habit.name}</h3><HabitMeta>{isComplete ? 'Completed today' : 'Ready when you are'} · {getHabitStreak(liveHabit)} day streak</HabitMeta></div></HabitInfo>
-                {isCountHabit && <HabitControl onClick={event => event.stopPropagation()}><CountStepper habit={liveHabit} /></HabitControl>}
+                <HabitInfo><HabitGlyph $color={habit.color} aria-hidden="true"><AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={22} /></HabitGlyph><div><h3>{habit.name}</h3><HabitMeta>{isComplete ? 'Completed today' : 'Ready when you are'} · {habit.currentStreak} day streak</HabitMeta></div></HabitInfo>
+                {isCountHabit && <HabitControl onClick={event => event.stopPropagation()}><CountStepper habit={habit} /></HabitControl>}
               </HabitRow>
             )
           })}

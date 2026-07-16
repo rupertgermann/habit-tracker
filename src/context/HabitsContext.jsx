@@ -5,6 +5,7 @@ import {
   createCountCompletionWriter,
   createYesNoCompletionWriter
 } from '../domain/completionWrites'
+import { createDashboardHabitTracking } from '../domain/dashboardHabitTracking'
 
 const HabitsContext = createContext()
 
@@ -248,6 +249,11 @@ export const HabitsProvider = ({
     return getCountCompletionWriter().decrement({ habitId, date })
   }
 
+  const dashboardHabitTracking = createDashboardHabitTracking({
+    getHabits: () => habitsRef.current,
+    toggleYesNoCompletion
+  })
+
   const addCategory = (categoryData) => {
     const newCategory = {
       id: Date.now().toString(),
@@ -292,6 +298,7 @@ export const HabitsProvider = ({
     getJournalEntriesByDate,
     getJournalEntriesByDateRange,
     getJournalEntryForHabit,
+    dashboardHabitTracking,
     toggleYesNoCompletion,
     incrementCountCompletion,
     decrementCountCompletion,

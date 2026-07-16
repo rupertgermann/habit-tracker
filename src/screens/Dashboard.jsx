@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
-import { format, isToday } from 'date-fns'
+import { format } from 'date-fns'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import CircularProgress from '../components/CircularProgress'
@@ -14,14 +14,6 @@ import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
 import { useToast } from '../context/ToastContext'
-import {
-  getHabitStreak,
-  getTodayHabits,
-  getTrackingStats,
-  getWeeklyCompletionData,
-  isCompletedOnDate,
-  toDateKey
-} from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON } from '../domain/iconCatalog'
 
 const DashboardContainer = styled.div`
@@ -204,52 +196,43 @@ const CheckButton = styled(motion.button)`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { habits, toggleYesNoCompletion } = useHabits()
+  const { dashboardHabitTracking } = useHabits()
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
-  const [todayHabits, setTodayHabits] = useState([])
-  const [weeklyData, setWeeklyData] = useState([])
-  const [stats, setStats] = useState({})
   const [showConfetti, setShowConfetti] = useState(false)
-
-  useEffect(() => {
-    setTodayHabits(getTodayHabits(habits))
-    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
-    setStats(getTrackingStats(habits))
-  }, [habits, weekStartsOn])
+  const referenceDate = new Date()
+  const {
+    todayHabits,
+    weeklyCompletionFacts: weeklyData,
+    totalHabits,
+    todayCompletedCount,
+    completionRate,
+    topCurrentStreak
+  } = dashboardHabitTracking.getSnapshot({ referenceDate, weekStartsOn })
 
   const handleToggleHabit = async (habitId) => {
     const habit = todayHabits.find(h => h.id === habitId)
     if (!habit) return { ok: false }
 
-    const isCompleting = !habit.isCompleted
-
-    const result = await toggleYesNoCompletion(habitId)
+    const result = await dashboardHabitTracking.toggleYesNo({
+      habitId,
+      referenceDate: new Date()
+    })
     if (!result.ok) {
       showErrorToast(`Could not update "${habit.name}". Please try again.`)
       return result
     }
 
-    const updatedHabits = todayHabits.map(todayHabit => (
-      todayHabit.id === habitId
-        ? {
-            ...result.habit,
-            isCompleted: isCompletedOnDate(result.habit, toDateKey())
-          }
-        : todayHabit
-    ))
-    
     // Show toast notification
-    if (isCompleting) {
+    if (result.completionState === 'complete') {
       showSuccessToast(`Great job! "${habit.name}" completed!`)
       
       // Show confetti for milestone completions
-      const completedCount = updatedHabits.filter(h => h.isCompleted).length
-      if (completedCount === stats.totalHabits && stats.totalHabits > 0) {
+      if (result.allComplete) {
         // All habits completed
         setShowConfetti(true)
         showSuccessToast('Perfect day! All habits completed!')
-      } else if (completedCount % 3 === 0) {
+      } else if (result.intermediateMilestone) {
         // Every 3 habits completed
         setShowConfetti(true)
       }
@@ -259,9 +242,7 @@ const Dashboard = () => {
   }
 
   const getMotivationalMessage = () => {
-    const { completionRate, maxStreak } = stats
-    
-    if (habits.length === 0) {
+    if (totalHabits === 0) {
       return {
         title: "Start Your Journey",
         text: "Create your first habit and begin building a better you!"
@@ -282,10 +263,10 @@ const Dashboard = () => {
       }
     }
     
-    if (maxStreak >= 7) {
+    if (topCurrentStreak >= 7) {
       return {
         title: "On Fire!",
-        text: `You're on a ${maxStreak}-day streak. Keep it up!`
+        text: `You're on a ${topCurrentStreak}-day streak. Keep it up!`
       }
     }
     
@@ -304,12 +285,12 @@ const Dashboard = () => {
 
   const motivationalMessage = getMotivationalMessage()
 
-  if (habits.length === 0) {
+  if (totalHabits === 0) {
     return (
       <DashboardContainer>
         <Header>
           <Title>Dashboard</Title>
-          <DateText>{format(new Date(), 'EEEE, MMMM d')}</DateText>
+          <DateText>{format(referenceDate, 'EEEE, MMMM d')}</DateText>
         </Header>
         
         <EmptyState
@@ -328,16 +309,16 @@ const Dashboard = () => {
       <Confetti run={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Header>
         <Title>Dashboard</Title>
-        <DateText>{format(new Date(), 'EEEE, MMMM d')}</DateText>
+        <DateText>{format(referenceDate, 'EEEE, MMMM d')}</DateText>
       </Header>
 
       <StatsGrid>
         <StatCard elevated>
-          <StatValue>{stats.totalHabits}</StatValue>
+          <StatValue>{totalHabits}</StatValue>
           <StatLabel>Total Habits</StatLabel>
         </StatCard>
         <StatCard elevated>
-          <StatValue>{stats.completionRate}%</StatValue>
+          <StatValue>{completionRate}%</StatValue>
           <StatLabel>Today's Rate</StatLabel>
         </StatCard>
       </StatsGrid>
@@ -345,10 +326,10 @@ const Dashboard = () => {
       <ProgressCard elevated>
         <ProgressTitle>Today's Progress</ProgressTitle>
         <CircularProgress
-          progress={stats.completionRate}
+          progress={completionRate}
           size={150}
           strokeWidth={12}
-          label={`${stats.todayCompletions}/${stats.totalHabits} habits`}
+          label={`${todayCompletedCount}/${totalHabits} habits`}
         />
       </ProgressCard>
 
@@ -381,16 +362,17 @@ const Dashboard = () => {
                   <HabitName>{habit.name}</HabitName>
                   <HabitMeta>
                     <HabitStreak>
-                      <AppIcon name="flame" size={14} /> {getHabitStreak(habits.find(h => h.id === habit.id) || habit)} days
+                      <AppIcon name="flame" size={14} /> {habit.currentStreak} days
                     </HabitStreak>
                   </HabitMeta>
                 </HabitDetails>
               </HabitInfo>
-              {(habits.find(h => h.id === habit.id) || habit).type === 'count' ? (
-                <CountStepper habit={habits.find(h => h.id === habit.id) || habit} />
+              {habit.type === 'count' ? (
+                <CountStepper habit={habit} />
               ) : (
                 <CheckButton
                   $checked={habit.isCompleted}
+                  aria-label={`${habit.isCompleted ? 'Mark as incomplete' : 'Mark as complete'}: ${habit.name}`}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleToggleHabit(habit.id)
