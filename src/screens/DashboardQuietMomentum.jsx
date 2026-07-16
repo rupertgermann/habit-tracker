@@ -306,7 +306,7 @@ const Dashboard = () => {
             const isCountHabit = habit.type === 'count'
             const isComplete = Boolean(habit.isCompleted)
             return (
-              <HabitRow key={habit.id} onClick={() => navigate(`/habit/${habit.id}`)} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45, delay: index * .05 }}>
+              <HabitRow key={habit.id} data-habit-id={habit.id} onClick={() => navigate(`/habit/${habit.id}`)} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45, delay: index * .05 }}>
                 {isCountHabit ? <StaticToggle $active={isComplete} aria-hidden="true"><AppIcon name={isComplete ? 'check' : 'repeat'} size={18} /></StaticToggle> : <Toggle type="button" $active={isComplete} aria-label={`${isComplete ? 'Mark as incomplete' : 'Mark as complete'}: ${habit.name}`} onClick={event => { event.stopPropagation(); handleToggleHabit(habit.id) }}>{isComplete && <AppIcon name="check" size={19} stroke={2.4} />}</Toggle>}
                 <HabitInfo><HabitGlyph $color={habit.color} aria-hidden="true"><AppIcon name={habit.icon} fallbackName={DEFAULT_HABIT_ICON} size={22} /></HabitGlyph><div><h3>{habit.name}</h3><HabitMeta>{isComplete ? 'Completed today' : 'Ready when you are'} · {habit.currentStreak} day streak</HabitMeta></div></HabitInfo>
                 {isCountHabit && <HabitControl onClick={event => event.stopPropagation()}><CountStepper habit={habit} /></HabitControl>}

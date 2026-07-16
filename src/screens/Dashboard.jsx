@@ -402,6 +402,7 @@ const Dashboard = () => {
           {todayHabits.map((habit) => (
             <HabitItem
               key={habit.id}
+              data-habit-id={habit.id}
               clickable
               onClick={() => navigate(`/habit/${habit.id}`)}
               elevated

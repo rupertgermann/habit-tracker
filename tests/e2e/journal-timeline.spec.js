@@ -197,6 +197,11 @@ test.describe('journal timeline regression coverage', () => {
       return entries.map(entry => `${entry.content}|${entry.moodId}`).join(',')
     }).toBe(`${createdContent}|good`)
 
+    await page.reload()
+    await waitForAppReady(page)
+    await expect(page.getByText(createdContent, { exact: true })).toBeVisible()
+    await expect(page.getByText(/Good/)).toBeVisible()
+
     await page.goto('/journal')
     await waitForAppReady(page)
 
@@ -231,6 +236,12 @@ test.describe('journal timeline regression coverage', () => {
       return entries.map(entry => `${entry.content}|${entry.moodId}`).join(',')
     }).toBe(`${updatedContent}|very-good`)
 
+    await page.reload()
+    await waitForAppReady(page)
+    await expect(page.getByText(updatedContent, { exact: true })).toBeVisible()
+    await expect(page.getByText(createdContent, { exact: true })).toHaveCount(0)
+    await expect(page.getByText(/Very Good/)).toBeVisible()
+
     await page.goto('/journal')
     await waitForAppReady(page)
 
@@ -251,6 +262,11 @@ test.describe('journal timeline regression coverage', () => {
       const entries = await getEntriesForHabitDate(request, habit.id, todayKey)
       return entries.length
     }).toBe(0)
+
+    await page.reload()
+    await waitForAppReady(page)
+    await expect(page.getByPlaceholder(reflectionInput)).toBeVisible()
+    await expect(page.getByText(updatedContent, { exact: true })).toHaveCount(0)
 
     await page.goto('/journal')
     await waitForAppReady(page)

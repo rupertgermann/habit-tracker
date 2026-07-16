@@ -742,6 +742,7 @@ const Dashboard = () => {
             return (
               <HabitItem
                 key={habit.id}
+                data-habit-id={habit.id}
                 $color={habit.color}
                 onClick={() => navigate(`/habit/${habit.id}`)}
                 initial={{ opacity: 0, x: -12 }}

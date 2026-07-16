@@ -134,7 +134,15 @@ const BarChart = ({
           const hasSeparateBars = item.completed !== undefined && item.missed !== undefined
           
           return (
-            <BarGroup key={index} $barWidth={barWidth} $spacing={spacing}>
+            <BarGroup
+              key={index}
+              $barWidth={barWidth}
+              $spacing={spacing}
+              role="img"
+              aria-label={hasSeparateBars
+                ? `${item.day || item.label}: ${item.completed} completed, ${item.missed} missed`
+                : `${item.label || item.day}: ${item.value || 0}`}
+            >
               <BarsWrapper $height={height}>
                 {hasSeparateBars ? (
                   <>
