@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { habitsApi } from '../api/habitsApi'
-import { lightTheme, darkTheme } from '../styles/theme'
+import {
+  DEFAULT_DESIGN_ID,
+  DESIGN_OPTIONS,
+  getDesignTheme,
+  normalizeDesignPreference
+} from '../styles/designs'
 
 const ThemeContext = createContext()
 export const LEGACY_THEME_STORAGE_KEY = 'theme'
 export const THEME_SETTINGS_KEY = 'theme'
+export const DESIGN_SETTINGS_KEY = 'design'
 export const DARK_THEME_VALUE = 'dark'
 export const LIGHT_THEME_VALUE = 'light'
+export { DEFAULT_DESIGN_ID, normalizeDesignPreference }
 
 const getBrowserStorage = () => {
   try {
@@ -58,29 +65,40 @@ export const removeLegacyThemePreference = (storage = getBrowserStorage()) => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => resolveInitialIsDarkMode())
+  const [design, setDesignState] = useState(DEFAULT_DESIGN_ID)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
-  const theme = isDarkMode ? darkTheme : lightTheme
+  const theme = getDesignTheme(design, isDarkMode)
 
   useEffect(() => {
     let cancelled = false
 
     removeLegacyThemePreference()
 
-    habitsApi.getSetting(THEME_SETTINGS_KEY)
-      .then(({ value }) => {
-        if (cancelled) return
+    const loadAppearanceSettings = async () => {
+      const [themeResult, designResult] = await Promise.allSettled([
+        habitsApi.getSetting(THEME_SETTINGS_KEY),
+        habitsApi.getSetting(DESIGN_SETTINGS_KEY)
+      ])
 
-        const savedTheme = normalizeThemePreference(value)
-        if (savedTheme) {
-          setIsDarkMode(savedTheme === DARK_THEME_VALUE)
-        }
-      })
-      .catch(error => {
-        if (!cancelled) console.error('Failed to load theme preference:', error)
-      })
-      .finally(() => {
-        if (!cancelled) setSettingsLoaded(true)
-      })
+      if (cancelled) return
+
+      if (themeResult.status === 'fulfilled') {
+        const savedTheme = normalizeThemePreference(themeResult.value.value)
+        if (savedTheme) setIsDarkMode(savedTheme === DARK_THEME_VALUE)
+      } else {
+        console.error('Failed to load theme preference:', themeResult.reason)
+      }
+
+      if (designResult.status === 'fulfilled') {
+        setDesignState(normalizeDesignPreference(designResult.value.value))
+      } else {
+        console.error('Failed to load design preference:', designResult.reason)
+      }
+
+      setSettingsLoaded(true)
+    }
+
+    loadAppearanceSettings()
 
     return () => {
       cancelled = true
@@ -94,6 +112,13 @@ export const ThemeProvider = ({ children }) => {
       .catch(error => console.error('Failed to save theme preference:', error))
   }, [isDarkMode, settingsLoaded])
 
+  useEffect(() => {
+    if (!settingsLoaded) return
+
+    habitsApi.saveSetting(DESIGN_SETTINGS_KEY, design)
+      .catch(error => console.error('Failed to save design preference:', error))
+  }, [design, settingsLoaded])
+
   // Apply theme class to body
   useEffect(() => {
     if (isDarkMode) {
@@ -103,14 +128,26 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [isDarkMode])
 
+  useEffect(() => {
+    document.documentElement.dataset.design = design
+    document.body.dataset.design = design
+  }, [design])
+
   const toggleTheme = () => {
     setIsDarkMode(currentIsDarkMode => !currentIsDarkMode)
+  }
+
+  const setDesign = value => {
+    setDesignState(normalizeDesignPreference(value))
   }
 
   const value = {
     theme,
     isDarkMode,
-    toggleTheme
+    toggleTheme,
+    design,
+    setDesign,
+    designOptions: DESIGN_OPTIONS
   }
 
   return (

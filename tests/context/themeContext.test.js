@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import {
   DARK_THEME_VALUE,
+  DEFAULT_DESIGN_ID,
   LEGACY_THEME_STORAGE_KEY,
   LIGHT_THEME_VALUE,
+  normalizeDesignPreference,
   normalizeThemePreference,
   removeLegacyThemePreference,
   resolveInitialIsDarkMode
@@ -79,6 +81,27 @@ export const tests = [
 
       removeLegacyThemePreference(storage)
       assert.equal(storage.valueFor(LEGACY_THEME_STORAGE_KEY), undefined)
+    }
+  },
+  {
+    name: 'theme context accepts every shipped design preference',
+    run() {
+      for (const design of [
+        'standard',
+        'rhythm-ledger',
+        'orbit',
+        'quiet-momentum',
+        'sunday-club'
+      ]) {
+        assert.equal(normalizeDesignPreference(design), design)
+      }
+    }
+  },
+  {
+    name: 'theme context falls back to standard for unsupported designs',
+    run() {
+      assert.equal(normalizeDesignPreference('unknown'), DEFAULT_DESIGN_ID)
+      assert.equal(normalizeDesignPreference(null), DEFAULT_DESIGN_ID)
     }
   }
 ]

@@ -232,6 +232,108 @@ const SettingsCard = styled(Card)`
   overflow: visible;
 `
 
+const DesignGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.lg};
+`
+
+const DesignChoice = styled.label`
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 86px auto;
+  overflow: hidden;
+  border: 2px solid ${props => props.$selected
+    ? props.theme.colors.primary
+    : props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  background: ${props => props.theme.colors.white};
+  box-shadow: ${props => props.$selected ? props.theme.shadows.medium : 'none'};
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: ${props => props.theme.colors.primary};
+  }
+
+  &:has(input:focus-visible) {
+    outline: 3px solid ${props => props.theme.colors.focus || props.theme.colors.primary};
+    outline-offset: 3px;
+  }
+`
+
+const DesignRadio = styled.input`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+`
+
+const DesignPreview = styled.span`
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 5px;
+  padding: 14px;
+  overflow: hidden;
+  background: ${props => props.$colors[0]};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+
+  &::after {
+    content: "Aa 07";
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    color: ${props => props.$colors[3]};
+    font-family: ${props => props.theme.typography.displayFamily || props.theme.typography.fontFamily};
+    font-size: 17px;
+    font-weight: ${props => props.theme.typography.fontWeight.bold};
+    letter-spacing: -0.04em;
+  }
+`
+
+const DesignSwatch = styled.span`
+  display: block;
+  height: ${props => props.$tall ? '50px' : '34px'};
+  align-self: end;
+  background: ${props => props.$color};
+  border: 1px solid rgb(0 0 0 / 18%);
+  border-radius: ${props => props.theme.borderRadius.small};
+`
+
+const DesignCopy = styled.span`
+  display: grid;
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.md};
+`
+
+const DesignNameRow = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${props => props.theme.spacing.sm};
+`
+
+const DesignName = styled.strong`
+  color: ${props => props.theme.colors.text.primary};
+  font-size: ${props => props.theme.typography.fontSize.bodyLarge};
+`
+
+const SelectedDesignIcon = styled.span`
+  display: inline-flex;
+  color: ${props => props.theme.colors.primary};
+`
+
+const DesignDescription = styled.span`
+  color: ${props => props.theme.colors.text.secondary};
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  line-height: ${props => props.theme.typography.lineHeight.normal};
+`
+
 const SettingItem = styled.div`
   display: flex;
   align-items: center;
@@ -423,7 +525,13 @@ const DangerButton = styled(Button)`
 `
 
 const Settings = () => {
-  const { isDarkMode, toggleTheme } = useTheme()
+  const {
+    isDarkMode,
+    toggleTheme,
+    design,
+    setDesign,
+    designOptions
+  } = useTheme()
   const { weekStartsOn, setWeekStartsOn } = usePreferences()
   const { showToast } = useToast()
   const { habits, categories, journalEntries } = useHabits()
@@ -613,6 +721,7 @@ const Settings = () => {
             avatarImage: profileAvatarImage
           },
           theme: isDarkMode ? 'dark' : 'light',
+          design,
           preferences: {
             weekStartsOn
           }
@@ -827,14 +936,6 @@ const Settings = () => {
       value: weekStartsOn,
       options: WEEK_START_OPTIONS,
       onChange: setWeekStartsOn
-    },
-    {
-      icon: 'moon',
-      title: 'Dark Mode',
-      description: 'Easier on the eyes at night',
-      type: 'toggle',
-      value: isDarkMode,
-      onChange: toggleTheme
     }
   ]
 
@@ -939,6 +1040,72 @@ const Settings = () => {
           </ProfileActions>
         )}
       </ProfileSection>
+
+      <SettingsGroup>
+        <GroupTitle>Appearance</GroupTitle>
+        <SettingsCard elevated>
+          <DesignGrid role="radiogroup" aria-label="App design">
+            {designOptions.map(option => {
+              const selected = option.id === design
+
+              return (
+                <DesignChoice key={option.id} $selected={selected}>
+                  <DesignRadio
+                    type="radio"
+                    name="app-design"
+                    value={option.id}
+                    checked={selected}
+                    onChange={() => setDesign(option.id)}
+                    aria-label={option.name}
+                  />
+                  <DesignPreview $colors={option.preview} aria-hidden="true">
+                    {option.preview.slice(1).map((color, index) => (
+                      <DesignSwatch
+                        key={color}
+                        $color={color}
+                        $tall={index === 0}
+                      />
+                    ))}
+                  </DesignPreview>
+                  <DesignCopy>
+                    <DesignNameRow>
+                      <DesignName>{option.name}</DesignName>
+                      {selected && (
+                        <SelectedDesignIcon aria-hidden="true">
+                          <AppIcon name="circle-check" size={20} />
+                        </SelectedDesignIcon>
+                      )}
+                    </DesignNameRow>
+                    <DesignDescription>{option.description}</DesignDescription>
+                  </DesignCopy>
+                </DesignChoice>
+              )
+            })}
+          </DesignGrid>
+          <SettingItem>
+            <SettingLeft>
+              <SettingIcon>
+                <AppIcon name="moon" size={22} />
+              </SettingIcon>
+              <SettingInfo>
+                <SettingTitle>Dark Mode</SettingTitle>
+                <SettingDescription>Use the night palette for the selected design</SettingDescription>
+              </SettingInfo>
+            </SettingLeft>
+            <SettingRight>
+              <ToggleSwitch>
+                <ToggleInput
+                  type="checkbox"
+                  checked={isDarkMode}
+                  onChange={toggleTheme}
+                  aria-label="Dark Mode"
+                />
+                <ToggleSlider />
+              </ToggleSwitch>
+            </SettingRight>
+          </SettingItem>
+        </SettingsCard>
+      </SettingsGroup>
 
       <SettingsGroup>
         <GroupTitle>Preferences</GroupTitle>

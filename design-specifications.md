@@ -2,6 +2,20 @@
 
 ## Design System Foundation
 
+### Runtime Design Families
+
+The app exposes five complete visual systems from Settings. The selected `design` is persisted through the SQLite-backed settings API, while light/dark mode remains an independent preference within every design.
+
+| Design | Runtime id | Source snapshot | Direction |
+|---|---|---|---|
+| Standard | `standard` | `2bbc54a61644f1e0ccda4d474a04af2e42bc3932` | Friendly green mobile habit tracker |
+| Rhythm Ledger | `rhythm-ledger` | `7c9a357e5f9fb6191abb4640dd256eb8272a8b31` | Field journal and precision instrument |
+| Orbit | `orbit` | `7aec7cbf85c486775f68cb6c72fc4bc4897776b2` | Spatial command deck and orbital progress |
+| Quiet Momentum | `quiet-momentum` | `24ddae65079ecdf2bbb8249c57b3c2b9df66d4f8` | Calm botanical editorial system |
+| Sunday Club | `sunday-club` | `9e35ba2350cecc709ce01d5552a59d9d59e629fb` | Playful punch cards and bright weekend ink |
+
+`src/App.jsx` switches the global texture, signature Dashboard, primary navigation, and desktop frame as one unit. `src/styles/designs.js` resolves each design's light/dark token pair. The detailed component specifications below describe the Standard baseline; the named variants retain the authored structures from their source snapshots.
+
 ### Color Palette
 
 #### Light Theme
@@ -360,7 +374,8 @@ Based on 8px increments:
 **Layout:**
 - Header: "Settings" heading
 - Profile section: avatar, name, email, photo actions, and edit controls
-- Preferences group: notifications, reminder time, week-start selector, and dark mode toggle
+- Appearance group: five-design visual picker and dark mode toggle
+- Preferences group: notifications, reminder time, and week-start selector
 - Data group: JSON export, CSV export, backup, restore, and clear-all action
 - App info: version plus Privacy, Terms, and Support links
 

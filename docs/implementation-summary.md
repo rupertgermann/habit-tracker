@@ -2,7 +2,7 @@
 
 ## Overview
 
-Habit Tracker is a mobile-first React app backed by an Express API and a local SQLite database. It supports yes/no habits, count habits, streaks, calendar heatmaps, progress analytics, journaling, profile settings, dark mode, data export/restore, and browser-tested responsive layouts.
+Habit Tracker is a mobile-first React app backed by an Express API and a local SQLite database. It supports yes/no habits, count habits, streaks, calendar heatmaps, progress analytics, journaling, profile settings, five switchable design systems, dark mode, data export/restore, and browser-tested responsive layouts.
 
 The original product brief lives in `docs/prompt.md`; the current UI specification lives in `design-specifications.md`.
 
@@ -10,10 +10,11 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Dashboard
 
-- **Location**: `src/screens/Dashboard.jsx`
+- **Location**: `src/screens/Dashboard.jsx`, `src/screens/DashboardRhythmLedger.jsx`, `src/screens/DashboardOrbit.jsx`, `src/screens/DashboardQuietMomentum.jsx`, `src/screens/DashboardSundayClub.jsx`
 - Shows total habits, today's completion rate, circular progress, motivational messaging, today's habits, weekly overview, and journal entry point.
 - Supports binary check-off and count-habit steppers from the same daily list.
 - Uses `Confetti`, `ToastContext`, and `CircularProgress` for feedback and completion celebrations.
+- `src/App.jsx` selects the dashboard, navigation geometry, global texture, and responsive shell for the persisted design.
 
 ### Habit Management
 
@@ -57,7 +58,8 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 - **Location**: `src/screens/Settings.jsx`, `src/context/ThemeContext.jsx`, `src/context/PreferencesContext.jsx`
 - Profile settings include name, email, image avatar upload, and avatar removal.
-- Theme and week-start preferences are stored in the database through `/api/settings/:key`.
+- Design, theme, and week-start preferences are stored in the database through `/api/settings/:key`.
+- The Appearance picker switches between Standard, Rhythm Ledger, Orbit, Quiet Momentum, and Sunday Club while preserving an independent light/dark choice.
 - Legacy `localStorage` profile, theme, and week-start values are removed so the database remains the source of truth.
 - Reminder controls use the browser Notification API and a themed time-input clock glyph.
 - Settings links route to app-local Privacy, Terms, and Support pages in `src/screens/InfoPage.jsx`.
@@ -67,7 +69,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - **Location**: `src/screens/Settings.jsx`, `server/index.js`, `server/db.js`
 - JSON export downloads habit data.
 - CSV export downloads completion rows.
-- Full backup includes habits, categories, journal entries, profile settings, theme, and preferences.
+- Full backup includes habits, categories, journal entries, profile settings, design, theme, and preferences.
 - Restore replaces app data through `POST /api/restore`.
 - Clear-all uses `DELETE /api/data` and re-seeds default categories.
 
@@ -78,11 +80,11 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - `src/App.jsx` defines routes and provider order.
 - `src/api/habitsApi.js` centralizes REST requests.
 - `src/context/HabitsContext.jsx` owns habit, category, completion, and journal state.
-- `src/context/ThemeContext.jsx` owns light/dark theme state.
+- `src/context/ThemeContext.jsx` owns the persisted design and light/dark theme state.
 - `src/context/PreferencesContext.jsx` owns calendar and journal week-start preference.
 - `src/context/NavigationContext.jsx` keeps bottom navigation in sync with routes.
-- `src/styles/theme.js` contains light/dark theme tokens and exposes `theme.mode`.
-- `src/styles/GlobalStyles.js` applies base typography, focus styles, and responsive rules.
+- `src/styles/designs.js` is the registry for design metadata and light/dark token pairs.
+- `src/styles/theme*.js` and `src/styles/GlobalStyles*.js` preserve each design's tokens, typography, focus styles, texture, and responsive rules.
 
 ### Backend
 
@@ -142,14 +144,14 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Domain and Context Tests
 
 - **Location**: `tests/domain/`, `tests/context/`, `scripts/run-domain-tests.mjs`
-- Covers count-habit completions, binary toggles, date-targeted mutations, streaks, weekly completion data, journal timeline filtering, week-start normalization, and theme preference resolution.
+- Covers count-habit completions, binary toggles, date-targeted mutations, streaks, weekly completion data, journal timeline filtering, week-start normalization, and design/theme preference resolution.
 
 ### Browser Tests
 
 - **Location**: `tests/e2e/`, `playwright.config.js`, `scripts/run-e2e-dev.mjs`
 - Uses a temp SQLite database under `.tmp/e2e`.
 - Verifies the runtime marker before destructive reset/restore operations.
-- Covers persisted habit flows, icon selection, legacy icon rendering, mobile edit stability, journal timelines, profile/avatar settings, information pages, reminder and week-start controls, dark calendar contrast, and responsive smoke coverage.
+- Covers persisted habit flows, design persistence, every design dashboard at mobile and desktop sizes, icon selection, legacy icon rendering, mobile edit stability, journal timelines, profile/avatar settings, information pages, reminder and week-start controls, dark calendar contrast, and responsive smoke coverage.
 
 ### Documentation Screenshots
 
