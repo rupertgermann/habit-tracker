@@ -3,9 +3,11 @@ const express = require('express')
 const cors = require('cors')
 const store = require('./db')
 const { createHabitDeletion } = require('./habitDeletion')
+const { createStateRestorer } = require('./backupRestore')
 
 const app = express()
 const deleteHabit = createHabitDeletion({ db: store.db, getState: store.getState })
+const restoreState = createStateRestorer({ replaceAll: store.replaceAll })
 const HOST = process.env.HOST || '127.0.0.1'
 const PORT = process.env.PORT || 3301
 const E2E_DB_DIR = path.join(process.cwd(), '.tmp', 'e2e')
@@ -95,8 +97,7 @@ app.delete('/api/journal/:id', asyncWrap((req, res) => {
 
 // Restore from a backup file and wipe-all
 app.post('/api/restore', asyncWrap((req, res) => {
-  store.replaceAll(req.body || {})
-  res.json(store.getState())
+  res.json(restoreState(req.body || {}))
 }))
 
 app.delete('/api/data', asyncWrap((req, res) => {

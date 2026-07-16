@@ -145,9 +145,8 @@ function replaceAll({ habits = [], categories = [], journalEntries = [], setting
     const insertHabit = db.prepare('INSERT INTO habits (id, data) VALUES (?, ?)')
     for (const h of habits) insertHabit.run(h.id, JSON.stringify(h))
 
-    const categoryItems = categories.length > 0 ? categories : DEFAULT_CATEGORIES
     const insertCategory = db.prepare('INSERT INTO categories (id, data) VALUES (?, ?)')
-    for (const c of categoryItems) insertCategory.run(c.id, JSON.stringify(c))
+    for (const c of categories) insertCategory.run(c.id, JSON.stringify(c))
 
     const insertEntry = db.prepare('INSERT INTO journal_entries (id, data) VALUES (?, ?)')
     for (const e of journalEntries) insertEntry.run(e.id, JSON.stringify(e))
@@ -159,10 +158,10 @@ function replaceAll({ habits = [], categories = [], journalEntries = [], setting
     for (const [key, value] of settingEntries) {
       insertSetting.run(key, JSON.stringify(value))
     }
+
+    return getState()
   })
-  tx()
-  // Upgrade old built-in category icons when restoring older backups.
-  seedCategories()
+  return tx()
 }
 
 function clearAll() {

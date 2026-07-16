@@ -10,6 +10,9 @@ import { removeLegacyThemePreference, useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useHabits } from '../context/HabitsContext'
 import { habitsApi } from '../api/habitsApi'
+import { backupPersistence } from '../api/backupPersistence'
+import { createBrowserBackupAdapter } from '../adapters/browserBackup'
+import { createBackupModule } from '../domain/backup'
 import { isCompletedOnDate, toDateKey } from '../domain/habitTracking'
 import { removeLegacyWeekStartPreference, usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
 import { listAppDesigns } from '../appDesign/catalog'
@@ -24,6 +27,8 @@ const PROFILE_SETTINGS_KEY = 'profile'
 const AVATAR_SIZE = 256
 const CLOCK_ICON_MASK = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'9\'/%3E%3Cpath d=\'M12 7v5l3 2\'/%3E%3C/svg%3E")'
 const APP_DESIGN_OPTIONS = listAppDesigns()
+const canonicalBackup = createBackupModule({ persistence: backupPersistence })
+const browserBackup = createBrowserBackupAdapter()
 
 const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
 const isValidEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -535,7 +540,7 @@ const Settings = () => {
   } = useTheme()
   const { weekStartsOn, setWeekStartsOn } = usePreferences()
   const { showToast } = useToast()
-  const { habits, categories, journalEntries } = useHabits()
+  const { habits } = useHabits()
   const avatarInputRef = useRef(null)
   const [profileName, setProfileName] = useState(DEFAULT_PROFILE.name)
   const [profileEmail, setProfileEmail] = useState(DEFAULT_PROFILE.email)
@@ -709,87 +714,51 @@ const Settings = () => {
     }
   }
 
-  const handleBackupData = () => {
+  const handleBackupData = async () => {
     try {
-      const data = {
-        habits,
-        categories,
-        journalEntries,
-        settings: {
-          profile: {
-            name: profileName,
-            email: profileEmail,
-            avatarImage: profileAvatarImage
-          },
-          theme: isDarkMode ? 'dark' : 'light',
-          design,
-          preferences: {
-            weekStartsOn
-          }
-        },
-        backupDate: new Date().toISOString(),
-        version: '1.0.0'
+      const result = await canonicalBackup.createSnapshot()
+      if (!result.ok) {
+        throw result.error
       }
-      
-      const dataStr = JSON.stringify(data, null, 2)
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
-      
-      const exportFileDefaultName = `habit-tracker-backup-${toDateKey()}.json`
-      
-      const linkElement = document.createElement('a')
-      linkElement.setAttribute('href', dataUri)
-      linkElement.setAttribute('download', exportFileDefaultName)
-      linkElement.click()
-      
+
+      browserBackup.download(result)
       showToast('Backup created successfully', 'success')
     } catch (error) {
       showToast('Failed to create backup', 'error')
     }
   }
 
-  const handleRestoreData = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    
-    input.onchange = (e) => {
-      const file = e.target.files[0]
-      if (!file) return
-      
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        try {
-          const data = JSON.parse(event.target.result)
-          
-          if (data.habits && Array.isArray(data.habits)) {
-            if (window.confirm('This will replace all your current data. Are you sure you want to continue?')) {
-              // Restore data to the SQLite-backed API
-              habitsApi.restore({
-                habits: data.habits,
-                categories: Array.isArray(data.categories) ? data.categories : [],
-                journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : [],
-                settings: data.settings && typeof data.settings === 'object' ? data.settings : {}
-              })
-                .then(() => {
-                  showToast('Data restored successfully', 'success')
-                  setTimeout(() => {
-                    window.location.reload()
-                  }, 1500)
-                })
-                .catch(() => showToast('Failed to restore data', 'error'))
-            }
-          } else {
-            showToast('Invalid backup file', 'error')
-          }
-        } catch (error) {
-          showToast('Failed to restore data', 'error')
-        }
-      }
-      
-      reader.readAsText(file)
+  const handleRestoreData = async () => {
+    let selection
+    try {
+      selection = await browserBackup.selectFile()
+    } catch {
+      showToast('Failed to read backup file', 'error')
+      return
     }
-    
-    input.click()
+
+    if (selection.status === 'cancelled') return
+
+    const prepared = canonicalBackup.prepareRestore(selection.serialized)
+    if (!prepared.ok) {
+      showToast(prepared.error.message || 'Invalid backup file', 'error')
+      return
+    }
+
+    if (!window.confirm('This will replace all your current data. Are you sure you want to continue?')) {
+      return
+    }
+
+    const result = await canonicalBackup.restore(prepared)
+    if (!result.ok) {
+      showToast('Failed to restore data', 'error')
+      return
+    }
+
+    showToast('Data restored successfully', 'success')
+    setTimeout(() => {
+      window.location.reload()
+    }, 1500)
   }
 
   const handleClearData = () => {

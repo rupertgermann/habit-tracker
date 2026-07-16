@@ -67,11 +67,14 @@ export const expectE2ERuntime = async (request) => {
 
 export const resetAppData = async (request, state = {}) => {
   await expectE2ERuntime(request)
+  const clearResponse = await request.delete('/api/data')
+  expect(clearResponse.ok()).toBe(true)
+  const clearedState = await clearResponse.json()
 
   await request.post('/api/restore', {
     data: {
       habits: state.habits || [],
-      categories: state.categories || [],
+      categories: state.categories ?? clearedState.categories,
       journalEntries: state.journalEntries || [],
       settings: state.settings || {}
     }
