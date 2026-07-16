@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { habitsApi } from '../api/habitsApi'
 import {
-  DEFAULT_DESIGN_ID,
-  DESIGN_OPTIONS,
-  getDesignTheme,
-  normalizeDesignPreference
-} from '../styles/designs'
+  DEFAULT_APP_DESIGN_ID,
+  getAppDesign,
+  getAppDesignTheme,
+  normalizeAppDesignId
+} from '../appDesign/catalog'
 
 const ThemeContext = createContext()
 export const LEGACY_THEME_STORAGE_KEY = 'theme'
@@ -13,7 +13,8 @@ export const THEME_SETTINGS_KEY = 'theme'
 export const DESIGN_SETTINGS_KEY = 'design'
 export const DARK_THEME_VALUE = 'dark'
 export const LIGHT_THEME_VALUE = 'light'
-export { DEFAULT_DESIGN_ID, normalizeDesignPreference }
+export const DEFAULT_DESIGN_ID = DEFAULT_APP_DESIGN_ID
+export const normalizeDesignPreference = normalizeAppDesignId
 
 const getBrowserStorage = () => {
   try {
@@ -65,9 +66,10 @@ export const removeLegacyThemePreference = (storage = getBrowserStorage()) => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => resolveInitialIsDarkMode())
-  const [design, setDesignState] = useState(DEFAULT_DESIGN_ID)
+  const [design, setDesignState] = useState(DEFAULT_APP_DESIGN_ID)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
-  const theme = getDesignTheme(design, isDarkMode)
+  const appDesign = getAppDesign(design)
+  const theme = getAppDesignTheme(design, isDarkMode)
 
   useEffect(() => {
     let cancelled = false
@@ -90,7 +92,7 @@ export const ThemeProvider = ({ children }) => {
       }
 
       if (designResult.status === 'fulfilled') {
-        setDesignState(normalizeDesignPreference(designResult.value.value))
+        setDesignState(normalizeAppDesignId(designResult.value.value))
       } else {
         console.error('Failed to load design preference:', designResult.reason)
       }
@@ -138,7 +140,7 @@ export const ThemeProvider = ({ children }) => {
   }
 
   const setDesign = value => {
-    setDesignState(normalizeDesignPreference(value))
+    setDesignState(normalizeAppDesignId(value))
   }
 
   const value = {
@@ -147,7 +149,7 @@ export const ThemeProvider = ({ children }) => {
     toggleTheme,
     design,
     setDesign,
-    designOptions: DESIGN_OPTIONS
+    appDesign
   }
 
   return (

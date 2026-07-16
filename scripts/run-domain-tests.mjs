@@ -1,6 +1,7 @@
 import { createServer } from 'vite'
 
 const testModules = [
+  '/tests/appDesign/catalog.test.js',
   '/tests/domain/habitTracking.test.js',
   '/tests/domain/completionWrites.test.js',
   '/tests/domain/journalTimeline.test.js',
@@ -11,6 +12,9 @@ const testModules = [
 const server = await createServer({
   appType: 'custom',
   logLevel: 'error',
+  ssr: {
+    noExternal: ['styled-components']
+  },
   server: {
     middlewareMode: true,
     hmr: false

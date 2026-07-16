@@ -12,6 +12,7 @@ import { useHabits } from '../context/HabitsContext'
 import { habitsApi } from '../api/habitsApi'
 import { isCompletedOnDate, toDateKey } from '../domain/habitTracking'
 import { removeLegacyWeekStartPreference, usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
+import { listAppDesigns } from '../appDesign/catalog'
 
 const DEFAULT_PROFILE = {
   name: 'User Name',
@@ -22,6 +23,7 @@ const LEGACY_PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
 const PROFILE_SETTINGS_KEY = 'profile'
 const AVATAR_SIZE = 256
 const CLOCK_ICON_MASK = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'9\'/%3E%3Cpath d=\'M12 7v5l3 2\'/%3E%3C/svg%3E")'
+const APP_DESIGN_OPTIONS = listAppDesigns()
 
 const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
 const isValidEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -529,8 +531,7 @@ const Settings = () => {
     isDarkMode,
     toggleTheme,
     design,
-    setDesign,
-    designOptions
+    setDesign
   } = useTheme()
   const { weekStartsOn, setWeekStartsOn } = usePreferences()
   const { showToast } = useToast()
@@ -1045,7 +1046,7 @@ const Settings = () => {
         <GroupTitle>Appearance</GroupTitle>
         <SettingsCard elevated>
           <DesignGrid role="radiogroup" aria-label="App design">
-            {designOptions.map(option => {
+            {APP_DESIGN_OPTIONS.map(option => {
               const selected = option.id === design
 
               return (
