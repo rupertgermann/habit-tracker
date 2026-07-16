@@ -1,15 +1,9 @@
+import defaultCategories from '../../shared/defaultCategories.json'
+
 export const BACKUP_FORMAT_VERSION = 2
 export const LEGACY_BACKUP_VERSION = '1.0.0'
 
-export const LEGACY_DEFAULT_CATEGORIES = [
-  { id: 'health', name: 'Health & Fitness', color: '#6CC47C', icon: 'dumbbell' },
-  { id: 'productivity', name: 'Productivity', color: '#F6D860', icon: 'notes' },
-  { id: 'mindfulness', name: 'Mindfulness', color: '#8B5CF6', icon: 'yoga' },
-  { id: 'learning', name: 'Learning', color: '#0EA5E9', icon: 'books' },
-  { id: 'social', name: 'Social', color: '#F28A8A', icon: 'users' },
-  { id: 'creativity', name: 'Creativity', color: '#EC4899', icon: 'palette' },
-  { id: 'other', name: 'Other', color: '#6B7280', icon: 'pin' }
-]
+export const LEGACY_DEFAULT_CATEGORIES = defaultCategories
 
 const emptyState = () => ({
   habits: [],

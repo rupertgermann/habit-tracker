@@ -86,6 +86,25 @@ export const tests = [
     }
   },
   {
+    name: 'canonical snapshots preserve an empty persisted state',
+    async run() {
+      const backup = createBackupModule({
+        persistence: createInMemoryBackupPersistence(),
+        clock: () => new Date('2026-07-16T09:10:11.000Z')
+      })
+
+      const result = await backup.createSnapshot()
+
+      assert.equal(result.ok, true)
+      assert.deepEqual(result.document.state, {
+        habits: [],
+        categories: [],
+        journalEntries: [],
+        settings: {}
+      })
+    }
+  },
+  {
     name: 'canonical version 2 documents validate before restore',
     async run() {
       const persistence = createInMemoryBackupPersistence()

@@ -93,5 +93,28 @@ export const tests = [
 
       await assert.rejects(adapter.selectFile(), error => error === readError)
     }
+  },
+  {
+    name: 'browser backup adapter exposes download failures to its caller',
+    run() {
+      const downloadError = new Error('download failed')
+      const adapter = createBrowserBackupAdapter({
+        documentObject: {},
+        BlobClass: class {},
+        URLObject: {
+          createObjectURL() {
+            throw downloadError
+          }
+        }
+      })
+
+      assert.throws(
+        () => adapter.download({
+          serialized: '{"formatVersion":2}',
+          filename: 'habit-tracker-backup-2026-07-16.json'
+        }),
+        error => error === downloadError
+      )
+    }
   }
 ]

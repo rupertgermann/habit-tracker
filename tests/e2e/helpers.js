@@ -71,7 +71,7 @@ export const resetAppData = async (request, state = {}) => {
   expect(clearResponse.ok()).toBe(true)
   const clearedState = await clearResponse.json()
 
-  await request.post('/api/restore', {
+  const restoreResponse = await request.post('/api/restore', {
     data: {
       habits: state.habits || [],
       categories: state.categories ?? clearedState.categories,
@@ -79,6 +79,7 @@ export const resetAppData = async (request, state = {}) => {
       settings: state.settings || {}
     }
   })
+  expect(restoreResponse.ok()).toBe(true)
 }
 
 export const waitForAppReady = async (page) => {

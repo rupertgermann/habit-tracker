@@ -193,10 +193,30 @@ const CheckButton = styled(motion.button)`
   }
 `
 
+const StatusCard = styled(Card)`
+  max-width: 680px;
+  margin: ${props => props.theme.spacing.xxl} auto 0;
+  padding: ${props => props.theme.spacing.xxl};
+  text-align: center;
+
+  h2 {
+    margin-bottom: ${props => props.theme.spacing.sm};
+  }
+
+  p {
+    margin-bottom: ${props => props.theme.spacing.lg};
+    color: ${props => props.theme.colors.text.secondary};
+  }
+`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { dashboardHabitTracking } = useHabits()
+  const {
+    dashboardHabitTracking,
+    isLoading,
+    hasLoaded,
+    error
+  } = useHabits()
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
   const [showConfetti, setShowConfetti] = useState(false)
@@ -284,6 +304,38 @@ const Dashboard = () => {
   }
 
   const motivationalMessage = getMotivationalMessage()
+
+  if (isLoading && !hasLoaded) {
+    return (
+      <DashboardContainer aria-busy="true">
+        <Header>
+          <Title>Dashboard</Title>
+          <DateText>{format(referenceDate, 'EEEE, MMMM d')}</DateText>
+        </Header>
+        <StatusCard elevated>
+          <h2>Loading today&apos;s habits</h2>
+          <p>Your private habit record is opening.</p>
+          <span className="sr-only">Loading habits</span>
+        </StatusCard>
+      </DashboardContainer>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardContainer>
+        <Header>
+          <Title>Dashboard</Title>
+          <DateText>{format(referenceDate, 'EEEE, MMMM d')}</DateText>
+        </Header>
+        <StatusCard elevated role="alert">
+          <h2>Could not load your habits</h2>
+          <p>Your saved data has not changed. Reconnect to the local service and try again.</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </StatusCard>
+      </DashboardContainer>
+    )
+  }
 
   if (totalHabits === 0) {
     return (

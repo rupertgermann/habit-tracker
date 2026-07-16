@@ -283,6 +283,53 @@ export const tests = [
     }
   },
   {
+    name: 'overlapping writes to different Journal Entries preserve both committed results',
+    async run() {
+      const firstEntry = makeEntry({ id: 'first-entry', content: 'First original' })
+      const secondEntry = makeEntry({ id: 'second-entry', content: 'Second original' })
+      const persistedEntries = new Map([
+        [firstEntry.id, firstEntry],
+        [secondEntry.id, secondEntry]
+      ])
+      let releaseFirstWrite
+      const persistence = {
+        async updateJournalEntry(entry) {
+          if (entry.id === firstEntry.id) {
+            await new Promise(resolve => { releaseFirstWrite = resolve })
+          }
+          persistedEntries.set(entry.id, entry)
+          return entry
+        }
+      }
+      let journalEntries = [firstEntry, secondEntry]
+      const writer = createJournalEntryWriter({
+        persistence,
+        getJournalEntries: () => journalEntries,
+        replaceJournalEntries: replacement => { journalEntries = replacement },
+        now: () => new Date('2026-07-16T09:45:00.000Z')
+      })
+
+      const firstWrite = writer.update(firstEntry.id, { content: 'First committed' })
+      const secondWrite = writer.update(secondEntry.id, { content: 'Second committed' })
+      await secondWrite
+
+      assert.deepEqual(
+        journalEntries.map(entry => entry.content),
+        ['First original', 'Second committed']
+      )
+
+      releaseFirstWrite()
+      await firstWrite
+
+      assert.deepEqual(
+        journalEntries.map(entry => entry.content),
+        ['First committed', 'Second committed']
+      )
+      assert.equal(persistedEntries.get(firstEntry.id).content, 'First committed')
+      assert.equal(persistedEntries.get(secondEntry.id).content, 'Second committed')
+    }
+  },
+  {
     name: 'update then delete for one Journal Entry commits in caller order',
     async run() {
       const entry = makeEntry()

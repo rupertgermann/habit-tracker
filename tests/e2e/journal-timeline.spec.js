@@ -62,6 +62,96 @@ test.describe('journal timeline regression coverage', () => {
     expect(await getEntriesForHabitDate(request, habit.id, localDateKey())).toEqual([])
   })
 
+  test('failed Journal Entry update restores committed state and keeps the revision available for retry', async ({ page, request }) => {
+    const today = localDateKey()
+    const habit = makeHabit({
+      id: 'journal-update-failure-habit',
+      name: 'Journal Update Failure'
+    })
+    const committedContent = 'Previously committed reflection'
+    const draft = 'Keep this revised reflection available for retry'
+    await resetAppData(request, {
+      habits: [habit],
+      journalEntries: [makeJournalEntry({
+        id: 'journal-update-failure-entry',
+        habitId: habit.id,
+        date: today,
+        content: committedContent,
+        moodId: 'good'
+      })]
+    })
+
+    await page.route('**/api/journal/*', async route => {
+      if (route.request().method() === 'PUT') {
+        await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        return
+      }
+      await route.continue()
+    })
+
+    await page.goto(`/habit/${habit.id}`)
+    await waitForAppReady(page)
+    await journalEntryCardFor(page, committedContent)
+      .getByRole('button', { name: /^Edit$/ })
+      .click()
+    await moodButton(page, 'Very Good').click()
+    const editor = page.getByPlaceholder(reflectionInput)
+    await editor.fill(draft)
+    await page.getByRole('button', { name: 'Save Entry' }).click()
+
+    await expect(page.getByText('Failed to update journal entry. Please try again.')).toBeVisible()
+    await expect(page.getByText('Journal entry updated successfully!')).toHaveCount(0)
+    await expect(editor).toHaveValue(draft)
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.getByText(committedContent, { exact: true })).toBeVisible()
+    await journalEntryCardFor(page, committedContent)
+      .getByRole('button', { name: /^Edit$/ })
+      .click()
+    await expect(editor).toHaveValue(draft)
+
+    const entries = await getEntriesForHabitDate(request, habit.id, today)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({
+      content: committedContent,
+      moodId: 'good'
+    })
+  })
+
+  test('failed Journal Entry deletion keeps visible and persisted state without success feedback', async ({ page, request }) => {
+    const today = localDateKey()
+    const habit = makeHabit({
+      id: 'journal-delete-failure-habit',
+      name: 'Journal Delete Failure'
+    })
+    const content = 'This reflection must survive a failed deletion'
+    await resetAppData(request, {
+      habits: [habit],
+      journalEntries: [makeJournalEntry({
+        id: 'journal-delete-failure-entry',
+        habitId: habit.id,
+        date: today,
+        content
+      })]
+    })
+
+    await page.route('**/api/journal/*', async route => {
+      if (route.request().method() === 'DELETE') {
+        await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        return
+      }
+      await route.continue()
+    })
+
+    await page.goto(`/habit/${habit.id}`)
+    await waitForAppReady(page)
+    await page.getByRole('button', { name: /^Delete$/ }).click()
+
+    await expect(page.getByText('Failed to delete journal entry. Please try again.')).toBeVisible()
+    await expect(page.getByText('Journal entry deleted successfully!')).toHaveCount(0)
+    await expect(page.getByText(content, { exact: true })).toBeVisible()
+    expect(await getEntriesForHabitDate(request, habit.id, today)).toHaveLength(1)
+  })
+
   test('creates, searches, edits, and deletes habit journal entries through the app surface', async ({ page, request }) => {
     await page.setViewportSize({ width: 390, height: 900 })
 

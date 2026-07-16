@@ -14,7 +14,8 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - Shows total habits, today's completion rate, circular progress, motivational messaging, today's habits, weekly overview, and journal entry point.
 - Supports binary check-off and count-habit steppers from the same daily list.
 - Uses `Confetti`, `ToastContext`, and `CircularProgress` for feedback and completion celebrations.
-- `src/App.jsx` selects the dashboard, navigation geometry, global texture, and responsive shell for the persisted design.
+- `src/domain/dashboardHabitTracking.js` supplies every dashboard with the same Habit, Completion, Streak, weekly, and semantic milestone facts.
+- Each dashboard keeps its authored wording, layout, motion, and feedback rendering while `src/appDesign/catalog.jsx` selects its complete design registration.
 
 ### Habit Management
 
@@ -49,10 +50,11 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Journal
 
-- **Location**: `src/screens/JournalView.jsx`, `src/components/JournalEntry.jsx`, `src/domain/journalTimeline.js`
+- **Location**: `src/screens/JournalView.jsx`, `src/components/JournalEntry.jsx`, `src/domain/journalTimeline.js`, `src/domain/journalEntryWrites.js`
 - Journal entries connect to habits by `habitId`, date, content, and mood.
 - Weekly timeline data is scoped to the selected week and follows the configured week-start preference.
 - Search matches entry content and habit names while staying within the active week.
+- Create, update, and delete return committed results through one injected persistence interface; same-entry writes serialize and failures restore exact shared state before the editor reports failure.
 
 ### Settings, Profile, and Preferences
 
@@ -66,11 +68,13 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Data Management
 
-- **Location**: `src/screens/Settings.jsx`, `server/index.js`, `server/db.js`
+- **Location**: `src/domain/backup.js`, `src/adapters/browserBackup.js`, `src/api/backupPersistence.js`, `src/screens/Settings.jsx`, `server/backupRestore.js`, `server/db.js`
 - JSON export downloads habit data.
 - CSV export downloads completion rows.
-- Full backup includes habits, categories, journal entries, profile settings, design, theme, and preferences.
-- Restore replaces app data through `POST /api/restore`.
+- Canonical format-version `2` backup reads `/api/state` and preserves every Habit, Category, Journal Entry, and persisted settings key, including unknown future keys.
+- Restore validates before confirmation or mutation, supports canonical version `2` and legacy version `1.0.0`, and supplies safe defaults for omitted legacy Categories and settings.
+- `POST /api/restore` replaces complete state in one SQLite transaction and returns the authoritative committed result; a controlled reload occurs only after success.
+- Browser file selection and download behavior are isolated from backup format, validation, and migration rules.
 - Clear-all uses `DELETE /api/data` and re-seeds default categories.
 
 ## Technical Architecture
@@ -79,17 +83,22 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 - `src/App.jsx` defines routes and provider order.
 - `src/api/habitsApi.js` centralizes REST requests.
-- `src/context/HabitsContext.jsx` owns habit, category, completion, and journal state.
-- `src/context/ThemeContext.jsx` owns the persisted design and light/dark theme state.
+- `src/context/HabitsContext.jsx` owns Habit, Category, Completion, and Journal Entry state and injects production persistence into the shared writers.
+- `src/domain/dashboardHabitTracking.js` is the dashboard-facing tracking seam.
+- `src/domain/journalEntryWrites.js` owns Journal Entry state replacement, persistence ordering, rollback, and caller results.
+- `src/domain/backup.js` owns canonical backup creation, validation, legacy migration, and restore results.
+- `shared/defaultCategories.json` keeps first-run and legacy-restore Category defaults identical.
+- `src/appDesign/catalog.jsx` registers metadata, previews, themes, global styles, dashboards, primary navigation, and responsive frames for all five designs.
+- `src/context/ThemeContext.jsx` owns persisted design and light/dark state and resolves both through the catalog.
 - `src/context/PreferencesContext.jsx` owns calendar and journal week-start preference.
 - `src/context/NavigationContext.jsx` keeps bottom navigation in sync with routes.
-- `src/styles/designs.js` is the registry for design metadata and light/dark token pairs.
 - `src/styles/theme*.js` and `src/styles/GlobalStyles*.js` preserve each design's tokens, typography, focus styles, texture, and responsive rules.
 
 ### Backend
 
 - `server/index.js` exposes the REST API on `127.0.0.1:3301` by default.
-- `server/db.js` initializes SQLite, enables WAL mode and foreign keys, seeds default categories, and provides JSON row helpers.
+- `server/db.js` initializes SQLite, enables WAL mode and foreign keys, seeds default categories, and provides JSON row helpers plus transactional complete-state replacement.
+- `server/backupRestore.js` wraps complete-state replacement in the authoritative `{ ok, state }` API result.
 - The database path defaults to `server/data/habit-tracker.db` and can be overridden with `HABIT_TRACKER_DB_PATH`.
 - Tables:
   - `habits`
@@ -121,7 +130,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 | `POST /api/journal` | Create a journal entry. |
 | `PUT /api/journal/:id` | Update a journal entry. |
 | `DELETE /api/journal/:id` | Delete a journal entry. |
-| `POST /api/restore` | Replace app data from a backup payload. |
+| `POST /api/restore` | Atomically replace complete app state and return the authoritative committed result. |
 | `DELETE /api/data` | Clear app data and re-seed default categories. |
 
 ## Commands
@@ -133,8 +142,9 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 | `npm run dev:client` | Start only Vite on `3300`. |
 | `npm run dev:e2e` | Start the isolated e2e runtime on `3341/3340`. |
 | `npm run test:domain` | Run domain and context tests through Vite SSR. |
+| `npm run test:server` | Run transactional SQLite server tests. |
 | `npm run test:e2e` | Run Playwright tests against the isolated e2e runtime. |
-| `npm run test` | Run domain tests and e2e tests. |
+| `npm run test` | Run domain, server, and e2e tests. |
 | `npm run screenshots` | Generate README screenshots from seeded example data. |
 | `npm run build` | Build the production bundle. |
 | `npm run preview` | Preview the production bundle. |
@@ -144,14 +154,19 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Domain and Context Tests
 
 - **Location**: `tests/domain/`, `tests/context/`, `scripts/run-domain-tests.mjs`
-- Covers count-habit completions, binary toggles, date-targeted mutations, streaks, weekly completion data, journal timeline filtering, week-start normalization, and design/theme preference resolution.
+- Covers dashboard projections and semantic outcomes, persistence-aware Completion and Journal Entry writes, App Design catalog completeness, canonical backup validation and legacy migration, Habit date/Streak rules, journal timelines, and preference normalization.
+
+### Server Tests
+
+- **Location**: `tests/server/`
+- Prove atomic Habit deletion and complete backup restore, including forced SQLite failures that must preserve exact previous state.
 
 ### Browser Tests
 
 - **Location**: `tests/e2e/`, `playwright.config.js`, `scripts/run-e2e-dev.mjs`
 - Uses a temp SQLite database under `.tmp/e2e`.
 - Verifies the runtime marker before destructive reset/restore operations.
-- Covers persisted habit flows, design persistence, every design dashboard at mobile and desktop sizes, icon selection, legacy icon rendering, mobile edit stability, journal timelines, profile/avatar settings, information pages, reminder and week-start controls, dark calendar contrast, and responsive smoke coverage.
+- Covers cross-design Completion persistence and failure rollback, design persistence, every design dashboard at mobile and desktop sizes, committed Journal Entry create/update/delete behavior, canonical and legacy backup/restore, invalid-file rejection, profile/avatar settings, dark calendar contrast, and responsive smoke coverage.
 
 ### Documentation Screenshots
 

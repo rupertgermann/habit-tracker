@@ -6,6 +6,10 @@ import {
   createYesNoCompletionWriter
 } from '../domain/completionWrites'
 import { createDashboardHabitTracking } from '../domain/dashboardHabitTracking'
+import {
+  createJournalEntryPersistence,
+  createJournalEntryWriter
+} from '../domain/journalEntryWrites'
 
 const HabitsContext = createContext()
 
@@ -67,20 +71,10 @@ const habitsReducer = (state, action) => {
         ...state,
         categories: state.categories.filter(category => category.id !== action.payload)
       }
-    case 'ADD_JOURNAL_ENTRY':
-      return { ...state, journalEntries: [...state.journalEntries, action.payload] }
-    case 'UPDATE_JOURNAL_ENTRY':
-      return {
-        ...state,
-        journalEntries: state.journalEntries.map(entry =>
-          entry.id === action.payload.id ? action.payload : entry
-        )
-      }
-    case 'DELETE_JOURNAL_ENTRY':
-      return {
-        ...state,
-        journalEntries: state.journalEntries.filter(entry => entry.id !== action.payload)
-      }
+    case 'REPLACE_JOURNAL_ENTRIES':
+      return state.journalEntries === action.payload
+        ? state
+        : { ...state, journalEntries: action.payload }
     case 'SET_MUTATION_ERROR':
       return { ...state, mutationError: action.payload }
     case 'CLEAR_MUTATION_ERROR':
@@ -94,14 +88,24 @@ const productionCompletionPersistence = createCompletionPersistence({
   updateHabit: habit => habitsApi.updateHabit(habit)
 })
 
+const productionJournalEntryPersistence = createJournalEntryPersistence({
+  createJournalEntry: entry => habitsApi.createJournalEntry(entry),
+  updateJournalEntry: entry => habitsApi.updateJournalEntry(entry),
+  deleteJournalEntry: id => habitsApi.deleteJournalEntry(id)
+})
+
 export const HabitsProvider = ({
   children,
-  completionPersistence = productionCompletionPersistence
+  completionPersistence = productionCompletionPersistence,
+  journalEntryPersistence = productionJournalEntryPersistence
 }) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
   const habitsRef = useRef(state.habits)
+  const journalEntriesRef = useRef(state.journalEntries)
   const pendingCompletionWrites = useRef(new Map())
+  const pendingJournalEntryWrites = useRef(new Map())
   habitsRef.current = state.habits
+  journalEntriesRef.current = state.journalEntries
 
   const replaceHabit = replacement => {
     habitsRef.current = habitsRef.current.map(habit => (
@@ -115,6 +119,18 @@ export const HabitsProvider = ({
     getHabit: habitId => habitsRef.current.find(habit => habit.id === habitId),
     replaceHabit,
     pendingWrites: pendingCompletionWrites.current
+  })
+
+  const replaceJournalEntries = replacement => {
+    journalEntriesRef.current = replacement
+    dispatch({ type: 'REPLACE_JOURNAL_ENTRIES', payload: replacement })
+  }
+
+  const getJournalEntryWriter = () => createJournalEntryWriter({
+    persistence: journalEntryPersistence,
+    getJournalEntries: () => journalEntriesRef.current,
+    replaceJournalEntries,
+    pendingWrites: pendingJournalEntryWrites.current
   })
 
   // Load full state from the SQLite-backed API on mount
@@ -149,32 +165,12 @@ export const HabitsProvider = ({
     return newHabit
   }
 
-  const addJournalEntry = (entryData) => {
-    const newEntry = {
-      id: Date.now().toString(),
-      ...entryData,
-      createdAt: new Date().toISOString()
-    }
-    dispatch({ type: 'ADD_JOURNAL_ENTRY', payload: newEntry })
-    habitsApi.createJournalEntry(newEntry).catch(err => console.error('Failed to create journal entry:', err))
-    return newEntry
-  }
+  const addJournalEntry = entryData => getJournalEntryWriter().create(entryData)
 
-  const updateJournalEntry = (id, entryData) => {
-    const updatedEntry = {
-      ...state.journalEntries.find(entry => entry.id === id),
-      ...entryData,
-      updatedAt: new Date().toISOString()
-    }
-    dispatch({ type: 'UPDATE_JOURNAL_ENTRY', payload: updatedEntry })
-    habitsApi.updateJournalEntry(updatedEntry).catch(err => console.error('Failed to update journal entry:', err))
-    return updatedEntry
-  }
+  const updateJournalEntry = (id, entryData) =>
+    getJournalEntryWriter().update(id, entryData)
 
-  const deleteJournalEntry = (id) => {
-    dispatch({ type: 'DELETE_JOURNAL_ENTRY', payload: id })
-    habitsApi.deleteJournalEntry(id).catch(err => console.error('Failed to delete journal entry:', err))
-  }
+  const deleteJournalEntry = id => getJournalEntryWriter().delete(id)
 
   const getJournalEntriesByDate = (date) => {
     return state.journalEntries.filter(entry => entry.date === date)

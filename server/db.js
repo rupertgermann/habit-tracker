@@ -1,6 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const Database = require('better-sqlite3')
+const DEFAULT_CATEGORIES = require('../shared/defaultCategories.json')
 
 const DB_PATH = process.env.HABIT_TRACKER_DB_PATH || path.join(__dirname, 'data', 'habit-tracker.db')
 const DATA_DIR = path.dirname(DB_PATH)
@@ -32,16 +33,6 @@ db.exec(`
     value TEXT
   );
 `)
-
-const DEFAULT_CATEGORIES = [
-  { id: 'health', name: 'Health & Fitness', color: '#6CC47C', icon: 'dumbbell' },
-  { id: 'productivity', name: 'Productivity', color: '#F6D860', icon: 'notes' },
-  { id: 'mindfulness', name: 'Mindfulness', color: '#8B5CF6', icon: 'yoga' },
-  { id: 'learning', name: 'Learning', color: '#0EA5E9', icon: 'books' },
-  { id: 'social', name: 'Social', color: '#F28A8A', icon: 'users' },
-  { id: 'creativity', name: 'Creativity', color: '#EC4899', icon: 'palette' },
-  { id: 'other', name: 'Other', color: '#6B7280', icon: 'pin' }
-]
 
 const DEFAULT_CATEGORY_LEGACY_ICONS = {
   health: '💪',

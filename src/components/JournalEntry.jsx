@@ -129,13 +129,15 @@ const JournalEntry = ({ habitId, date, habitName }) => {
   const [content, setContent] = useState('')
   const [selectedMood, setSelectedMood] = useState(null)
   const [existingEntry, setExistingEntry] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const persistedEntry = getJournalEntryForHabit(habitId, date)
   
   useEffect(() => {
-    const entry = getJournalEntryForHabit(habitId, date)
-    if (entry) {
-      setExistingEntry(entry)
-      setContent(entry.content || '')
-      setSelectedMood(entry.moodId || null)
+    if (persistedEntry) {
+      setExistingEntry(persistedEntry)
+      setContent(persistedEntry.content || '')
+      setSelectedMood(persistedEntry.moodId || null)
       setIsEditing(false)
     } else {
       setExistingEntry(null)
@@ -143,9 +145,14 @@ const JournalEntry = ({ habitId, date, habitName }) => {
       setSelectedMood(null)
       setIsEditing(true)
     }
-  }, [habitId, date, getJournalEntryForHabit])
+  }, [habitId, date, persistedEntry])
   
-  const handleSaveEntry = () => {
+  const handleSaveEntry = async () => {
+    if (isSaving) return
+
+    const isUpdating = Boolean(existingEntry)
+    setIsSaving(true)
+
     try {
       const entryData = {
         habitId,
@@ -153,18 +160,37 @@ const JournalEntry = ({ habitId, date, habitName }) => {
         content,
         moodId: selectedMood
       }
-      
-      if (existingEntry) {
-        updateJournalEntry(existingEntry.id, entryData)
-        showSuccessToast('Journal entry updated successfully!')
-      } else {
-        addJournalEntry(entryData)
-        showSuccessToast('Journal entry added successfully!')
+
+      const result = isUpdating
+        ? await updateJournalEntry(existingEntry.id, entryData)
+        : await addJournalEntry(entryData)
+
+      if (!result.ok) {
+        showErrorToast(
+          isUpdating
+            ? 'Failed to update journal entry. Please try again.'
+            : 'Failed to add journal entry. Please try again.'
+        )
+        return
       }
-      
+
+      setExistingEntry(result.entry)
+      setContent(result.entry.content || '')
+      setSelectedMood(result.entry.moodId || null)
       setIsEditing(false)
-    } catch (error) {
-      showErrorToast('Failed to save journal entry. Please try again.')
+      showSuccessToast(
+        isUpdating
+          ? 'Journal entry updated successfully!'
+          : 'Journal entry added successfully!'
+      )
+    } catch {
+      showErrorToast(
+        isUpdating
+          ? 'Failed to update journal entry. Please try again.'
+          : 'Failed to add journal entry. Please try again.'
+      )
+    } finally {
+      setIsSaving(false)
     }
   }
   
@@ -172,14 +198,26 @@ const JournalEntry = ({ habitId, date, habitName }) => {
     setIsEditing(true)
   }
   
-  const handleDeleteEntry = () => {
-    if (existingEntry) {
-      deleteJournalEntry(existingEntry.id)
+  const handleDeleteEntry = async () => {
+    if (!existingEntry || isDeleting) return
+
+    setIsDeleting(true)
+    try {
+      const result = await deleteJournalEntry(existingEntry.id)
+      if (!result.ok) {
+        showErrorToast('Failed to delete journal entry. Please try again.')
+        return
+      }
+
       setExistingEntry(null)
       setContent('')
       setSelectedMood(null)
       setIsEditing(true)
       showSuccessToast('Journal entry deleted successfully!')
+    } catch {
+      showErrorToast('Failed to delete journal entry. Please try again.')
+    } finally {
+      setIsDeleting(false)
     }
   }
   
@@ -205,6 +243,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
                 type="button"
                 $selected={selectedMood === mood.id}
                 onClick={() => setSelectedMood(mood.id)}
+                disabled={isSaving}
               >
                 <MoodEmoji>{mood.emoji}</MoodEmoji>
                 <MoodLabel>{mood.name}</MoodLabel>
@@ -217,6 +256,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
             placeholder="Reflect on your experience, challenges, or achievements..."
             value={content}
             onChange={(value) => setContent(value)}
+            disabled={isSaving}
             multiline
             rows={4}
             maxLength={500}
@@ -228,6 +268,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
               type="button"
               onClick={handleSaveEntry}
               disabled={!content.trim()}
+              loading={isSaving}
               fullWidth
             >
               Save Entry
@@ -237,6 +278,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
                 type="button"
                 variant="ghost"
                 onClick={() => setIsEditing(false)}
+                disabled={isSaving}
                 fullWidth
               >
                 Cancel
@@ -263,6 +305,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
               size="small"
               variant="ghost"
               onClick={handleEditEntry}
+              disabled={isDeleting}
             >
               Edit
             </Button>
@@ -271,6 +314,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
               size="small"
               variant="destructive"
               onClick={handleDeleteEntry}
+              loading={isDeleting}
             >
               Delete
             </Button>

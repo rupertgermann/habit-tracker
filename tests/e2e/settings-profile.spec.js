@@ -42,6 +42,14 @@ const contrastRatio = (foreground, background) => {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
+const appDesigns = [
+  { id: 'standard', name: 'Standard' },
+  { id: 'rhythm-ledger', name: 'Rhythm Ledger' },
+  { id: 'orbit', name: 'Orbit' },
+  { id: 'quiet-momentum', name: 'Quiet Momentum' },
+  { id: 'sunday-club', name: 'Sunday Club' }
+]
+
 test.beforeEach(async ({ request }) => {
   await resetAppData(request)
 })
@@ -62,19 +70,21 @@ test('design selection switches immediately and persists in the database', async
   await expect(designGroup.getByRole('radio', { name: 'Quiet Momentum' })).toBeChecked()
   await expect(page.locator('html')).toHaveAttribute('data-design', 'quiet-momentum')
 
-  await designGroup.getByText('Orbit', { exact: true }).click()
-  await expect(designGroup.getByRole('radio', { name: 'Orbit' })).toBeChecked()
-  await expect(page.locator('html')).toHaveAttribute('data-design', 'orbit')
-  await expect.poll(async () => {
-    const state = await getState(request)
-    return state.settings?.design
-  }).toBe('orbit')
-  await expectNoRootOverflow(page)
+  for (const appDesign of appDesigns) {
+    await designGroup.getByText(appDesign.name, { exact: true }).click()
+    await expect(designGroup.getByRole('radio', { name: appDesign.name })).toBeChecked()
+    await expect(page.locator('html')).toHaveAttribute('data-design', appDesign.id)
+    await expect.poll(async () => {
+      const state = await getState(request)
+      return state.settings?.design
+    }).toBe(appDesign.id)
+    await expectNoRootOverflow(page)
+  }
 
   await page.reload()
   await waitForAppReady(page)
-  await expect(page.getByRole('radio', { name: 'Orbit' })).toBeChecked()
-  await expect(page.locator('html')).toHaveAttribute('data-design', 'orbit')
+  await expect(page.getByRole('radio', { name: 'Sunday Club' })).toBeChecked()
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'sunday-club')
 })
 
 test('profile and calendar preferences use the database instead of legacy localStorage', async ({ page, request }) => {

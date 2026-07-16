@@ -75,12 +75,27 @@ export const createJournalEntryWriter = ({
     return operation
   }
 
+  const restorePreviousCollection = previousJournalEntries => {
+    const currentJournalEntries = getJournalEntries()
+    if (currentJournalEntries === previousJournalEntries) {
+      replaceJournalEntries(previousJournalEntries)
+      return previousJournalEntries
+    }
+
+    return currentJournalEntries
+  }
+
   const performCreate = async (entry) => {
     const previousJournalEntries = getJournalEntries()
 
     try {
       const committedEntry = await persistence.createJournalEntry(entry)
-      const journalEntries = [...previousJournalEntries, committedEntry]
+      const currentJournalEntries = getJournalEntries()
+      const journalEntries = currentJournalEntries.some(currentEntry => currentEntry.id === committedEntry.id)
+        ? currentJournalEntries.map(currentEntry => (
+            currentEntry.id === committedEntry.id ? committedEntry : currentEntry
+          ))
+        : [...currentJournalEntries, committedEntry]
       replaceJournalEntries(journalEntries)
 
       return {
@@ -90,12 +105,12 @@ export const createJournalEntryWriter = ({
         journalEntries
       }
     } catch (error) {
-      replaceJournalEntries(previousJournalEntries)
+      const journalEntries = restorePreviousCollection(previousJournalEntries)
       return {
         ok: false,
         changed: false,
         error,
-        journalEntries: previousJournalEntries
+        journalEntries
       }
     }
   }
@@ -120,7 +135,7 @@ export const createJournalEntryWriter = ({
 
     try {
       const committedEntry = await persistence.updateJournalEntry(entry)
-      const journalEntries = previousJournalEntries.map(currentEntry => (
+      const journalEntries = getJournalEntries().map(currentEntry => (
         currentEntry.id === id ? committedEntry : currentEntry
       ))
       replaceJournalEntries(journalEntries)
@@ -132,13 +147,13 @@ export const createJournalEntryWriter = ({
         journalEntries
       }
     } catch (error) {
-      replaceJournalEntries(previousJournalEntries)
+      const journalEntries = restorePreviousCollection(previousJournalEntries)
       return {
         ok: false,
         changed: false,
         entry: previousEntry,
         error,
-        journalEntries: previousJournalEntries
+        journalEntries
       }
     }
   }
@@ -157,7 +172,7 @@ export const createJournalEntryWriter = ({
 
     try {
       await persistence.deleteJournalEntry(id)
-      const journalEntries = previousJournalEntries.filter(entry => entry.id !== id)
+      const journalEntries = getJournalEntries().filter(entry => entry.id !== id)
       replaceJournalEntries(journalEntries)
 
       return {
@@ -167,13 +182,13 @@ export const createJournalEntryWriter = ({
         journalEntries
       }
     } catch (error) {
-      replaceJournalEntries(previousJournalEntries)
+      const journalEntries = restorePreviousCollection(previousJournalEntries)
       return {
         ok: false,
         changed: false,
         entry: previousEntry,
         error,
-        journalEntries: previousJournalEntries
+        journalEntries
       }
     }
   }

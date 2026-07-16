@@ -440,9 +440,9 @@ test('calendar stats for a count habit survive reload', async ({ page, request }
   const completionDates = includesYesterday ? [yesterdayKey, todayKey] : [todayKey]
   const daysWithEntry = new Set(completionDates).size
   const daysElapsed = today.getDate()
-  const daysWithoutEntry = daysElapsed - daysWithEntry
-  const expectedDaysSaid = `${Math.round((daysWithEntry / daysElapsed) * 100)}%`
-  const expectedDaysNotSaid = `${Math.round((daysWithoutEntry / daysElapsed) * 100)}%`
+  const daysSaidPercent = Math.round((daysWithEntry / daysElapsed) * 100)
+  const expectedDaysSaid = `${daysSaidPercent}%`
+  const expectedDaysNotSaid = `${100 - daysSaidPercent}%`
   const completions = [
     ...(includesYesterday ? [makeCompletion(yesterdayKey, 8)] : []),
     makeCompletion(todayKey, 9),
