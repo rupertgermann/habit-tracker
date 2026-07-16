@@ -32,6 +32,36 @@ const moodButton = (page, moodName) =>
   })
 
 test.describe('journal timeline regression coverage', () => {
+  test('failed Journal Entry create keeps the draft and reports failure without success', async ({ page, request }) => {
+    const habit = makeHabit({
+      id: 'journal-create-failure-habit',
+      name: 'Journal Create Failure'
+    })
+    const draft = 'Keep this exact reflection available for retry'
+    await resetAppData(request, { habits: [habit] })
+
+    await page.route('**/api/journal', async route => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        return
+      }
+      await route.continue()
+    })
+
+    await page.goto(`/habit/${habit.id}`)
+    await waitForAppReady(page)
+    await moodButton(page, 'Very Good').click()
+    const editor = page.getByPlaceholder(reflectionInput)
+    await editor.fill(draft)
+    await page.getByRole('button', { name: 'Save Entry' }).click()
+
+    await expect(page.getByText('Failed to add journal entry. Please try again.')).toBeVisible()
+    await expect(page.getByText('Journal entry added successfully!')).toHaveCount(0)
+    await expect(editor).toHaveValue(draft)
+    await expect(page.getByRole('button', { name: 'Save Entry' })).toBeEnabled()
+    expect(await getEntriesForHabitDate(request, habit.id, localDateKey())).toEqual([])
+  })
+
   test('creates, searches, edits, and deletes habit journal entries through the app surface', async ({ page, request }) => {
     await page.setViewportSize({ width: 390, height: 900 })
 
