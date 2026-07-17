@@ -122,8 +122,7 @@ habit-tracker/
 ├── shared/
 │   └── defaultCategories.json # Seed and legacy-restore defaults shared by server and client
 ├── server/
-│   ├── backupRestore.js       # Authoritative, transactional complete-state restore result
-│   ├── db.js                  # SQLite schema, seed data, JSON row helpers, settings helpers
+│   ├── db.js                  # SQLite schema, row helpers, settings, and complete-state restore
 │   ├── index.js               # Express REST API
 │   └── data/                  # Local SQLite database files, ignored by git
 ├── src/
@@ -132,7 +131,7 @@ habit-tracker/
 │   ├── api/                   # Frontend API client
 │   ├── components/            # Reusable UI components
 │   ├── context/               # Habits, theme, preferences, toast, and navigation contexts
-│   ├── domain/                # Tracking, Journal Entry writes, backup, timeline, and icon rules
+│   ├── domain/                # Pure tracking rules plus injected write and backup coordinators
 │   ├── screens/               # Route-level screens
 │   └── styles/                # Theme and global styles
 └── tests/
@@ -144,19 +143,20 @@ habit-tracker/
 
 ## Architecture
 
-The frontend uses React Context for app state and keeps domain rules in pure modules:
+The frontend uses React Context for live app state. Pure calculations stay separate from persistence-aware coordinators, whose effects are supplied through injected interfaces:
 
 - `HabitsContext` loads application state and supplies persistence-aware Completion and Journal Entry writers. Both return committed results, serialize same-record writes, and restore exact prior state after persistence failure.
-- `src/domain/dashboardHabitTracking.js` composes the shared Habit, Completion, Streak, and seven-day projection rules for all five dashboard presentations. App Designs own wording, layout, motion, and feedback rendering.
+- `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` contain pure date, Completion, Streak, Calendar Period, and timeline calculations.
+- `src/domain/dashboardHabitTracking.js` composes those shared calculations with the Completion writer, waits for in-flight Completion writes to settle, and returns committed semantic outcomes for all five dashboard presentations. App Designs own wording, layout, motion, and feedback rendering.
+- `src/domain/journalEntryWrites.js` coordinates injected persistence, same-entry ordering, exact rollback, and committed caller results.
 - `src/appDesign/catalog.jsx` is the single registration seam for each design's metadata, previews, light/dark themes, global styles, dashboard, primary navigation, and responsive frame.
 - `ThemeContext` resolves the selected catalog registration, stores design and light/dark preferences in the database, and removes legacy browser-storage theme values.
 - `PreferencesContext` stores week-start preference in the database and feeds calendar, journal, and progress calculations.
 - `ToastContext` owns notifications inside the UI.
 - `NavigationContext` keeps the bottom navigation aligned with the active route.
-- `src/domain/backup.js` creates canonical format-version `2` snapshots from persisted `/api/state`, validates and migrates supported legacy `1.0.0` files before mutation, and delegates browser I/O to `src/adapters/browserBackup.js`.
-- `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` contain date, streak, range, and timeline rules covered by domain tests.
+- `src/domain/backup.js` coordinates persisted-state reads and restore writes around pure canonical validation and legacy migration, while `src/adapters/browserBackup.js` owns browser file I/O.
 
-The backend stores each collection item as JSON in SQLite tables. Complete restore replaces Habits, Categories, Journal Entries, and settings in one SQLite transaction and returns the authoritative committed state.
+The backend stores each collection item as JSON in SQLite tables. `server/db.js` owns complete restore as one transaction over Habits, Categories, Journal Entries, and settings and returns the authoritative `{ ok, state }` result.
 
 ## API
 
@@ -192,7 +192,7 @@ The backend stores each collection item as JSON in SQLite tables. Complete resto
 
 Domain tests run with `npm run test:domain` and cover Habit tracking, dashboard semantic outcomes, persistence-aware Completion and Journal Entry writes, App Design registrations, canonical backup validation/migration, journal timelines, and database-backed preference normalization. Server tests force complete-restore failures to verify SQLite rollback.
 
-Browser tests run with `npm run test:e2e`. Playwright starts `npm run dev:e2e`, verifies the API is using `.tmp/e2e/habit-tracker.db`, and only then allows reset/restore operations. The suite covers cross-design Completion success and rollback, design switching and responsive dashboards, committed Journal Entry feedback, canonical and legacy backup/restore, persisted habit flows, profile/avatar persistence, calendar contrast, and responsive smoke coverage.
+Browser tests run with `npm run test:e2e`. Playwright starts `npm run dev:e2e`, verifies the API is using `.tmp/e2e/habit-tracker.db`, and only then allows reset/restore operations. The suite covers cross-design Completion success, reload, rollback, and confetti suppression; every App Design's light/dark persistence matrix; committed Journal Entry feedback; canonical and legacy backup/restore including visible failure preservation; persisted habit flows; profile/avatar persistence; calendar contrast; and responsive smoke coverage.
 
 ## Documentation
 

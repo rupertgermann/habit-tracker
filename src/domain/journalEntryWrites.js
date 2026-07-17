@@ -12,34 +12,27 @@ export const createInMemoryJournalEntryPersistence = ({ journalEntries = [] } = 
   const committedEntries = new Map(journalEntries.map(entry => [entry.id, entry]))
   let nextFailure = null
 
+  const throwNextFailure = () => {
+    if (!nextFailure) return
+
+    const error = nextFailure
+    nextFailure = null
+    throw error
+  }
+
   return {
     async createJournalEntry(entry) {
-      if (nextFailure) {
-        const error = nextFailure
-        nextFailure = null
-        throw error
-      }
-
+      throwNextFailure()
       committedEntries.set(entry.id, entry)
       return entry
     },
     async updateJournalEntry(entry) {
-      if (nextFailure) {
-        const error = nextFailure
-        nextFailure = null
-        throw error
-      }
-
+      throwNextFailure()
       committedEntries.set(entry.id, entry)
       return entry
     },
     async deleteJournalEntry(id) {
-      if (nextFailure) {
-        const error = nextFailure
-        nextFailure = null
-        throw error
-      }
-
+      throwNextFailure()
       committedEntries.delete(id)
     },
     getJournalEntries() {

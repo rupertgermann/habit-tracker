@@ -68,7 +68,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Data Management
 
-- **Location**: `src/domain/backup.js`, `src/adapters/browserBackup.js`, `src/api/backupPersistence.js`, `src/screens/Settings.jsx`, `server/backupRestore.js`, `server/db.js`
+- **Location**: `src/domain/backup.js`, `src/adapters/browserBackup.js`, `src/api/backupPersistence.js`, `src/screens/Settings.jsx`, `server/db.js`
 - JSON export downloads habit data.
 - CSV export downloads completion rows.
 - Canonical format-version `2` backup reads `/api/state` and preserves every Habit, Category, Journal Entry, and persisted settings key, including unknown future keys.
@@ -84,9 +84,10 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - `src/App.jsx` defines routes and provider order.
 - `src/api/habitsApi.js` centralizes REST requests.
 - `src/context/HabitsContext.jsx` owns Habit, Category, Completion, and Journal Entry state and injects production persistence into the shared writers.
-- `src/domain/dashboardHabitTracking.js` is the dashboard-facing tracking seam.
-- `src/domain/journalEntryWrites.js` owns Journal Entry state replacement, persistence ordering, rollback, and caller results.
-- `src/domain/backup.js` owns canonical backup creation, validation, legacy migration, and restore results.
+- `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` provide pure Habit, Completion, Streak, Calendar Period, and timeline calculations.
+- `src/domain/dashboardHabitTracking.js` composes those calculations with the persistence-aware Completion writer, settles in-flight Completion writes, and returns committed dashboard outcomes.
+- `src/domain/journalEntryWrites.js` coordinates injected Journal Entry persistence, state replacement, same-entry ordering, exact rollback, and caller results.
+- `src/domain/backup.js` coordinates injected persisted-state reads and restore writes around canonical validation and legacy migration; browser file effects stay in `src/adapters/browserBackup.js`.
 - `shared/defaultCategories.json` keeps first-run and legacy-restore Category defaults identical.
 - `src/appDesign/catalog.jsx` registers metadata, previews, themes, global styles, dashboards, primary navigation, and responsive frames for all five designs.
 - `src/context/ThemeContext.jsx` owns persisted design and light/dark state and resolves both through the catalog.
@@ -97,8 +98,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Backend
 
 - `server/index.js` exposes the REST API on `127.0.0.1:3301` by default.
-- `server/db.js` initializes SQLite, enables WAL mode and foreign keys, seeds default categories, and provides JSON row helpers plus transactional complete-state replacement.
-- `server/backupRestore.js` wraps complete-state replacement in the authoritative `{ ok, state }` API result.
+- `server/db.js` initializes SQLite, enables WAL mode and foreign keys, seeds default categories, provides JSON row helpers, and owns transactional complete-state restore with the authoritative `{ ok, state }` result.
 - The database path defaults to `server/data/habit-tracker.db` and can be overridden with `HABIT_TRACKER_DB_PATH`.
 - Tables:
   - `habits`
@@ -166,7 +166,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - **Location**: `tests/e2e/`, `playwright.config.js`, `scripts/run-e2e-dev.mjs`
 - Uses a temp SQLite database under `.tmp/e2e`.
 - Verifies the runtime marker before destructive reset/restore operations.
-- Covers cross-design Completion persistence and failure rollback, design persistence, every design dashboard at mobile and desktop sizes, committed Journal Entry create/update/delete behavior, canonical and legacy backup/restore, invalid-file rejection, profile/avatar settings, dark calendar contrast, and responsive smoke coverage.
+- Covers cross-design Completion persistence, reload, failure rollback, and confetti suppression; every App Design in light and dark mode across reloads; every design dashboard at mobile and desktop sizes; committed Journal Entry create/update/delete behavior; canonical and legacy backup/restore including visible failure preservation; invalid-file rejection; profile/avatar settings; dark calendar contrast; and responsive smoke coverage.
 
 ### Documentation Screenshots
 
