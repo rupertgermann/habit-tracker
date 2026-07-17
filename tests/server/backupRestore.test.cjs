@@ -8,10 +8,6 @@ const testDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'backup-restore-'))
 process.env.HABIT_TRACKER_DB_PATH = path.join(testDirectory, 'habit-tracker.db')
 
 const store = require('../../server/db')
-const { createStateRestorer } = require('../../server/backupRestore')
-const restoreState = createStateRestorer({
-  replaceAll: store.replaceAll
-})
 
 const replacementState = {
   habits: [{
@@ -46,7 +42,7 @@ test.beforeEach(() => {
 })
 
 test('complete restore commits exact state and returns the authoritative result', () => {
-  const result = restoreState(replacementState)
+  const result = store.restoreState(replacementState)
 
   assert.deepEqual(result, {
     ok: true,
@@ -70,7 +66,7 @@ test('forced complete restore failure preserves exact previous state', () => {
       }
     }
   }
-  store.replaceAll(priorState)
+  store.restoreState(priorState)
   store.db.exec(`
     CREATE TRIGGER force_complete_restore_failure
     BEFORE INSERT ON settings
@@ -80,7 +76,7 @@ test('forced complete restore failure preserves exact previous state', () => {
   `)
 
   assert.throws(
-    () => restoreState(replacementState),
+    () => store.restoreState(replacementState),
     /forced complete restore failure/
   )
   assert.deepEqual(store.getState(), priorState)

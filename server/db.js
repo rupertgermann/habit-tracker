@@ -126,7 +126,7 @@ function getState() {
   }
 }
 
-function replaceAll({ habits = [], categories = [], journalEntries = [], settings = {} }) {
+function restoreState({ habits = [], categories = [], journalEntries = [], settings = {} }) {
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM habits').run()
     db.prepare('DELETE FROM categories').run()
@@ -150,7 +150,10 @@ function replaceAll({ habits = [], categories = [], journalEntries = [], setting
       insertSetting.run(key, JSON.stringify(value))
     }
 
-    return getState()
+    return {
+      ok: true,
+      state: getState()
+    }
   })
   return tx()
 }
@@ -176,6 +179,6 @@ module.exports = {
   upsertRow,
   upsertSetting,
   deleteRow,
-  replaceAll,
+  restoreState,
   clearAll
 }

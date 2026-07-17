@@ -181,6 +181,11 @@ test('restore transport failure preserves state and does not reload', async ({ p
   await resetAppData(request, priorState)
   await page.goto('/settings')
   await waitForAppReady(page)
+  await expect(page.getByText('prior User', { exact: true })).toBeVisible()
+  await expect(page.getByText('prior@example.com', { exact: true })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Orbit' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Dark Mode' })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Week Starts On' })).toHaveText('Monday')
   page.on('dialog', dialog => dialog.accept())
   let navigationCount = 0
   page.on('framenavigated', () => {
@@ -198,4 +203,10 @@ test('restore transport failure preserves state and does not reload', async ({ p
   await page.waitForTimeout(1700)
   expect(navigationCount).toBe(0)
   expect(await getState(request)).toEqual(priorState)
+  await expect(page.getByText('prior User', { exact: true })).toBeVisible()
+  await expect(page.getByText('prior@example.com', { exact: true })).toBeVisible()
+  await expect(page.getByText('failed User', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Orbit' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Dark Mode' })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Week Starts On' })).toHaveText('Monday')
 })
