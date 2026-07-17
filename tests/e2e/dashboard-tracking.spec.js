@@ -191,6 +191,15 @@ test('all App Designs expose identical dashboard facts and semantic complete/inc
     })
     await expect.poll(() => hasConfettiPixels(page)).toBe(true)
 
+    if (design.id === 'standard') {
+      await page.reload()
+      await waitForAppReady(page)
+      await expect(page.getByRole('button', {
+        name: `Mark as incomplete: ${targetName}`
+      }).last()).toBeVisible()
+      await expect.poll(() => completionCount(request, targetId, today)).toBe(1)
+    }
+
     const habitsWithTargetComplete = baseHabits.map(habit => (
       habit.id === targetId
         ? { ...habit, completions: [makeCompletion(today, 9)] }
@@ -260,6 +269,7 @@ test('all App Designs roll dashboard Completion failure back without success fee
     })
     await page.goto('/')
     await waitForAppReady(page)
+    await expect.poll(() => hasConfettiPixels(page)).toBe(false)
 
     await page.getByRole('button', {
       name: `Mark as complete: ${habitName}`
@@ -271,5 +281,7 @@ test('all App Designs roll dashboard Completion failure back without success fee
       name: `Mark as complete: ${habitName}`
     }).last()).toBeVisible()
     await expect.poll(() => completionCount(request, habitId, today)).toBe(0)
+    await page.waitForTimeout(250)
+    expect(await hasConfettiPixels(page)).toBe(false)
   }
 })

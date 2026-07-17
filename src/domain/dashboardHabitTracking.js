@@ -27,7 +27,8 @@ const getDashboardSnapshot = ({
 
 export const createDashboardHabitTracking = ({
   getHabits,
-  toggleYesNoCompletion
+  toggleYesNoCompletion,
+  settleCompletionWrites = async () => {}
 }) => {
   const getSnapshot = ({
     referenceDate = new Date(),
@@ -45,6 +46,7 @@ export const createDashboardHabitTracking = ({
     const result = await toggleYesNoCompletion(habitId, referenceDate)
     if (!result.ok) return result
 
+    await settleCompletionWrites()
     const currentHabits = getHabits()
     const includesUpdatedHabit = currentHabits.some(habit => habit.id === result.habit.id)
     const resultingHabits = includesUpdatedHabit

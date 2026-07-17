@@ -95,6 +95,11 @@ const createCompletionWriter = ({
 
       pendingWrites.set(habitId, trackedOperation)
       return operation
+    },
+    async settle() {
+      while (pendingWrites.size > 0) {
+        await Promise.all(pendingWrites.values())
+      }
     }
   }
 }
@@ -106,7 +111,8 @@ export const createYesNoCompletionWriter = (dependencies) => {
   })
 
   return {
-    toggle: input => writer.write(input)
+    toggle: input => writer.write(input),
+    settle: () => writer.settle()
   }
 }
 

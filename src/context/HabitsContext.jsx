@@ -247,7 +247,10 @@ export const HabitsProvider = ({
 
   const dashboardHabitTracking = createDashboardHabitTracking({
     getHabits: () => habitsRef.current,
-    toggleYesNoCompletion
+    toggleYesNoCompletion,
+    settleCompletionWrites: () => createYesNoCompletionWriter(
+      getCompletionWriterDependencies()
+    ).settle()
   })
 
   const addCategory = (categoryData) => {

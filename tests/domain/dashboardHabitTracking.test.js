@@ -22,9 +22,10 @@ const completion = date => ({
   completedAt: `${date}T08:00:00.000Z`
 })
 
-const createHarness = habits => {
+const createHarness = (habits, {
+  persistence = createInMemoryCompletionPersistence({ habits })
+} = {}) => {
   let currentHabits = habits
-  const persistence = createInMemoryCompletionPersistence({ habits })
   const writer = createYesNoCompletionWriter({
     persistence,
     getHabit: habitId => currentHabits.find(habit => habit.id === habitId),
@@ -36,7 +37,8 @@ const createHarness = habits => {
   })
   const dashboard = createDashboardHabitTracking({
     getHabits: () => currentHabits,
-    toggleYesNoCompletion: (habitId, date) => writer.toggle({ habitId, date })
+    toggleYesNoCompletion: (habitId, date) => writer.toggle({ habitId, date }),
+    settleCompletionWrites: () => writer.settle()
   })
 
   return {
@@ -260,6 +262,68 @@ export const tests = [
           completionState: 'complete',
           completedCount: 3,
           allComplete: true,
+          intermediateMilestone: false
+        }
+      )
+    }
+  },
+  {
+    name: 'dashboard milestone outcomes exclude another Habit update that later fails',
+    async run() {
+      let rejectPendingUpdate
+      let markCommittedUpdateStarted
+      const committedUpdateStarted = new Promise(resolve => {
+        markCommittedUpdateStarted = resolve
+      })
+      const persistence = {
+        async updateHabit(habit) {
+          if (habit.id === 'pending-failure') {
+            return new Promise((resolve, reject) => {
+              rejectPendingUpdate = reject
+            })
+          }
+
+          markCommittedUpdateStarted()
+          return habit
+        }
+      }
+      const { dashboard } = createHarness([
+        makeHabit({ id: 'committed-success' }),
+        makeHabit({ id: 'pending-failure' })
+      ], { persistence })
+
+      const pendingFailure = dashboard.toggleYesNo({
+        habitId: 'pending-failure',
+        referenceDate
+      })
+      const committedSuccess = dashboard.toggleYesNo({
+        habitId: 'committed-success',
+        referenceDate
+      })
+
+      await committedUpdateStarted
+      await new Promise(resolve => setTimeout(resolve, 0))
+      rejectPendingUpdate(new Error('forced pending update failure'))
+
+      const [failedResult, committedResult] = await Promise.all([
+        pendingFailure,
+        committedSuccess
+      ])
+
+      assert.equal(failedResult.ok, false)
+      assert.deepEqual(
+        {
+          ok: committedResult.ok,
+          completionState: committedResult.completionState,
+          completedCount: committedResult.completedCount,
+          allComplete: committedResult.allComplete,
+          intermediateMilestone: committedResult.intermediateMilestone
+        },
+        {
+          ok: true,
+          completionState: 'complete',
+          completedCount: 1,
+          allComplete: false,
           intermediateMilestone: false
         }
       )
