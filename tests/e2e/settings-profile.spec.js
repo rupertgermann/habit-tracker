@@ -165,6 +165,82 @@ test('profile and calendar preferences use the database instead of legacy localS
   })
 })
 
+test('profile identity stays readable across designs and responsive widths', async ({ page, request }) => {
+  await resetAppData(request, {
+    settings: {
+      design: 'standard',
+      profile: {
+        name: 'Rupert',
+        email: 'user@example.com',
+        avatarImage: `data:image/png;base64,${avatarPng.toString('base64')}`
+      }
+    }
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  const profileName = page.getByRole('heading', { name: 'Rupert', exact: true })
+  const profileEmail = page.getByText('user@example.com', { exact: true })
+  const designGroup = page.getByRole('radiogroup', { name: 'App design' })
+  const designs = [
+    { label: 'Standard', value: 'standard' },
+    { label: 'Rhythm Ledger', value: 'rhythm-ledger' },
+    { label: 'Orbit', value: 'orbit' },
+    { label: 'Quiet Momentum', value: 'quiet-momentum' },
+    { label: 'Sunday Club', value: 'sunday-club' }
+  ]
+  const viewports = [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 }
+  ]
+
+  await expect(profileName).toBeVisible()
+  await expect(profileEmail).toBeVisible()
+
+  for (const design of designs) {
+    if (design.value !== 'standard') {
+      await designGroup.getByText(design.label, { exact: true }).click()
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-design', design.value)
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport)
+
+      const identityMetrics = await Promise.all([
+        profileName.evaluate(element => {
+          const rect = element.getBoundingClientRect()
+          return {
+            height: rect.height,
+            lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+            width: rect.width
+          }
+        }),
+        profileEmail.evaluate(element => {
+          const rect = element.getBoundingClientRect()
+          return {
+            height: rect.height,
+            lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+            width: rect.width
+          }
+        })
+      ])
+      const context = `${design.label} at ${viewport.width}px`
+
+      expect(identityMetrics[0].width, `${context} username width`).toBeGreaterThanOrEqual(120)
+      expect(identityMetrics[0].height, `${context} username line count`)
+        .toBeLessThanOrEqual(identityMetrics[0].lineHeight * 1.25)
+      expect(identityMetrics[1].width, `${context} email width`).toBeGreaterThanOrEqual(120)
+      expect(identityMetrics[1].height, `${context} email line count`)
+        .toBeLessThanOrEqual(identityMetrics[1].lineHeight * 1.25)
+      await expectNoRootOverflow(page)
+    }
+  }
+})
+
 test('profile avatar image is stored in the database and survives reloads', async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/settings')

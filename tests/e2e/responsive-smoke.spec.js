@@ -231,6 +231,141 @@ test.describe('responsive smoke coverage', () => {
     await assertNoConsoleErrors()
   })
 
+  test("today's progress card uses the right layout across designs and responsive widths", async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    const progressViewports = [
+      { width: 390, height: 844, wide: false },
+      { width: 768, height: 1024, wide: true },
+      { width: 1024, height: 768, wide: true },
+      { width: 1280, height: 800, wide: true },
+      { width: 1440, height: 900, wide: true }
+    ]
+
+    for (const design of designIds) {
+      await resetAppData(request, {
+        ...smokeState,
+        settings: {
+          theme: 'light',
+          design
+        }
+      })
+      await page.goto('/progress')
+      await waitForAppReady(page)
+      await expect(page.locator('html')).toHaveAttribute('data-design', design)
+
+      const progressTitle = page.getByRole('heading', { name: "Today's Progress", exact: true })
+      const progressCard = progressTitle.locator('..')
+      await expect(progressTitle).toBeVisible()
+
+      for (const viewport of progressViewports) {
+        await page.setViewportSize(viewport)
+        const layout = await progressCard.evaluate(element => {
+          const title = element.querySelector('h2')
+          const progress = element.querySelector('svg')?.parentElement
+          const percentage = progress.querySelector('span')
+          const titleRect = title.getBoundingClientRect()
+          const progressRect = progress.getBoundingClientRect()
+
+          return {
+            titleBottom: titleRect.bottom,
+            titleRight: titleRect.right,
+            titleCenterX: titleRect.left + titleRect.width / 2,
+            titleCenterY: titleRect.top + titleRect.height / 2,
+            progressLeft: progressRect.left,
+            progressTop: progressRect.top,
+            progressWidth: progressRect.width,
+            progressCenterX: progressRect.left + progressRect.width / 2,
+            progressCenterY: progressRect.top + progressRect.height / 2,
+            percentageFontSize: Number.parseFloat(getComputedStyle(percentage).fontSize)
+          }
+        })
+        const context = `${design} at ${viewport.width}px`
+
+        expect(layout.percentageFontSize, `${context} percentage fits its ring`)
+          .toBeLessThanOrEqual(layout.progressWidth * 0.32)
+
+        if (viewport.wide) {
+          expect(layout.titleRight, `${context} title precedes ring`).toBeLessThan(layout.progressLeft)
+          expect(
+            Math.abs(layout.titleCenterY - layout.progressCenterY),
+            `${context} title and ring share a row`
+          ).toBeLessThanOrEqual(24)
+        } else {
+          expect(layout.titleBottom, `${context} title precedes ring`).toBeLessThan(layout.progressTop)
+          expect(
+            Math.abs(layout.titleCenterX - layout.progressCenterX),
+            `${context} title and ring stay centered`
+          ).toBeLessThanOrEqual(2)
+        }
+        await expectNoRootOverflow(page)
+      }
+    }
+  })
+
+  test('journal week controls adapt across designs and responsive widths', async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    const journalViewports = [
+      { width: 390, height: 844, phone: true },
+      { width: 768, height: 1024, phone: false },
+      { width: 1024, height: 768, phone: false },
+      { width: 1280, height: 800, phone: false },
+      { width: 1440, height: 900, phone: false }
+    ]
+
+    for (const design of designIds) {
+      await resetAppData(request, {
+        ...smokeState,
+        settings: {
+          theme: 'light',
+          design
+        }
+      })
+      await page.setViewportSize(journalViewports[0])
+      await page.goto('/journal')
+      await waitForAppReady(page)
+      await expect(page.locator('html')).toHaveAttribute('data-design', design)
+
+      const weekDate = page.getByRole('heading', { level: 2 })
+      const previous = page.getByRole('button', { name: 'Previous', exact: true })
+      const next = page.getByRole('button', { name: 'Next', exact: true })
+      const thisWeek = page.getByRole('button', { name: 'Go to This Week', exact: true })
+      await expect(weekDate).toBeVisible()
+
+      for (const viewport of journalViewports) {
+        await page.setViewportSize(viewport)
+        const layout = await Promise.all([weekDate, previous, next, thisWeek].map(locator => (
+          locator.evaluate(element => {
+            const rect = element.getBoundingClientRect()
+            return {
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              left: rect.left,
+              centerY: rect.top + rect.height / 2
+            }
+          })
+        )))
+        const context = `${design} at ${viewport.width}px`
+
+        if (viewport.phone) {
+          expect(layout[0].bottom, `${context} date precedes navigation`)
+            .toBeLessThanOrEqual(Math.min(layout[1].top, layout[2].top))
+        } else {
+          expect(Math.abs(layout[0].centerY - layout[1].centerY), `${context} date shares desktop row`)
+            .toBeLessThanOrEqual(4)
+          expect(Math.abs(layout[0].centerY - layout[2].centerY), `${context} date shares desktop row`)
+            .toBeLessThanOrEqual(4)
+        }
+        expect(Math.abs(layout[1].centerY - layout[2].centerY), `${context} navigation alignment`)
+          .toBeLessThanOrEqual(2)
+        expect(layout[1].right, `${context} navigation order`).toBeLessThan(layout[2].left)
+        expect(layout[3].top, `${context} this-week action remains separate`)
+          .toBeGreaterThanOrEqual(Math.max(layout[1].bottom, layout[2].bottom))
+        await expectNoRootOverflow(page)
+      }
+    }
+  })
+
   for (const viewport of viewports) {
     test(`progress current streak timeline behaves consistently on ${viewport.name}`, async ({ page, request }) => {
       const smokeState = buildSmokeState()

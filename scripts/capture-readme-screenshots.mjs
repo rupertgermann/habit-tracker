@@ -202,12 +202,21 @@ const screenshotState = {
       email: 'rupert@example.com',
       avatarImage: null
     },
+    design: 'standard',
     theme: 'light',
     preferences: {
       weekStartsOn: 1
     }
   }
 }
+
+const designScreenshots = [
+  { design: 'standard', file: 'readme-dashboard-light.png' },
+  { design: 'rhythm-ledger', file: 'readme-dashboard-rhythm-ledger.png' },
+  { design: 'orbit', file: 'readme-dashboard-orbit.png' },
+  { design: 'quiet-momentum', file: 'readme-dashboard-quiet-momentum.png' },
+  { design: 'sunday-club', file: 'readme-dashboard-sunday-club.png' }
+]
 
 const restoreState = async settings => {
   const response = await fetch(`${baseURL}/api/restore`, {
@@ -240,41 +249,67 @@ try {
   await waitFor(`${baseURL}/api/runtime`)
 
   const browser = await chromium.launch()
-  const context = await browser.newContext({
+  const desktopContext = await browser.newContext({
+    baseURL,
+    viewport: { width: 1280, height: 900 },
+    deviceScaleFactor: 1
+  })
+  const desktopPage = await desktopContext.newPage()
+
+  for (const screenshot of designScreenshots) {
+    await restoreState({ design: screenshot.design, theme: 'light' })
+    await desktopPage.goto('/')
+    await expect(desktopPage.locator('html')).toHaveAttribute('data-design', screenshot.design)
+    await expect(desktopPage.getByText('Deep Work Block')).toBeVisible()
+    await waitForSettledFrame(desktopPage)
+    await desktopPage.evaluate(() => window.scrollTo(0, 0))
+    await desktopPage.screenshot({
+      path: path.join(outputDir, screenshot.file)
+    })
+  }
+
+  await restoreState({ design: 'standard', theme: 'light' })
+  await desktopPage.goto('/settings')
+  const designPicker = desktopPage.getByRole('radiogroup', { name: 'App design' })
+  await expect(designPicker.getByRole('radio')).toHaveCount(5)
+  await waitForSettledFrame(desktopPage)
+  const appearanceSection = desktopPage.getByRole('heading', { name: 'Appearance' }).locator('..')
+  await appearanceSection.screenshot({
+    path: path.join(outputDir, 'readme-settings-appearance.png')
+  })
+
+  await desktopContext.close()
+
+  const mobileContext = await browser.newContext({
     baseURL,
     viewport: { width: 390, height: 900 },
     deviceScaleFactor: 2
   })
-  const page = await context.newPage()
+  const mobilePage = await mobileContext.newPage()
 
-  await restoreState({ theme: 'light' })
-  await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
-  await expect(page.getByText('Deep Work Block')).toBeVisible()
-  await waitForSettledFrame(page)
-  await page.screenshot({
-    path: path.join(outputDir, 'readme-dashboard-light.png')
-  })
-
-  await restoreState({ theme: 'dark' })
-  await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
-  await expect(page.getByText('Deep Work Block')).toBeVisible()
-  await waitForSettledFrame(page)
-  await page.screenshot({
+  await restoreState({ design: 'standard', theme: 'dark' })
+  await mobilePage.goto('/')
+  await expect(mobilePage.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+  await expect(mobilePage.getByText('Deep Work Block')).toBeVisible()
+  await waitForSettledFrame(mobilePage)
+  await mobilePage.screenshot({
     path: path.join(outputDir, 'readme-dashboard-dark.png')
   })
 
-  await page.goto('/calendar')
-  await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
-  await expect(page.getByText('This Month: Days Said')).toBeVisible()
-  await waitForSettledFrame(page)
-  await page.screenshot({
+  await mobilePage.goto('/calendar')
+  await expect(mobilePage.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
+  await expect(mobilePage.getByText('This Month: Days Said')).toBeVisible()
+  await waitForSettledFrame(mobilePage)
+  await mobilePage.screenshot({
     path: path.join(outputDir, 'readme-calendar-dark.png')
   })
 
+  await mobileContext.close()
   await browser.close()
-  console.log('Captured docs/images/readme-dashboard-light.png')
+  for (const screenshot of designScreenshots) {
+    console.log(`Captured docs/images/${screenshot.file}`)
+  }
+  console.log('Captured docs/images/readme-settings-appearance.png')
   console.log('Captured docs/images/readme-dashboard-dark.png')
   console.log('Captured docs/images/readme-calendar-dark.png')
 } catch (error) {

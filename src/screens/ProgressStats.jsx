@@ -75,12 +75,24 @@ const ProgressCard = styled(Card)`
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  @media (min-width: ${props => props.theme.breakpoints.mobile}) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: ${props => props.theme.spacing.xl};
+  }
 `
 
 const ProgressTitle = styled.h2`
   font-size: ${props => props.theme.typography.fontSize.headingMedium};
   margin-bottom: ${props => props.theme.spacing.lg};
   text-align: center;
+
+  @media (min-width: ${props => props.theme.breakpoints.mobile}) {
+    font-size: min(${props => props.theme.typography.fontSize.headingMedium}, 32px);
+    margin-bottom: 0;
+    text-align: left;
+  }
 `
 
 const StreakSection = styled.div`

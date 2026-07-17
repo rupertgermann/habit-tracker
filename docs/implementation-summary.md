@@ -81,7 +81,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Frontend
 
-- `src/App.jsx` defines routes and provider order.
+- `src/App.jsx` defines routes, provider order, and the Dashboard/navigation/global-style mapping for each design.
 - `src/api/habitsApi.js` centralizes REST requests.
 - `src/context/HabitsContext.jsx` owns Habit, Category, Completion, and Journal Entry state and injects production persistence into the shared writers.
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` provide pure Habit, Completion, Streak, Calendar Period, and timeline calculations.
@@ -172,12 +172,14 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 - **Location**: `scripts/capture-readme-screenshots.mjs`, `docs/images/`
 - Seeds example habits and journal entries into `.tmp/screenshots/habit-tracker.db`.
-- Captures light dashboard, dark dashboard, and dark calendar screenshots for the README.
+- Captures wide Dashboard screenshots for Standard, Rhythm Ledger, Orbit, Quiet Momentum, and Sunday Club.
+- Captures the Appearance picker plus mobile Standard dark-mode and Calendar dark-mode surfaces.
+- Uses isolated `3330/3331` servers and synthetic profile data so documentation assets never depend on the user's database.
 
 ## Accessibility and Responsive Behavior
 
-- Interactive controls use labels, focus styles, and keyboard-reachable elements.
-- The bottom navigation supports the main mobile routes.
+- A skip-to-main link and keyboard-reachable controls provide a direct path into each screen's content.
+- Every design exposes the main routes through an accessible primary navigation with a touch-safe mobile layout.
 - Wide viewports switch habit list/detail workflows into a split layout.
 - Playwright smoke tests assert no root overflow across mobile and desktop viewports.
 - Dark-mode tests assert contrast-sensitive calendar cells and settings controls remain readable.
