@@ -425,6 +425,37 @@ test.describe('responsive smoke coverage', () => {
     })
   }
 
+  test('Orbit dashboard dispatch action keeps readable contrast in dark mode', async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    await resetAppData(request, {
+      ...smokeState,
+      settings: {
+        theme: 'dark',
+        design: 'orbit'
+      }
+    })
+    await page.goto('/')
+    await waitForAppReady(page)
+
+    await expect(page.locator('html')).toHaveAttribute('data-design', 'orbit')
+    const dispatchAction = page.getByRole('button', { name: 'Inspect pattern', exact: true })
+    await expect(dispatchAction).toBeVisible()
+
+    const colors = await dispatchAction.evaluate(element => {
+      const style = getComputedStyle(element)
+      return {
+        background: style.backgroundColor,
+        text: style.color
+      }
+    })
+
+    expect(
+      contrastRatio(parseRgb(colors.text), parseRgb(colors.background)),
+      'Orbit dark-mode dispatch action label remains readable'
+    ).toBeGreaterThanOrEqual(4.5)
+    await expectNoRootOverflow(page)
+  })
+
   test('calendar heatmap cells keep readable contrast in dark mode', async ({ page, request }) => {
     const smokeState = buildSmokeState()
     await resetAppData(request, {
