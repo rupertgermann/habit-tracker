@@ -80,7 +80,7 @@ Below the wide breakpoint, every design uses a touch-safe bottom navigation suit
 
 ### Prerequisites
 
-- Node.js 20.19+ (Node 22 recommended for Vite 8)
+- Node.js 24.x (run `nvm use` to select the version from `.nvmrc`)
 - npm
 
 ### Install
