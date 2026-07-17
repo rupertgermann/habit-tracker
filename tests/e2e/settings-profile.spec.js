@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import {
   expectNoRootOverflow,
+  installConsoleErrorGuard,
   resetAppData,
   waitForAppReady
 } from './helpers.js'
@@ -54,37 +55,64 @@ test.beforeEach(async ({ request }) => {
   await resetAppData(request)
 })
 
-test('design selection switches immediately and persists in the database', async ({ page, request }) => {
+test('every App Design appearance persists and resolves after reload', async ({ page, request }) => {
+  test.slow()
   await resetAppData(request, {
     settings: {
       theme: 'light',
-      design: 'quiet-momentum'
+      design: 'standard'
     }
   })
   await page.setViewportSize({ width: 390, height: 900 })
+  const assertNoConsoleErrors = installConsoleErrorGuard(page)
   await page.goto('/settings')
   await waitForAppReady(page)
 
   const designGroup = page.getByRole('radiogroup', { name: 'App design' })
+  const darkMode = page.getByRole('checkbox', { name: 'Dark Mode' })
+  const darkModeToggle = page.locator('label').filter({ has: darkMode })
   await expect(designGroup.getByRole('radio')).toHaveCount(5)
-  await expect(designGroup.getByRole('radio', { name: 'Quiet Momentum' })).toBeChecked()
-  await expect(page.locator('html')).toHaveAttribute('data-design', 'quiet-momentum')
 
   for (const appDesign of appDesigns) {
     await designGroup.getByText(appDesign.name, { exact: true }).click()
-    await expect(designGroup.getByRole('radio', { name: appDesign.name })).toBeChecked()
-    await expect(page.locator('html')).toHaveAttribute('data-design', appDesign.id)
-    await expect.poll(async () => {
-      const state = await getState(request)
-      return state.settings?.design
-    }).toBe(appDesign.id)
-    await expectNoRootOverflow(page)
+
+    for (const appearance of [
+      { value: 'light', isDark: false },
+      { value: 'dark', isDark: true }
+    ]) {
+      if (await darkMode.isChecked() !== appearance.isDark) {
+        await darkModeToggle.click()
+      }
+      await expect(designGroup.getByRole('radio', { name: appDesign.name })).toBeChecked()
+      await expect(darkMode).toBeChecked({ checked: appearance.isDark })
+      await expect(page.locator('html')).toHaveAttribute('data-design', appDesign.id)
+      if (appearance.isDark) {
+        await expect(page.locator('body')).toHaveClass(/dark-mode/)
+      } else {
+        await expect(page.locator('body')).not.toHaveClass(/dark-mode/)
+      }
+      await expect.poll(async () => {
+        const state = await getState(request)
+        return {
+          design: state.settings?.design,
+          theme: state.settings?.theme
+        }
+      }).toEqual({
+        design: appDesign.id,
+        theme: appearance.value
+      })
+      await expectNoRootOverflow(page)
+
+      await page.reload()
+      await waitForAppReady(page)
+      await expect(designGroup.getByRole('radio', { name: appDesign.name })).toBeChecked()
+      await expect(darkMode).toBeChecked({ checked: appearance.isDark })
+      await expect(page.locator('html')).toHaveAttribute('data-design', appDesign.id)
+      await expectNoRootOverflow(page)
+    }
   }
 
-  await page.reload()
-  await waitForAppReady(page)
-  await expect(page.getByRole('radio', { name: 'Sunday Club' })).toBeChecked()
-  await expect(page.locator('html')).toHaveAttribute('data-design', 'sunday-club')
+  await assertNoConsoleErrors()
 })
 
 test('profile and calendar preferences use the database instead of legacy localStorage', async ({ page, request }) => {
