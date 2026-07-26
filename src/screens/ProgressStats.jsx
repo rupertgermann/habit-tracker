@@ -105,14 +105,10 @@ const StatCard = styled(Card)`
 `
 
 const StatValue = styled.div`
-  font-size: ${props => props.theme.typography.fontSize.headingLarge};
+  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, 42px)`};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
-`
-
-const RateStatValue = styled(StatValue)`
-  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, 42px)`};
 `
 
 const StatLabel = styled.div`
@@ -306,7 +302,7 @@ const ProgressStats = () => {
           <StatLabel>Total Habits</StatLabel>
         </StatCard>
         <StatCard elevated>
-          <RateStatValue>{stats.completionRate}%</RateStatValue>
+          <StatValue>{stats.completionRate}%</StatValue>
           <StatLabel>Today's Rate</StatLabel>
         </StatCard>
         <StatCard elevated>

@@ -256,6 +256,7 @@ test.describe('responsive smoke coverage', () => {
       const progressTitle = page.getByRole('heading', { name: "Today's Progress", exact: true })
       const progressCard = progressTitle.locator('..')
       const todayRateCard = page.getByText("Today's Rate", { exact: true }).locator('..')
+      const summaryGrid = todayRateCard.locator('..')
       await expect(progressTitle).toBeVisible()
       await expect(todayRateCard).toBeVisible()
 
@@ -281,25 +282,52 @@ test.describe('responsive smoke coverage', () => {
             percentageFontSize: Number.parseFloat(getComputedStyle(percentage).fontSize)
           }
         })
-        const rateLayout = await todayRateCard.evaluate(element => {
-          const value = element.firstElementChild
+        const summaryLayout = await summaryGrid.evaluate(element =>
+          Array.from(element.children).map(card => {
+            const value = card.firstElementChild
+            const style = getComputedStyle(value)
 
-          return {
-            cardContentWidth: element.clientWidth,
-            valueFontSize: Number.parseFloat(getComputedStyle(value).fontSize),
-            valueScrollWidth: value.scrollWidth
-          }
-        })
+            return {
+              cardContentWidth: card.clientWidth,
+              valueColor: style.color,
+              valueFontSize: Number.parseFloat(style.fontSize),
+              valueFontWeight: style.fontWeight,
+              valueLineHeight: style.lineHeight,
+              valueScrollWidth: value.scrollWidth
+            }
+          })
+        )
         const context = `${design} at ${viewport.width}px`
+        const baselineSummaryValue = summaryLayout[0]
 
         expect(layout.percentageFontSize, `${context} percentage fits its ring`)
           .toBeLessThanOrEqual(layout.progressWidth * 0.27)
-        expect(rateLayout.valueFontSize, `${context} rate percentage stays compact`)
-          .toBeLessThanOrEqual(42)
+        expect(summaryLayout, `${context} renders all three summary values`).toHaveLength(3)
+
+        for (const summaryValue of summaryLayout) {
+          expect(summaryValue.valueFontSize, `${context} summary values stay compact`)
+            .toBeLessThanOrEqual(42)
+          expect(
+            {
+              color: summaryValue.valueColor,
+              fontSize: summaryValue.valueFontSize,
+              fontWeight: summaryValue.valueFontWeight,
+              lineHeight: summaryValue.valueLineHeight
+            },
+            `${context} summary values use matching typography`
+          ).toEqual({
+            color: baselineSummaryValue.valueColor,
+            fontSize: baselineSummaryValue.valueFontSize,
+            fontWeight: baselineSummaryValue.valueFontWeight,
+            lineHeight: baselineSummaryValue.valueLineHeight
+          })
+        }
 
         if (viewport.wide) {
-          expect(rateLayout.valueScrollWidth, `${context} rate percentage fits its card`)
-            .toBeLessThanOrEqual(rateLayout.cardContentWidth)
+          for (const summaryValue of summaryLayout) {
+            expect(summaryValue.valueScrollWidth, `${context} summary value fits its card`)
+              .toBeLessThanOrEqual(summaryValue.cardContentWidth)
+          }
           expect(layout.titleRight, `${context} title precedes ring`).toBeLessThan(layout.progressLeft)
           expect(
             Math.abs(layout.titleCenterY - layout.progressCenterY),
