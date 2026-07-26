@@ -234,7 +234,8 @@ test.describe('responsive smoke coverage', () => {
   test("progress percentages and today's progress card adapt across designs and responsive widths", async ({ page, request }) => {
     const smokeState = buildSmokeState()
     const progressViewports = [
-      { width: 390, height: 844, wide: false },
+      { width: 320, height: 720, wide: false },
+      { width: 393, height: 852, wide: false },
       { width: 768, height: 1024, wide: true },
       { width: 1024, height: 768, wide: true },
       { width: 1280, height: 800, wide: true },
@@ -307,6 +308,8 @@ test.describe('responsive smoke coverage', () => {
         for (const summaryValue of summaryLayout) {
           expect(summaryValue.valueFontSize, `${context} summary values stay compact`)
             .toBeLessThanOrEqual(42)
+          expect(summaryValue.valueScrollWidth, `${context} summary value fits its card`)
+            .toBeLessThanOrEqual(summaryValue.cardContentWidth)
           expect(
             {
               color: summaryValue.valueColor,
@@ -324,10 +327,6 @@ test.describe('responsive smoke coverage', () => {
         }
 
         if (viewport.wide) {
-          for (const summaryValue of summaryLayout) {
-            expect(summaryValue.valueScrollWidth, `${context} summary value fits its card`)
-              .toBeLessThanOrEqual(summaryValue.cardContentWidth)
-          }
           expect(layout.titleRight, `${context} title precedes ring`).toBeLessThan(layout.progressLeft)
           expect(
             Math.abs(layout.titleCenterY - layout.progressCenterY),

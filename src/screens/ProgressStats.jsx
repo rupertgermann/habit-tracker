@@ -65,8 +65,12 @@ const PeriodButton = styled.button`
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: ${props => props.theme.spacing.sm};
+  gap: ${props => props.theme.spacing.xs};
   margin-bottom: ${props => props.theme.spacing.lg};
+
+  @media (min-width: ${props => props.theme.breakpoints.mobile}) {
+    gap: ${props => props.theme.spacing.sm};
+  }
 `
 
 const ProgressCard = styled(Card)`
@@ -101,11 +105,15 @@ const StreakSection = styled.div`
 
 const StatCard = styled(Card)`
   text-align: center;
-  padding: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xs};
+
+  @media (min-width: ${props => props.theme.breakpoints.mobile}) {
+    padding: ${props => props.theme.spacing.lg};
+  }
 `
 
 const StatValue = styled.div`
-  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, 42px)`};
+  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, clamp(24px, 8vw, 42px))`};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.$color || props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.xs};
