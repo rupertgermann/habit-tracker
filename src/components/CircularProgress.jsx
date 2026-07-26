@@ -59,7 +59,7 @@ const ProgressText = styled.div`
 `
 
 const PercentageText = styled.span`
-  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, ${props.$size * 0.32}px)`};
+  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, ${props.$size * props.$percentageSizeRatio}px)`};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   line-height: 1;
   color: ${props => props.theme.colors.text.primary};
@@ -94,6 +94,7 @@ const CircularProgress = ({
   backgroundColor,
   showPercentage = true,
   label,
+  percentageSizeRatio = 0.32,
   animated = false,
   daily = false,
   className,
@@ -144,7 +145,12 @@ const CircularProgress = ({
       {(showPercentage || label) && (
         <ProgressText $animated={animated}>
           {showPercentage && (
-            <PercentageText $size={size}>{Math.round(progress)}%</PercentageText>
+            <PercentageText
+              $size={size}
+              $percentageSizeRatio={percentageSizeRatio}
+            >
+              {Math.round(progress)}%
+            </PercentageText>
           )}
           {label && <LabelText>{label}</LabelText>}
         </ProgressText>

@@ -231,7 +231,7 @@ test.describe('responsive smoke coverage', () => {
     await assertNoConsoleErrors()
   })
 
-  test("today's progress card uses the right layout across designs and responsive widths", async ({ page, request }) => {
+  test("progress percentages and today's progress card adapt across designs and responsive widths", async ({ page, request }) => {
     const smokeState = buildSmokeState()
     const progressViewports = [
       { width: 390, height: 844, wide: false },
@@ -255,7 +255,9 @@ test.describe('responsive smoke coverage', () => {
 
       const progressTitle = page.getByRole('heading', { name: "Today's Progress", exact: true })
       const progressCard = progressTitle.locator('..')
+      const todayRateCard = page.getByText("Today's Rate", { exact: true }).locator('..')
       await expect(progressTitle).toBeVisible()
+      await expect(todayRateCard).toBeVisible()
 
       for (const viewport of progressViewports) {
         await page.setViewportSize(viewport)
@@ -279,12 +281,25 @@ test.describe('responsive smoke coverage', () => {
             percentageFontSize: Number.parseFloat(getComputedStyle(percentage).fontSize)
           }
         })
+        const rateLayout = await todayRateCard.evaluate(element => {
+          const value = element.firstElementChild
+
+          return {
+            cardContentWidth: element.clientWidth,
+            valueFontSize: Number.parseFloat(getComputedStyle(value).fontSize),
+            valueScrollWidth: value.scrollWidth
+          }
+        })
         const context = `${design} at ${viewport.width}px`
 
         expect(layout.percentageFontSize, `${context} percentage fits its ring`)
-          .toBeLessThanOrEqual(layout.progressWidth * 0.32)
+          .toBeLessThanOrEqual(layout.progressWidth * 0.27)
+        expect(rateLayout.valueFontSize, `${context} rate percentage stays compact`)
+          .toBeLessThanOrEqual(42)
 
         if (viewport.wide) {
+          expect(rateLayout.valueScrollWidth, `${context} rate percentage fits its card`)
+            .toBeLessThanOrEqual(rateLayout.cardContentWidth)
           expect(layout.titleRight, `${context} title precedes ring`).toBeLessThan(layout.progressLeft)
           expect(
             Math.abs(layout.titleCenterY - layout.progressCenterY),

@@ -111,6 +111,10 @@ const StatValue = styled.div`
   margin-bottom: ${props => props.theme.spacing.xs};
 `
 
+const RateStatValue = styled(StatValue)`
+  font-size: ${props => `min(${props.theme.typography.fontSize.headingLarge}, 42px)`};
+`
+
 const StatLabel = styled.div`
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
   color: ${props => props.theme.colors.text.secondary};
@@ -291,6 +295,7 @@ const ProgressStats = () => {
           progress={stats.completionRate}
           size={150}
           strokeWidth={12}
+          percentageSizeRatio={0.26}
           label={`${stats.todayCompletions}/${stats.totalHabits} habits`}
         />
       </ProgressCard>
@@ -301,7 +306,7 @@ const ProgressStats = () => {
           <StatLabel>Total Habits</StatLabel>
         </StatCard>
         <StatCard elevated>
-          <StatValue>{stats.completionRate}%</StatValue>
+          <RateStatValue>{stats.completionRate}%</RateStatValue>
           <StatLabel>Today's Rate</StatLabel>
         </StatCard>
         <StatCard elevated>
