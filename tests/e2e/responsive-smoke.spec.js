@@ -498,6 +498,39 @@ test.describe('responsive smoke coverage', () => {
     await expectNoRootOverflow(page)
   })
 
+  test('Rhythm Ledger inactive navigation hover stays readable in dark mode', async ({ page, request }) => {
+    const smokeState = buildSmokeState()
+    await resetAppData(request, {
+      ...smokeState,
+      settings: {
+        theme: 'dark',
+        design: 'rhythm-ledger'
+      }
+    })
+    await page.setViewportSize({ width: 672, height: 1052 })
+    await page.goto('/settings')
+    await waitForAppReady(page)
+
+    await expect(page.locator('html')).toHaveAttribute('data-design', 'rhythm-ledger')
+    const journalNavigation = page.getByRole('button', { name: 'Journal', exact: true })
+    await journalNavigation.hover()
+
+    await expect.poll(async () => {
+      const colors = await journalNavigation.evaluate(element => {
+        const style = getComputedStyle(element)
+        return {
+          background: style.backgroundColor,
+          text: style.color
+        }
+      })
+
+      return contrastRatio(parseRgb(colors.text), parseRgb(colors.background))
+    },
+      'Rhythm Ledger dark-mode navigation hover remains readable'
+    ).toBeGreaterThanOrEqual(4.5)
+    await expectNoRootOverflow(page)
+  })
+
   test('calendar heatmap cells keep readable contrast in dark mode', async ({ page, request }) => {
     const smokeState = buildSmokeState()
     await resetAppData(request, {

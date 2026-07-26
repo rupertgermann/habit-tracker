@@ -91,7 +91,7 @@ const NavItem = styled(motion.button)`
 
   &:hover:not(:disabled) {
     background: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.surfaceAlt};
-    color: ${props => props.$active ? props.theme.colors.onPrimary : '#201D18'};
+    color: ${props => props.$active ? props.theme.colors.onPrimary : props.theme.colors.text.primary};
   }
 
   &:active:not(:disabled) {
