@@ -213,13 +213,25 @@ const ProfileActions = styled.div`
   gap: ${props => props.theme.spacing.sm};
   flex: 0 0 auto;
   margin-left: auto;
+
+  @media (max-width: 480px) {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 0;
+    margin-left: 0;
+  }
 `
 
-const ProfileEditActions = styled(ProfileActions)`
+const ProfileEditActions = styled.div`
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
+  gap: ${props => props.theme.spacing.sm};
   margin-top: ${props => props.theme.spacing.sm};
-  margin-left: 0;
 `
 
 const SettingsGroup = styled.div`
@@ -984,6 +996,7 @@ const Settings = () => {
             <Button
               type="button"
               variant="ghost"
+              compactOnNarrow
               onClick={handleSelectAvatar}
               loading={isSavingAvatar}
             >
@@ -993,6 +1006,7 @@ const Settings = () => {
               <Button
                 type="button"
                 variant="ghost"
+                compactOnNarrow
                 onClick={handleRemoveAvatar}
                 loading={isSavingAvatar}
               >
@@ -1002,6 +1016,7 @@ const Settings = () => {
             <Button
               type="button"
               variant="ghost"
+              compactOnNarrow
               onClick={handleEditProfile}
               disabled={isSavingAvatar}
             >

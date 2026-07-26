@@ -95,6 +95,18 @@ const ButtonWrapper = styled(motion.button)`
     `
       width: 100%;
     `}
+
+  @media (max-width: 480px) {
+    ${({ $compactOnNarrow }) =>
+      $compactOnNarrow &&
+      css`
+        min-width: 0;
+        padding-right: 0;
+        padding-left: 0;
+        font-size: 11px;
+        white-space: nowrap;
+      `}
+  }
   
   ${({ disabled }) =>
     disabled &&
@@ -154,6 +166,7 @@ const Button = ({
   loading = false,
   icon,
   fullWidth = false,
+  compactOnNarrow = false,
   onClick,
   className,
   bounceOnClick = false,
@@ -184,6 +197,7 @@ const Button = ({
       $size={size}
       disabled={disabled || loading}
       $fullWidth={fullWidth}
+      $compactOnNarrow={compactOnNarrow}
       onClick={handleClick}
       className={className}
       aria-label={ariaLabel || (typeof children === 'string' ? children : undefined)}

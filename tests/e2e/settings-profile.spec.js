@@ -182,6 +182,8 @@ test('profile identity stays readable across designs and responsive widths', asy
 
   const profileName = page.getByRole('heading', { name: 'Rupert', exact: true })
   const profileEmail = page.getByText('user@example.com', { exact: true })
+  const photoButton = page.getByRole('button', { name: 'Photo', exact: true })
+  const profileActions = photoButton.locator('..')
   const designGroup = page.getByRole('radiogroup', { name: 'App design' })
   const designs = [
     { label: 'Standard', value: 'standard' },
@@ -191,15 +193,17 @@ test('profile identity stays readable across designs and responsive widths', asy
     { label: 'Sunday Club', value: 'sunday-club' }
   ]
   const viewports = [
-    { width: 390, height: 844 },
-    { width: 768, height: 1024 },
-    { width: 1024, height: 768 },
-    { width: 1280, height: 800 },
-    { width: 1440, height: 900 }
+    { width: 320, height: 720, narrow: true },
+    { width: 393, height: 852, narrow: true },
+    { width: 768, height: 1024, narrow: false },
+    { width: 1024, height: 768, narrow: false },
+    { width: 1280, height: 800, narrow: false },
+    { width: 1440, height: 900, narrow: false }
   ]
 
   await expect(profileName).toBeVisible()
   await expect(profileEmail).toBeVisible()
+  await expect(photoButton).toBeVisible()
 
   for (const design of designs) {
     if (design.value !== 'standard') {
@@ -209,6 +213,12 @@ test('profile identity stays readable across designs and responsive widths', asy
 
     for (const viewport of viewports) {
       await page.setViewportSize(viewport)
+
+      if (viewport.narrow) {
+        await expect.poll(() =>
+          photoButton.evaluate(element => getComputedStyle(element).fontSize)
+        ).toBe('11px')
+      }
 
       const identityMetrics = await Promise.all([
         profileName.evaluate(element => {
@@ -228,6 +238,29 @@ test('profile identity stays readable across designs and responsive widths', asy
           }
         })
       ])
+      const actionMetrics = await profileActions.evaluate(element => {
+        const card = element.parentElement
+        const cardRect = card.getBoundingClientRect()
+        const cardStyle = getComputedStyle(card)
+        const rowRect = element.getBoundingClientRect()
+
+        return {
+          cardInnerLeft: cardRect.left + Number.parseFloat(cardStyle.paddingLeft),
+          cardInnerRight: cardRect.right - Number.parseFloat(cardStyle.paddingRight),
+          rowLeft: rowRect.left,
+          rowRight: rowRect.right,
+          buttons: Array.from(element.children).map(button => {
+            const rect = button.getBoundingClientRect()
+
+            return {
+              clientWidth: button.clientWidth,
+              left: rect.left,
+              right: rect.right,
+              scrollWidth: button.scrollWidth
+            }
+          })
+        }
+      })
       const context = `${design.label} at ${viewport.width}px`
 
       expect(identityMetrics[0].width, `${context} username width`).toBeGreaterThanOrEqual(120)
@@ -236,6 +269,28 @@ test('profile identity stays readable across designs and responsive widths', asy
       expect(identityMetrics[1].width, `${context} email width`).toBeGreaterThanOrEqual(120)
       expect(identityMetrics[1].height, `${context} email line count`)
         .toBeLessThanOrEqual(identityMetrics[1].lineHeight * 1.25)
+      expect(actionMetrics.buttons, `${context} profile actions`).toHaveLength(3)
+
+      for (const [index, button] of actionMetrics.buttons.entries()) {
+        expect(button.scrollWidth, `${context} action ${index + 1} text fits`)
+          .toBeLessThanOrEqual(button.clientWidth)
+        expect(button.left, `${context} action ${index + 1} stays inside the card`)
+          .toBeGreaterThanOrEqual(actionMetrics.cardInnerLeft - 1)
+        expect(button.right, `${context} action ${index + 1} stays inside the card`)
+          .toBeLessThanOrEqual(actionMetrics.cardInnerRight + 1)
+
+        if (index > 0) {
+          expect(button.left, `${context} action ${index + 1} does not overlap`)
+            .toBeGreaterThanOrEqual(actionMetrics.buttons[index - 1].right)
+        }
+      }
+
+      if (viewport.narrow) {
+        expect(actionMetrics.rowLeft, `${context} action row starts at the card inset`)
+          .toBeCloseTo(actionMetrics.cardInnerLeft, 0)
+        expect(actionMetrics.rowRight, `${context} action row ends at the card inset`)
+          .toBeCloseTo(actionMetrics.cardInnerRight, 0)
+      }
       await expectNoRootOverflow(page)
     }
   }
