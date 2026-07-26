@@ -124,8 +124,13 @@ const ProfileSection = styled(Card)`
   padding: ${props => props.theme.spacing.xl};
   margin-bottom: ${props => props.theme.spacing.xl};
 
-  @media (max-width: 360px) {
+  @media (max-width: 480px) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     gap: ${props => props.theme.spacing.md};
+  }
+
+  @media (max-width: 360px) {
     padding: ${props => props.theme.spacing.lg};
   }
 `
@@ -177,6 +182,10 @@ const AvatarInput = styled.input`
 const ProfileInfo = styled.div`
   flex: 1 1 160px;
   min-width: 160px;
+
+  @media (max-width: 480px) {
+    min-width: 0;
+  }
 `
 
 const ProfileName = styled.h2`
@@ -215,6 +224,7 @@ const ProfileActions = styled.div`
   margin-left: auto;
 
   @media (max-width: 480px) {
+    grid-column: 1 / -1;
     width: 100%;
     min-width: 0;
     flex: 1 1 100%;

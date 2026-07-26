@@ -182,6 +182,8 @@ test('profile identity stays readable across designs and responsive widths', asy
 
   const profileName = page.getByRole('heading', { name: 'Rupert', exact: true })
   const profileEmail = page.getByText('user@example.com', { exact: true })
+  const avatar = page.getByAltText('Rupert avatar').locator('..')
+  const profileInfo = profileName.locator('..')
   const photoButton = page.getByRole('button', { name: 'Photo', exact: true })
   const profileActions = photoButton.locator('..')
   const designGroup = page.getByRole('radiogroup', { name: 'App design' })
@@ -195,6 +197,7 @@ test('profile identity stays readable across designs and responsive widths', asy
   const viewports = [
     { width: 320, height: 720, narrow: true },
     { width: 393, height: 852, narrow: true },
+    { width: 412, height: 915, narrow: true },
     { width: 768, height: 1024, narrow: false },
     { width: 1024, height: 768, narrow: false },
     { width: 1280, height: 800, narrow: false },
@@ -219,6 +222,27 @@ test('profile identity stays readable across designs and responsive widths', asy
           photoButton.evaluate(element => getComputedStyle(element).fontSize)
         ).toBe('11px')
       }
+
+      await expect.poll(async () => {
+        const [avatarRect, infoRect] = await Promise.all([
+          avatar.evaluate(element => {
+            const rect = element.getBoundingClientRect()
+            return { right: rect.right, centerY: (rect.top + rect.bottom) / 2 }
+          }),
+          profileInfo.evaluate(element => {
+            const rect = element.getBoundingClientRect()
+            return { left: rect.left, centerY: (rect.top + rect.bottom) / 2 }
+          })
+        ])
+
+        return {
+          avatarIsLeft: avatarRect.right <= infoRect.left,
+          identityIsAligned: Math.abs(avatarRect.centerY - infoRect.centerY) <= 1
+        }
+      }).toEqual({
+        avatarIsLeft: true,
+        identityIsAligned: true
+      })
 
       const identityMetrics = await Promise.all([
         profileName.evaluate(element => {
