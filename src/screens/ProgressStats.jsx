@@ -362,6 +362,7 @@ const ProgressStats = () => {
             height={200}
             showDots={true}
             showArea={true}
+            ariaLabel="Monthly completion trend"
           />
         </Card>
       </ChartSection>

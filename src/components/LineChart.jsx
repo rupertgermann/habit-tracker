@@ -104,21 +104,44 @@ const LineChart = ({
   showGrid = true,
   showAxes = true,
   areaOpacity = 0.1,
+  ariaLabel = 'Line chart',
   className,
   ...props
 }) => {
   const [hoveredPoint, setHoveredPoint] = React.useState(null)
-  const svgRef = React.useRef(null)
+  const containerRef = React.useRef(null)
   const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 })
 
-  React.useEffect(() => {
-    if (svgRef.current) {
-      const rect = svgRef.current.getBoundingClientRect()
-      setDimensions({
-        width: rect.width,
-        height: rect.height
+  React.useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return undefined
+
+    const updateDimensions = () => {
+      const nextDimensions = {
+        width: container.getBoundingClientRect().width,
+        height: Math.max(height - 40, 0)
+      }
+
+      setDimensions(currentDimensions => {
+        if (
+          currentDimensions.width === nextDimensions.width &&
+          currentDimensions.height === nextDimensions.height
+        ) {
+          return currentDimensions
+        }
+
+        return nextDimensions
       })
     }
+
+    updateDimensions()
+
+    if (typeof ResizeObserver === 'undefined') return undefined
+
+    const observer = new ResizeObserver(updateDimensions)
+    observer.observe(container)
+
+    return () => observer.disconnect()
   }, [height])
 
   const padding = {
@@ -222,16 +245,13 @@ const LineChart = ({
     return labels
   }
 
-  if (!dimensions.width) {
-    return <ChartContainer $height={height} className={className} {...props} />
-  }
-
   return (
-    <ChartContainer $height={height} className={className} {...props}>
+    <ChartContainer ref={containerRef} $height={height} className={className} {...props}>
       <SvgContainer
-        ref={svgRef}
         $height={height}
         viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        role="img"
+        aria-label={ariaLabel}
       >
         {showGrid && generateGridLines()}
         
