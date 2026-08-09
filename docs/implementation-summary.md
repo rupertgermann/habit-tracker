@@ -44,8 +44,10 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Progress & Streaks
 
-- **Location**: `src/screens/ProgressStats.jsx`, `src/components/StreakVisualization.jsx`
-- Progress includes total habits, completion rate, current streak, longest streak, weekly bar data, monthly trend data, and insight cards.
+- **Location**: `src/domain/progressReadModel.js`, `src/screens/ProgressStats.jsx`, `src/components/StreakVisualization.jsx`
+- One Progress Snapshot projects summary, per-Habit Streak, weekly, and monthly facts from an explicit reference date and the shared Calendar Period eligibility policy.
+- Dates before Habit creation and after the reference day remain neutral; the screen refreshes the snapshot at local midnight.
+- Current Streak cards identify their Habit with its icon. Weekly bars and eligible monthly points expose the completed and missed Habit names on hover and keyboard focus.
 - Streak calculations live in `src/domain/habitTracking.js` and count consecutive active days ending at the reference day.
 
 ### Journal
@@ -85,6 +87,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - `src/api/habitsApi.js` centralizes REST requests.
 - `src/context/HabitsContext.jsx` owns Habit, Category, Completion, and Journal Entry state and injects production persistence into the shared lifecycle coordinators.
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` provide pure Habit, Completion, Streak, Calendar Period, and timeline calculations.
+- `src/domain/progressReadModel.js` composes shared tracking rules into one reference-date-bound Progress Snapshot for the existing Progress presentation.
 - `src/domain/habitLifecycle.js` owns Habit creation metadata, committed create/edit outcomes, optimistic Completion rollback, authoritative deletion state, and caller-ordered writes per Habit through HTTP and in-memory persistence adapters.
 - `src/domain/dashboardHabitTracking.js` composes shared calculations with the Habit lifecycle, settles in-flight Habit writes, and returns committed dashboard outcomes.
 - `src/domain/journalEntryWrites.js` coordinates injected Journal Entry persistence, state replacement, same-entry ordering, exact rollback, and caller results.

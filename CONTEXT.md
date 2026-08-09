@@ -36,6 +36,10 @@ _Avoid_: Tag, folder
 The week, month, or year window used to summarize one habit's completions.
 _Avoid_: View range, date mode
 
+**Progress Snapshot**:
+A coherent summary of Habit and Completion facts for one reference date, including overall totals, per-Habit Streaks, and weekly or monthly trends.
+_Avoid_: Progress state, analytics payload
+
 **Journal Entry**:
 A dated reflection connected to a habit, optionally annotated with a mood.
 _Avoid_: Note, diary item

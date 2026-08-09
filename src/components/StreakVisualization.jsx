@@ -1,7 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
-import { getRecentActivityDays } from '../domain/habitTracking'
 import AppIcon from './AppIcon'
 
 const StreakContainer = styled.div`
@@ -16,6 +15,25 @@ const StreakHeader = styled.div`
   align-items: center;
   gap: ${props => props.theme.spacing.md};
   margin-bottom: ${props => props.theme.spacing.sm};
+`
+
+const StreakIdentity = styled.div`
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+`
+
+const StreakIcon = styled.span`
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: ${props => props.theme.borderRadius.small};
+  color: ${props => props.$color || props.theme.colors.primary};
+  background-color: ${props => props.$color || props.theme.colors.primary}20;
 `
 
 const StreakTitle = styled.h3`
@@ -86,8 +104,15 @@ const StreakDay = styled(motion.div)`
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   position: relative;
   
-  ${({ $completed, theme }) =>
-    $completed
+  ${({ $completed, $eligible, theme }) =>
+    !$eligible
+      ? `
+          background-color: transparent;
+          color: ${theme.colors.text.secondary};
+          border: 1px dashed ${theme.colors.border};
+          opacity: 0.6;
+        `
+      : $completed
       ? `
           background-color: ${theme.colors.primary};
           color: ${theme.colors.white};
@@ -141,7 +166,7 @@ const MilestoneDescription = styled.div`
   color: ${props => props.theme.colors.text.secondary};
 `
 
-const StreakVisualization = ({ habit, streak }) => {
+const StreakVisualization = ({ habit, streak, recentDays = [] }) => {
   const timelineRef = useRef(null)
   const todayRef = useRef(null)
   const dragRef = useRef({ isDragging: false, pointerId: null, startX: 0, startScrollLeft: 0 })
@@ -194,14 +219,7 @@ const StreakVisualization = ({ habit, streak }) => {
     const centeredScrollLeft = todayOffset - (timeline.clientWidth - today.offsetWidth) / 2
     const maxScrollLeft = timeline.scrollWidth - timeline.clientWidth
     timeline.scrollLeft = Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft))
-  }, [habit.id])
-
-  const getRecentDays = () => {
-    return getRecentActivityDays(habit, 14).map(day => ({
-      ...day,
-      completed: day.isCompleted
-    }))
-  }
+  }, [habit.id, recentDays])
 
   const getMilestone = () => {
     if (streak >= 30) {
@@ -247,13 +265,17 @@ const StreakVisualization = ({ habit, streak }) => {
     return null
   }
 
-  const recentDays = getRecentDays()
   const milestone = getMilestone()
 
   return (
     <StreakContainer>
       <StreakHeader>
-        <StreakTitle>{habit.name}</StreakTitle>
+        <StreakIdentity>
+          <StreakIcon $color={habit.color}>
+            <AppIcon name={habit.icon} size={20} />
+          </StreakIcon>
+          <StreakTitle>{habit.name}</StreakTitle>
+        </StreakIdentity>
         <StreakValue>{streak} days</StreakValue>
       </StreakHeader>
       
@@ -271,10 +293,22 @@ const StreakVisualization = ({ habit, streak }) => {
             key={day.date.toString()}
             ref={day.isToday ? todayRef : undefined}
             data-current-day={day.isToday ? 'true' : undefined}
+            data-day-status={!day.isEligible
+              ? 'neutral'
+              : day.isCompleted
+                ? 'completed'
+                : 'missed'}
           >
             <StreakDay
-              $completed={day.completed}
+              $eligible={day.isEligible}
+              $completed={day.isCompleted}
               $isToday={day.isToday}
+              role="img"
+              aria-label={`${day.dayName} ${day.dayNumber}: ${!day.isEligible
+                ? 'not tracked'
+                : day.isCompleted
+                  ? 'completed'
+                  : 'missed'}`}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: index * 0.05 }}

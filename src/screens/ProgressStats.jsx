@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 import Card from '../components/Card'
 import BarChart from '../components/BarChart'
@@ -8,12 +8,7 @@ import StreakVisualization from '../components/StreakVisualization'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
-import {
-  getHabitStreak,
-  getMonthlyCompletionData,
-  getTrackingStats,
-  getWeeklyCompletionData
-} from '../domain/habitTracking'
+import { progressReadModel } from '../domain/progressReadModel'
 
 const ProgressContainer = styled.div`
   width: 100%;
@@ -202,24 +197,53 @@ const EmptyStateText = styled.p`
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
+const useProgressReferenceDate = () => {
+  const [referenceDate, setReferenceDate] = useState(() => new Date())
+
+  useEffect(() => {
+    let timeoutId
+
+    const scheduleNextDay = () => {
+      const now = new Date()
+      const nextDay = new Date(now)
+      nextDay.setHours(24, 0, 0, 0)
+      const delay = Math.max(nextDay.getTime() - now.getTime(), 0) + 50
+
+      timeoutId = window.setTimeout(() => {
+        setReferenceDate(new Date())
+        scheduleNextDay()
+      }, delay)
+    }
+
+    scheduleNextDay()
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  return referenceDate
+}
+
+const formatHabitNames = habits => habits.map(habit => habit.name).join(', ') || 'None'
+
 const ProgressStats = () => {
   const { habits } = useHabits()
   const { weekStartsOn } = usePreferences()
-  const [timePeriod, setTimePeriod] = useState('week')
-  const [weeklyData, setWeeklyData] = useState([])
-  const [monthlyData, setMonthlyData] = useState([])
-  const [stats, setStats] = useState({})
-
-  useEffect(() => {
-    setWeeklyData(getWeeklyCompletionData(habits, new Date(), weekStartsOn))
-    setMonthlyData(getMonthlyCompletionData(habits))
-    setStats(getTrackingStats(habits))
-  }, [habits, weekStartsOn])
+  const referenceDate = useProgressReferenceDate()
+  const snapshot = useMemo(() => progressReadModel.getSnapshot({
+    habits,
+    referenceDate,
+    weekStartsOn
+  }), [habits, referenceDate, weekStartsOn])
+  const {
+    monthly: monthlyData,
+    streaks,
+    summary: stats,
+    weekly: weeklyData
+  } = snapshot
 
   const getInsights = () => {
     const insights = []
     
-    if (stats.completionRate === 100 && stats.totalHabits > 0) {
+    if (stats.completionRate === 100 && stats.eligibleTodayHabits > 0) {
       insights.push({
         icon: 'target',
         title: 'Perfect Day!',
@@ -237,11 +261,11 @@ const ProgressStats = () => {
       })
     }
     
-    if (stats.totalCompletions >= 50) {
+    if (stats.totalCompletionRecords >= 50) {
       insights.push({
         icon: 'trophy',
         title: 'Milestone Reached',
-        description: `You've completed ${stats.totalCompletions} habits total. Every completion counts!`,
+        description: `You've recorded ${stats.totalCompletionRecords} Completions. Every one counts!`,
         color: '#6CC47C'
       })
     }
@@ -255,7 +279,7 @@ const ProgressStats = () => {
       })
     }
     
-    if (stats.completionRate < 50 && stats.totalHabits > 0) {
+    if (stats.completionRate < 50 && stats.eligibleTodayHabits > 0) {
       insights.push({
         icon: 'dumbbell',
         title: 'Room to Grow',
@@ -300,7 +324,7 @@ const ProgressStats = () => {
           size={150}
           strokeWidth={12}
           percentageSizeRatio={0.26}
-          label={`${stats.todayCompletions}/${stats.totalHabits} habits`}
+          label={`${stats.todayCompletedHabits}/${stats.eligibleTodayHabits} habits`}
         />
       </ProgressCard>
 
@@ -322,18 +346,15 @@ const ProgressStats = () => {
       {habits.length > 0 && (
         <StreakSection>
           <ChartTitle>Current Streaks</ChartTitle>
-          {habits.map(habit => {
-            const streak = getHabitStreak(habit)
-            
-            return (
+          {streaks.map(({ habit, currentStreak, recentDays }) => (
               <Card key={habit.id} elevated style={{ marginBottom: '16px' }}>
                 <StreakVisualization
                   habit={habit}
-                  streak={streak}
+                  streak={currentStreak}
+                  recentDays={recentDays}
                 />
               </Card>
-            )
-          })}
+          ))}
         </StreakSection>
       )}
 
@@ -341,7 +362,11 @@ const ProgressStats = () => {
         <ChartTitle>Weekly Overview</ChartTitle>
         <Card elevated>
           <BarChart
-            data={weeklyData}
+            data={weeklyData.map(day => ({
+              ...day,
+              completed: day.completedHabitCount,
+              missed: day.missedHabitCount
+            }))}
             height={200}
             barWidth={24}
             spacing={8}
@@ -357,7 +382,13 @@ const ProgressStats = () => {
             data={monthlyData.map(d => ({
               ...d,
               value: d.percentage,
-              label: d.day.toString()
+              label: d.day.toString(),
+              ariaLabel: d.percentage === null
+                ? undefined
+                : `Day ${d.day}: ${d.percentage}% complete. Completed: ${formatHabitNames(d.completedHabits)}. Missed: ${formatHabitNames(d.missedHabits)}`,
+              tooltip: d.percentage === null
+                ? undefined
+                : `Day ${d.day} · ${d.percentage}% complete\nCompleted: ${formatHabitNames(d.completedHabits)}\nMissed: ${formatHabitNames(d.missedHabits)}`
             }))}
             height={200}
             showDots={true}

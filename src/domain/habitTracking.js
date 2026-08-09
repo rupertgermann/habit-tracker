@@ -8,7 +8,6 @@ import {
   endOfWeek,
   endOfYear,
   format,
-  isToday,
   parseISO,
   startOfDay,
   startOfMonth,
@@ -47,6 +46,16 @@ export const getCountForDate = (habit, dateStr) =>
 
 export const isCompletedOnDate = (habit, dateStr) =>
   getCountForDate(habit, dateStr) > 0
+
+export const isHabitEligibleOnDate = (habit, date, referenceDate = date) => {
+  if (!habit) return false
+
+  const day = startOfDay(date)
+  if (day > startOfDay(referenceDate)) return false
+  if (!habit.createdAt) return true
+
+  return day >= startOfDay(parseISO(habit.createdAt))
+}
 
 export const toggleBinaryCompletionForDate = (habit, date = new Date()) => {
   if (!habit) return null
@@ -163,30 +172,14 @@ const getRangeStatsForDays = (days) => {
   }
 }
 
-const getSummaryWindow = (habit, periodStart, periodEnd, asOfDate) => {
-  if (!habit) return null
-
-  const today = startOfDay(asOfDate)
-  const createdAt = habit.createdAt ? startOfDay(parseISO(habit.createdAt)) : periodStart
-  const windowStart = createdAt > periodStart ? createdAt : periodStart
-  const windowEnd = today < periodEnd ? today : periodEnd
-
-  return windowEnd < windowStart ? null : { windowStart, windowEnd }
-}
-
 export const getHabitRangeStats = (habit, range, refDate = new Date(), asOfDate = new Date(), weekStartsOn = 0) => {
   if (!habit) return emptyRangeStats
 
   const { periodStart, periodEnd } = getPeriodRange(range, refDate, weekStartsOn)
-  const summaryWindow = getSummaryWindow(habit, periodStart, periodEnd, asOfDate)
+  const eligibleDays = getDailyCountsForRange(habit, periodStart, periodEnd)
+    .filter(day => isHabitEligibleOnDate(habit, day.day, asOfDate))
 
-  if (!summaryWindow) return emptyRangeStats
-
-  return getRangeStatsForDays(getDailyCountsForRange(
-    habit,
-    summaryWindow.windowStart,
-    summaryWindow.windowEnd
-  ))
+  return getRangeStatsForDays(eligibleDays)
 }
 
 const createCalendarDay = (habit, date, asOfDate) => {
@@ -250,10 +243,7 @@ export const getCalendarPeriod = (
   const { periodStart, periodEnd } = getPeriodRange(normalizedRange, refDate, weekStartsOn)
   const days = eachDayOfInterval({ start: periodStart, end: periodEnd })
     .map(date => createCalendarDay(habit, date, asOfDate))
-  const summaryWindow = getSummaryWindow(habit, periodStart, periodEnd, asOfDate)
-  const summaryDays = summaryWindow
-    ? days.filter(day => day.date >= summaryWindow.windowStart && day.date <= summaryWindow.windowEnd)
-    : []
+  const summaryDays = days.filter(day => isHabitEligibleOnDate(habit, day.date, asOfDate))
   const months = normalizedRange === 'year'
     ? eachMonthOfInterval({ start: periodStart, end: periodEnd })
       .map(month => createMonthProjection(habit, month, asOfDate, weekStartsOn))
@@ -306,7 +296,10 @@ export const getHabitStreak = (habit, refDate = new Date()) => {
   let streak = 0
   let cursor = startOfDay(refDate)
 
-  while (completionSet.has(toDateKey(cursor))) {
+  while (
+    isHabitEligibleOnDate(habit, cursor, refDate) &&
+    completionSet.has(toDateKey(cursor))
+  ) {
     streak += 1
     cursor = subDays(cursor, 1)
   }
@@ -320,12 +313,14 @@ export const getRecentActivityDays = (habit, numberOfDays = 30, refDate = new Da
   for (let index = numberOfDays - 1; index >= 0; index -= 1) {
     const date = subDays(refDate, index)
     const dateStr = toDateKey(date)
+    const isEligible = isHabitEligibleOnDate(habit, date, refDate)
 
     days.push({
       date,
       dateStr,
-      isCompleted: isCompletedOnDate(habit, dateStr),
-      isToday: isToday(date),
+      isCompleted: isEligible && isCompletedOnDate(habit, dateStr),
+      isEligible,
+      isToday: dateStr === toDateKey(refDate),
       day: format(date, 'EEE'),
       dayName: format(date, 'EEE'),
       dayNumber: format(date, 'd')
@@ -359,7 +354,7 @@ export const getWeeklyCompletionData = (habits, refDate = new Date(), weekStarts
       date,
       completed,
       missed: habits.length - completed,
-      isToday: isToday(day)
+      isToday: date === toDateKey(refDate)
     }
   })
 }

@@ -9,18 +9,25 @@ import {
   waitForAppReady
 } from './helpers.js'
 
-const daysInCurrentMonth = () => {
+const elapsedDaysInCurrentMonth = () => {
   const today = new Date()
-  return new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  return today.getDate()
+}
+
+const firstDayOfCurrentMonth = () => {
+  const today = new Date()
+  return new Date(today.getFullYear(), today.getMonth(), 1, 8).toISOString()
 }
 
 const expectMonthlyTrend = async page => {
-  const chart = page.getByRole('img', { name: 'Monthly completion trend' })
+  const chart = page.getByRole('group', { name: 'Monthly completion trend' })
+  const viewport = page.getByTestId('line-chart-scroller')
 
   await expect(chart).toBeVisible()
-  await expect(chart.locator('circle')).toHaveCount(daysInCurrentMonth())
+  await expect(viewport).toBeVisible()
+  await expect(chart.locator('circle')).toHaveCount(elapsedDaysInCurrentMonth())
 
-  const bounds = await chart.boundingBox()
+  const bounds = await viewport.boundingBox()
   expect(bounds?.width).toBeGreaterThan(0)
   expect(bounds?.height).toBeGreaterThan(0)
 
@@ -38,11 +45,13 @@ test('Monthly Trend renders after load, resize, and reload', async ({ page, requ
       makeHabit({
         id: 'monthly-completed-habit',
         name: 'Completed today',
+        createdAt: firstDayOfCurrentMonth(),
         completions: [makeCompletion(today)]
       }),
       makeHabit({
         id: 'monthly-incomplete-habit',
-        name: 'Incomplete today'
+        name: 'Incomplete today',
+        createdAt: firstDayOfCurrentMonth()
       })
     ]
   })
@@ -57,7 +66,7 @@ test('Monthly Trend renders after load, resize, and reload', async ({ page, requ
 
   await page.setViewportSize({ width: 1024, height: 768 })
   await expect
-    .poll(async () => (await page.getByRole('img', { name: 'Monthly completion trend' }).boundingBox())?.width)
+    .poll(async () => (await page.getByTestId('line-chart-scroller').boundingBox())?.width)
     .toBeGreaterThan(mobileBounds.width)
   await expectMonthlyTrend(page)
   await expectNoRootOverflow(page)

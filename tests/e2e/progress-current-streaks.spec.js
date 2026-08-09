@@ -19,11 +19,13 @@ test('Current Streak cards identify their Habits', async ({ page, request }) => 
       makeHabit({
         id: 'reading-streak-habit',
         name: 'Read a chapter',
+        icon: 'book',
         completions: [makeCompletion(today)]
       }),
       makeHabit({
         id: 'walking-streak-habit',
-        name: 'Take an evening walk'
+        name: 'Take an evening walk',
+        icon: 'walk'
       })
     ]
   })
@@ -33,7 +35,11 @@ test('Current Streak cards identify their Habits', async ({ page, request }) => 
   await waitForAppReady(page)
 
   const streakSection = page.getByRole('heading', { name: 'Current Streaks' }).locator('..')
-  await expect(streakSection.getByRole('heading', { name: 'Read a chapter' })).toBeVisible()
-  await expect(streakSection.getByRole('heading', { name: 'Take an evening walk' })).toBeVisible()
+  const readingTitle = streakSection.getByRole('heading', { name: 'Read a chapter' })
+  const walkingTitle = streakSection.getByRole('heading', { name: 'Take an evening walk' })
+  await expect(readingTitle).toBeVisible()
+  await expect(walkingTitle).toBeVisible()
+  await expect(readingTitle.locator('..').locator('svg[aria-hidden="true"]')).toBeVisible()
+  await expect(walkingTitle.locator('..').locator('svg[aria-hidden="true"]')).toBeVisible()
   await expectNoRootOverflow(page)
 })

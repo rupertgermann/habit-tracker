@@ -51,7 +51,7 @@ Below the wide breakpoint, every design uses a touch-safe bottom navigation suit
 - **Searchable icon catalog** - Tabler-based habit and category icons grouped by theme, with legacy emoji/string icon fallback for older data.
 - **Categories** - seeded default categories for health, productivity, mindfulness, learning, social, creativity, and other habits.
 - **Calendar view** - per-habit week, month, and year views with heatmap intensity, day details, period navigation, week-start preferences, and dark-mode contrast checks.
-- **Progress & stats** - weekly bars, monthly trend charts, current and longest streaks, completion rates, and insight cards.
+- **Progress & stats** - weekly bars and monthly trend points with Habit-specific tooltips, icon-labeled current Streaks, completion rates, and insight cards.
 - **Journal** - dated reflections connected to habits, mood annotations, weekly timeline navigation, and search scoped to the selected week.
 - **Settings & profile** - editable name/email, image avatar upload/removal, Standard/Rhythm Ledger/Orbit/Quiet Momentum/Sunday Club design selection, dark mode, an app-wide Daily Reminder while the app is open, and Sunday/Monday week-start selection.
 - **Data management** - JSON export, CSV export, canonical version 2 backup, safe restore of version 2 and legacy `1.0.0` files, and clear-all controls backed by the database.
@@ -169,6 +169,7 @@ The frontend uses React Context for live app state. Pure calculations stay separ
 
 - `HabitsContext` loads application state and adapts it to the Habit lifecycle and Journal Entry coordinators. Both return committed outcomes and serialize same-record writes; the Habit lifecycle owns creation metadata and orders create, edit, Completion, and deletion operations per Habit so stale writes cannot recreate deleted data.
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` contain pure date, Completion, Streak, Calendar Period, and timeline calculations.
+- `src/domain/progressReadModel.js` projects summary, per-Habit Streak, weekly, and monthly facts from one explicit reference date and the Calendar Period eligibility policy; the Progress screen owns presentation and local-midnight refresh timing.
 - `src/domain/dashboardHabitTracking.js` composes those shared calculations with the Habit lifecycle, waits for in-flight Habit writes to settle, and returns committed semantic outcomes for all five dashboard presentations. App Designs own wording, layout, motion, and feedback rendering.
 - `src/domain/journalEntryWrites.js` coordinates injected persistence, same-entry ordering, exact rollback, and committed caller results.
 - `src/domain/dailyReminder.js` owns Daily Reminder validation, persistence ordering, permission policy, scheduling, and incomplete-Habit notification decisions through injected interfaces. `DailyReminderContext` keeps one instance mounted above the router, and `src/adapters/browserDailyReminder.js` supplies browser clock and notification effects.

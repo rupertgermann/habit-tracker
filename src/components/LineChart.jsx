@@ -10,6 +10,22 @@ const ChartContainer = styled.div`
   position: relative;
 `
 
+const ChartScroller = styled.div`
+  flex: 1;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+`
+
+const ChartCanvas = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: ${props => props.$width}px;
+  min-width: 100%;
+  height: 100%;
+`
+
 const SvgContainer = styled.svg`
   flex: 1;
   width: 100%;
@@ -38,11 +54,17 @@ const Line = styled(motion.path)`
 const Dot = styled(motion.circle)`
   fill: ${props => props.$color || props.theme.colors.primary};
   stroke: ${props => props.theme.colors.white};
-  stroke-width: 2;
+  stroke-width: ${props => props.$active ? 4 : 2};
+  r: ${props => props.$active ? 6 : 4}px;
+  pointer-events: none;
+`
+
+const PointTarget = styled.rect`
+  fill: transparent;
   cursor: pointer;
-  
-  &:hover {
-    r: 6;
+
+  &:focus {
+    outline: none;
   }
 `
 
@@ -79,20 +101,19 @@ const YAxisLabel = styled.span`
 
 const Tooltip = styled.div`
   position: absolute;
+  width: max-content;
+  max-width: calc(100% - ${props => props.theme.spacing.md});
   background-color: ${props => props.theme.colors.text.primary};
   color: ${props => props.theme.colors.white};
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.small};
   font-size: ${props => props.theme.typography.fontSize.bodySmall};
-  white-space: nowrap;
+  line-height: ${props => props.theme.typography.lineHeight.normal};
+  white-space: pre-line;
+  text-align: left;
   z-index: 10;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  
-  ${Dot}:hover + & {
-    opacity: 1;
-  }
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 `
 
 const LineChart = ({
@@ -110,6 +131,7 @@ const LineChart = ({
 }) => {
   const [hoveredPoint, setHoveredPoint] = React.useState(null)
   const containerRef = React.useRef(null)
+  const scrollerRef = React.useRef(null)
   const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 })
 
   React.useLayoutEffect(() => {
@@ -117,8 +139,12 @@ const LineChart = ({
     if (!container) return undefined
 
     const updateDimensions = () => {
+      const availableWidth = container.getBoundingClientRect().width
+      const minimumPointWidth = showDots && data.length > 1
+        ? (data.length - 1) * 52 + 64
+        : 0
       const nextDimensions = {
-        width: container.getBoundingClientRect().width,
+        width: Math.max(availableWidth, minimumPointWidth),
         height: Math.max(height - 40, 0)
       }
 
@@ -142,11 +168,11 @@ const LineChart = ({
     observer.observe(container)
 
     return () => observer.disconnect()
-  }, [height])
+  }, [data.length, height, showDots])
 
   const padding = {
     top: 20,
-    right: 20,
+    right: 24,
     bottom: 20,
     left: showAxes ? 40 : 20
   }
@@ -154,35 +180,79 @@ const LineChart = ({
   const chartWidth = dimensions.width - padding.left - padding.right
   const chartHeight = dimensions.height - padding.top - padding.bottom
 
-  const maxValue = Math.max(...data.map(d => d.value || 0), 1)
-  const minValue = Math.min(...data.map(d => d.value || 0), 0)
+  const plottedData = data
+    .map((point, index) => ({ point, index }))
+    .filter(({ point }) => Number.isFinite(point.value))
+  const plottedValues = plottedData.map(({ point }) => point.value)
+  const maxValue = Math.max(...plottedValues, 1)
+  const minValue = Math.min(...plottedValues, 0)
+  const segments = data.reduce((currentSegments, point, index) => {
+    if (!Number.isFinite(point.value)) return currentSegments
+
+    const previousPoint = data[index - 1]
+    if (index === 0 || !Number.isFinite(previousPoint?.value)) {
+      currentSegments.push([])
+    }
+    currentSegments.at(-1).push({ point, index })
+    return currentSegments
+  }, [])
 
   const getXPosition = (index) => {
-    return padding.left + (index / (data.length - 1)) * chartWidth
+    return padding.left + (index / Math.max(data.length - 1, 1)) * chartWidth
   }
 
   const getYPosition = (value) => {
     return padding.top + (1 - (value - minValue) / (maxValue - minValue)) * chartHeight
   }
 
-  const handleDotHover = (point, event) => {
-    setHoveredPoint({ point, event })
+  React.useLayoutEffect(() => {
+    const scroller = scrollerRef.current
+    const todayIndex = data.findIndex(point => point.isToday)
+    if (!scroller || todayIndex < 0 || dimensions.width <= scroller.clientWidth) return
+
+    const todayX = getXPosition(todayIndex)
+    scroller.scrollLeft = Math.max(
+      0,
+      Math.min(todayX - scroller.clientWidth / 2, dimensions.width - scroller.clientWidth)
+    )
+  }, [data, dimensions.width])
+
+  const getPointTargetBounds = (index, value) => {
+    const x = getXPosition(index)
+    const targetHeight = Math.min(Math.max(chartHeight, 0), 44)
+    const y = Math.min(
+      Math.max(getYPosition(value) - targetHeight / 2, padding.top),
+      padding.top + Math.max(chartHeight - targetHeight, 0)
+    )
+
+    return {
+      x: x - 22,
+      y,
+      width: 44,
+      height: targetHeight
+    }
+  }
+
+  const handleDotHover = (point, index) => {
+    setHoveredPoint({ point, index })
   }
 
   const handleDotLeave = () => {
     setHoveredPoint(null)
   }
 
-  const generatePath = () => {
-    if (data.length < 2) return ''
+  const generatePath = (segment) => {
+    if (segment.length === 0) return ''
 
-    let path = `M ${getXPosition(0)} ${getYPosition(data[0].value)}`
+    let path = `M ${getXPosition(segment[0].index)} ${getYPosition(segment[0].point.value)}`
     
-    for (let i = 1; i < data.length; i++) {
-      const x1 = getXPosition(i - 1)
-      const y1 = getYPosition(data[i - 1].value)
-      const x2 = getXPosition(i)
-      const y2 = getYPosition(data[i].value)
+    for (let i = 1; i < segment.length; i++) {
+      const previous = segment[i - 1]
+      const current = segment[i]
+      const x1 = getXPosition(previous.index)
+      const y1 = getYPosition(previous.point.value)
+      const x2 = getXPosition(current.index)
+      const y2 = getYPosition(current.point.value)
       
       const controlX1 = x1 + (x2 - x1) / 2
       const controlY1 = y1
@@ -195,13 +265,12 @@ const LineChart = ({
     return path
   }
 
-  const generateAreaPath = () => {
-    if (data.length < 2) return ''
+  const generateAreaPath = (segment) => {
+    if (segment.length < 2) return ''
 
-    const linePath = generatePath()
-    const lastX = getXPosition(data.length - 1)
-    const lastY = getYPosition(data[data.length - 1].value)
-    const firstX = getXPosition(0)
+    const linePath = generatePath(segment)
+    const lastX = getXPosition(segment.at(-1).index)
+    const firstX = getXPosition(segment[0].index)
     const bottomY = padding.top + chartHeight
     
     return `${linePath} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`
@@ -247,76 +316,103 @@ const LineChart = ({
 
   return (
     <ChartContainer ref={containerRef} $height={height} className={className} {...props}>
-      <SvgContainer
-        $height={height}
-        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-        role="img"
-        aria-label={ariaLabel}
-      >
-        {showGrid && generateGridLines()}
-        
-        {showArea && (
-          <Area
-            d={generateAreaPath()}
-            $color={color}
-            $areaOpacity={areaOpacity}
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, ease: 'easeInOut' }}
-          />
-        )}
-        
-        <Line
-          d={generatePath()}
-          $color={color}
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1, ease: 'easeInOut' }}
-        />
-        
-        {showDots &&
-          data.map((point, index) => (
-            <g key={index}>
-              <Dot
-                cx={getXPosition(index)}
-                cy={getYPosition(point.value)}
-                r={4}
+      <ChartScroller ref={scrollerRef} data-testid="line-chart-scroller">
+        <ChartCanvas $width={dimensions.width}>
+          <SvgContainer
+            $height={height}
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            role="group"
+            aria-label={ariaLabel}
+          >
+            {showGrid && generateGridLines()}
+
+            {showArea && segments
+              .filter(segment => segment.length > 1)
+              .map((segment, index) => (
+                <Area
+                  key={`area-${index}`}
+                  d={generateAreaPath(segment)}
+                  $color={color}
+                  $areaOpacity={areaOpacity}
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1, ease: 'easeInOut' }}
+                />
+              ))}
+
+            {segments.map((segment, index) => (
+              <Line
+                key={`line-${index}`}
+                d={generatePath(segment)}
                 $color={color}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                onMouseEnter={(e) => handleDotHover(point, e)}
-                onMouseLeave={handleDotLeave}
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 1, ease: 'easeInOut' }}
               />
-              {hoveredPoint?.point === point && (
-                <Tooltip
-                  style={{
-                    left: getXPosition(index),
-                    top: getYPosition(point.value) - 40,
-                    transform: 'translateX(-50%)'
-                  }}
-                >
-                  {point.label || `Day ${point.day}`}: {point.value}
-                </Tooltip>
-              )}
-            </g>
-          ))}
-      </SvgContainer>
+            ))}
+
+            {showDots &&
+              plottedData.map(({ point, index }) => {
+                const targetBounds = getPointTargetBounds(index, point.value)
+                const isActive = hoveredPoint?.index === index
+
+                return (
+                  <g key={index}>
+                    <Dot
+                      cx={getXPosition(index)}
+                      cy={getYPosition(point.value)}
+                      $active={isActive}
+                      $color={color}
+                      aria-hidden="true"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                    />
+                    <PointTarget
+                      {...targetBounds}
+                      role="img"
+                      tabIndex={0}
+                      aria-label={point.ariaLabel || `${point.label || `Day ${point.day}`}: ${point.value}`}
+                      onMouseEnter={() => handleDotHover(point, index)}
+                      onMouseLeave={handleDotLeave}
+                      onFocus={() => handleDotHover(point, index)}
+                      onBlur={handleDotLeave}
+                    />
+                  </g>
+                )
+              })}
+          </SvgContainer>
+
+          {showAxes && (
+            <XAxis>
+              {data.map((point, index) => (
+                <XAxisLabel key={index}>
+                  {point.label || point.day || index + 1}
+                </XAxisLabel>
+              ))}
+            </XAxis>
+          )}
+        </ChartCanvas>
+      </ChartScroller>
+
+      {hoveredPoint && (
+        <Tooltip
+          role="tooltip"
+          style={{
+            left: '50%',
+            top: Math.max(getYPosition(hoveredPoint.point.value) - 84, 4),
+            transform: 'translateX(-50%)'
+          }}
+        >
+          {hoveredPoint.point.tooltip ||
+            `${hoveredPoint.point.label || `Day ${hoveredPoint.point.day}`}: ${hoveredPoint.point.value}`}
+        </Tooltip>
+      )}
       
       {showAxes && (
-        <>
-          <YAxis $height={height}>
-            {generateYAxisLabels()}
-          </YAxis>
-          
-          <XAxis>
-            {data.map((point, index) => (
-              <XAxisLabel key={index}>
-                {point.label || point.day || index + 1}
-              </XAxisLabel>
-            ))}
-          </XAxis>
-        </>
+        <YAxis $height={height}>
+          {generateYAxisLabels()}
+        </YAxis>
       )}
     </ChartContainer>
   )

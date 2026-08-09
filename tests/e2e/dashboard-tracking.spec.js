@@ -134,6 +134,7 @@ test('all App Designs expose identical dashboard facts and semantic complete/inc
     makeHabit({
       id: 'cross-design-streak',
       name: 'Cross Design Streak',
+      createdAt: `${twoDaysAgo}T06:00:00.000Z`,
       completions: [
         makeCompletion(twoDaysAgo, 7),
         makeCompletion(yesterday, 7),
