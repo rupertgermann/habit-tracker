@@ -69,14 +69,17 @@ const PointTarget = styled.rect`
 `
 
 const XAxis = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding: 0 ${props => props.theme.spacing.md};
+  position: relative;
+  flex: 0 0 ${props => props.theme.typography.lineHeight.normal}em;
+  font-size: ${props => props.theme.typography.fontSize.bodySmall};
   margin-top: ${props => props.theme.spacing.sm};
 `
 
 const XAxisLabel = styled.span`
-  font-size: ${props => props.theme.typography.fontSize.bodySmall};
+  position: absolute;
+  left: ${props => props.$x}px;
+  transform: translateX(-50%);
+  font-size: inherit;
   color: ${props => props.theme.colors.text.secondary};
   text-align: center;
 `
@@ -386,7 +389,7 @@ const LineChart = ({
           {showAxes && (
             <XAxis>
               {data.map((point, index) => (
-                <XAxisLabel key={index}>
+                <XAxisLabel key={index} $x={getXPosition(index)}>
                   {point.label || point.day || index + 1}
                 </XAxisLabel>
               ))}

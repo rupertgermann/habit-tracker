@@ -31,6 +31,14 @@ const expectMonthlyTrend = async page => {
   expect(bounds?.width).toBeGreaterThan(0)
   expect(bounds?.height).toBeGreaterThan(0)
 
+  for (const day of new Set([1, elapsedDaysInCurrentMonth()])) {
+    const pointBounds = await chart.getByRole('img', { name: new RegExp(`^Day ${day}:`) }).boundingBox()
+    const labelBounds = await viewport.getByText(day.toString(), { exact: true }).boundingBox()
+    const pointCenter = pointBounds.x + pointBounds.width / 2
+    const labelCenter = labelBounds.x + labelBounds.width / 2
+    expect(Math.abs(pointCenter - labelCenter)).toBeLessThanOrEqual(1)
+  }
+
   return bounds
 }
 
