@@ -14,16 +14,20 @@ const StreakHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${props => props.theme.spacing.md};
   margin-bottom: ${props => props.theme.spacing.sm};
 `
 
 const StreakTitle = styled.h3`
+  min-width: 0;
   font-size: ${props => props.theme.typography.fontSize.bodyLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.theme.colors.text.primary};
+  overflow-wrap: anywhere;
 `
 
 const StreakValue = styled.div`
+  flex-shrink: 0;
   font-size: ${props => props.theme.typography.fontSize.headingLarge};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   color: ${props => props.theme.colors.primary};
@@ -249,7 +253,7 @@ const StreakVisualization = ({ habit, streak }) => {
   return (
     <StreakContainer>
       <StreakHeader>
-        <StreakTitle>Current Streak</StreakTitle>
+        <StreakTitle>{habit.name}</StreakTitle>
         <StreakValue>{streak} days</StreakValue>
       </StreakHeader>
       
