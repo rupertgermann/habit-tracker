@@ -39,7 +39,7 @@ Below the wide breakpoint, every design uses a touch-safe bottom navigation suit
 ## Why This Repo
 
 - **Product-quality UI** - five complete design modes, mobile-first navigation, tablet split views, polished motion, dark mode, and readable empty states.
-- **Real persistence** - habits, categories, journal entries, profile details, design/theme preferences, and calendar preference live in SQLite through an Express REST API.
+- **Real persistence** - habits, categories, journal entries, profile details, design/theme preferences, calendar preference, and Daily Reminder settings live in SQLite through an Express REST API.
 - **Domain-oriented code** - tracking rules are isolated in `src/domain/`, with project vocabulary documented in `CONTEXT.md`.
 - **Regression coverage** - domain tests cover habit and journal rules; Playwright tests cover persisted flows, all design dashboards across responsive viewports, profile/avatar settings, and dark-mode contrast.
 - **Reproducible public assets** - README screenshots are generated from a temp database, so docs assets do not depend on local personal data.
@@ -53,7 +53,7 @@ Below the wide breakpoint, every design uses a touch-safe bottom navigation suit
 - **Calendar view** - per-habit week, month, and year views with heatmap intensity, day details, period navigation, week-start preferences, and dark-mode contrast checks.
 - **Progress & stats** - weekly bars, monthly trend charts, current and longest streaks, completion rates, and insight cards.
 - **Journal** - dated reflections connected to habits, mood annotations, weekly timeline navigation, and search scoped to the selected week.
-- **Settings & profile** - editable name/email, image avatar upload/removal, Standard/Rhythm Ledger/Orbit/Quiet Momentum/Sunday Club design selection, dark mode, reminder time, notification permission handling, and Sunday/Monday week-start selection.
+- **Settings & profile** - editable name/email, image avatar upload/removal, Standard/Rhythm Ledger/Orbit/Quiet Momentum/Sunday Club design selection, dark mode, an app-wide Daily Reminder while the app is open, and Sunday/Monday week-start selection.
 - **Data management** - JSON export, CSV export, canonical version 2 backup, safe restore of version 2 and legacy `1.0.0` files, and clear-all controls backed by the database.
 - **Information pages** - privacy, terms, and support pages reachable from Settings.
 - **Responsive layout** - mobile bottom navigation and wide-screen tablet split views for habit list/detail workflows.
@@ -148,12 +148,12 @@ habit-tracker/
 │   ├── index.js               # Express REST API
 │   └── data/                  # Local SQLite database files, ignored by git
 ├── src/
-│   ├── adapters/              # Browser-only file selection and download behavior
+│   ├── adapters/              # Browser file, clock, and notification interfaces
 │   ├── appDesign/             # Complete App Design registrations and fallback resolution
 │   ├── api/                   # Frontend API client
 │   ├── components/            # Reusable UI components
-│   ├── context/               # Habits, theme, preferences, toast, and navigation contexts
-│   ├── domain/                # Pure tracking rules plus injected write and backup coordinators
+│   ├── context/               # Habits, Daily Reminder, theme, preferences, toast, and navigation contexts
+│   ├── domain/                # Tracking rules plus injected persistence/effect coordinators
 │   ├── screens/               # Route-level screens
 │   └── styles/                # Design registry plus per-design light/dark themes and global styles
 └── tests/
@@ -171,6 +171,7 @@ The frontend uses React Context for live app state. Pure calculations stay separ
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` contain pure date, Completion, Streak, Calendar Period, and timeline calculations.
 - `src/domain/dashboardHabitTracking.js` composes those shared calculations with the Completion writer, waits for in-flight Completion writes to settle, and returns committed semantic outcomes for all five dashboard presentations. App Designs own wording, layout, motion, and feedback rendering.
 - `src/domain/journalEntryWrites.js` coordinates injected persistence, same-entry ordering, exact rollback, and committed caller results.
+- `src/domain/dailyReminder.js` owns Daily Reminder validation, persistence ordering, permission policy, scheduling, and incomplete-Habit notification decisions through injected interfaces. `DailyReminderContext` keeps one instance mounted above the router, and `src/adapters/browserDailyReminder.js` supplies browser clock and notification effects.
 - `src/appDesign/catalog.jsx` is the single registration seam for each design's metadata, previews, light/dark themes, global styles, dashboard, primary navigation, and responsive frame.
 - `ThemeContext` resolves the selected catalog registration, stores design and light/dark preferences in the database, and removes legacy browser-storage theme values.
 - `PreferencesContext` stores week-start preference in the database and feeds calendar, journal, and progress calculations.
@@ -186,7 +187,7 @@ The backend stores each collection item as JSON in SQLite tables. `server/db.js`
 |---|---|
 | `GET /api/state` | Full app state: habits, categories, journal entries, and settings. |
 | `GET /api/runtime` | Runtime marker used by the e2e reset guard. |
-| `GET /api/settings/:key` / `PUT /api/settings/:key` | Read or persist database-backed settings such as `design`, `theme`, `profile`, and `preferences`. |
+| `GET /api/settings/:key` / `PUT /api/settings/:key` | Read or persist database-backed settings such as `design`, `theme`, `profile`, `preferences`, and `dailyReminder`. |
 | `POST /api/habits` / `PUT /api/habits/:id` / `DELETE /api/habits/:id` | Create, update, or delete a habit. Deleting a habit also removes its journal entries. |
 | `POST /api/categories` / `PUT /api/categories/:id` / `DELETE /api/categories/:id` | Manage categories. |
 | `POST /api/journal` / `PUT /api/journal/:id` / `DELETE /api/journal/:id` | Manage journal entries. |

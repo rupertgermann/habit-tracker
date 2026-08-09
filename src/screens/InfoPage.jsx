@@ -7,12 +7,12 @@ import AppIcon from '../components/AppIcon'
 const PAGES = {
   privacy: {
     title: 'Privacy Policy',
-    updated: 'Last updated June 30, 2026',
+    updated: 'Last updated August 9, 2026',
     summary: 'Habit Tracker keeps your habit data in this app and gives you explicit export and restore controls.',
     sections: [
       {
         title: 'Data Stored',
-        body: 'The app stores habits, categories, journal entries, profile details, theme preference, calendar preference, and backup settings.'
+        body: 'The app stores habits, categories, journal entries, profile details, theme preference, calendar preference, Daily Reminder settings, and backup settings.'
       },
       {
         title: 'Data Use',
@@ -20,7 +20,7 @@ const PAGES = {
       },
       {
         title: 'Your Controls',
-        body: 'Use Settings to export, back up, restore, or clear your data. Browser notifications are only used after you grant permission.'
+        body: 'Use Settings to export, back up, restore, or clear your data. The Daily Reminder uses browser notifications only after you grant permission and while the app is open.'
       }
     ]
   },

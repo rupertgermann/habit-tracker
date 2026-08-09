@@ -9,11 +9,12 @@ import SelectDropdown, { SELECT_DROPDOWN_CONTROL_WIDTH } from '../components/Sel
 import { removeLegacyThemePreference, useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useHabits } from '../context/HabitsContext'
+import { useDailyReminder } from '../context/DailyReminderContext'
 import { habitsApi } from '../api/habitsApi'
 import { backupPersistence } from '../api/backupPersistence'
 import { createBrowserBackupAdapter } from '../adapters/browserBackup'
 import { createBackupModule } from '../domain/backup'
-import { isCompletedOnDate, toDateKey } from '../domain/habitTracking'
+import { toDateKey } from '../domain/habitTracking'
 import { removeLegacyWeekStartPreference, usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
 import { listAppDesigns } from '../appDesign/catalog'
 
@@ -511,6 +512,16 @@ const ToggleSlider = styled.span`
   ${ToggleInput}:checked + &::before {
     transform: translateX(20px);
   }
+
+  ${ToggleInput}:focus-visible + & {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 3px;
+  }
+
+  ${ToggleInput}:disabled + & {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 `
 
 const AppInfo = styled(Card)`
@@ -563,6 +574,14 @@ const Settings = () => {
   const { weekStartsOn, setWeekStartsOn } = usePreferences()
   const { showToast } = useToast()
   const { habits } = useHabits()
+  const {
+    enabled: notificationsEnabled,
+    time: reminderTime,
+    isLoaded: isDailyReminderLoaded,
+    isConfiguring: isDailyReminderConfiguring,
+    setEnabled: setDailyReminderEnabled,
+    setTime: setDailyReminderTime
+  } = useDailyReminder()
   const avatarInputRef = useRef(null)
   const [profileName, setProfileName] = useState(DEFAULT_PROFILE.name)
   const [profileEmail, setProfileEmail] = useState(DEFAULT_PROFILE.email)
@@ -572,8 +591,7 @@ const Settings = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
-  const [reminderTime, setReminderTime] = useState('09:00')
+  const [reminderTimeInputRevision, setReminderTimeInputRevision] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -605,85 +623,31 @@ const Settings = () => {
     return habitsApi.saveSetting(PROFILE_SETTINGS_KEY, normalizeProfileSettings(profile))
   }
 
-  // Check notification permission & (re) schedule on mount
-  useEffect(() => {
-    if (!('Notification' in window)) return
-
-    setNotificationsEnabled(Notification.permission === 'granted')
-
-    if (Notification.permission === 'granted') {
-      scheduleReminder(reminderTime)
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (window.reminderTimeout) clearTimeout(window.reminderTimeout)
-    }
-  }, [])
-
   const handleNotificationsToggle = async () => {
-    if (!('Notification' in window)) {
-      showToast('Notifications are not supported in your browser', 'error')
+    const nextEnabled = !notificationsEnabled
+    const result = await setDailyReminderEnabled(nextEnabled)
+
+    if (result.ok) {
+      showToast(nextEnabled ? 'Notifications enabled' : 'Notifications disabled', nextEnabled ? 'success' : 'info')
       return
     }
 
-    if (Notification.permission === 'granted') {
-      setNotificationsEnabled(false)
-      showToast('Notifications disabled', 'info')
-    } else if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission()
-      if (permission === 'granted') {
-        setNotificationsEnabled(true)
-        showToast('Notifications enabled', 'success')
-      } else {
-        setNotificationsEnabled(false)
-        showToast('Notifications permission denied', 'error')
-      }
+    const errorMessages = {
+      unsupported: 'Notifications are not supported in your browser',
+      'permission-denied': 'Notifications permission denied',
+      'permission-failed': 'Could not request notification permission',
+      'persistence-failed': 'Failed to save notification settings',
+      loading: 'Notification settings are still loading'
     }
+    showToast(errorMessages[result.reason] || 'Failed to update notification settings', 'error')
   }
 
-  const handleReminderTimeChange = (time) => {
-    setReminderTime(time)
-    
-    // Schedule reminder
-    if (notificationsEnabled) {
-      scheduleReminder(time)
+  const handleReminderTimeChange = async time => {
+    const result = await setDailyReminderTime(time)
+    if (!result.ok) {
+      setReminderTimeInputRevision(revision => revision + 1)
+      showToast('Failed to save reminder time', 'error')
     }
-  }
-
-  const scheduleReminder = (time) => {
-    // Clear any existing reminders
-    if (window.reminderTimeout) {
-      clearTimeout(window.reminderTimeout)
-    }
-
-    // Calculate time until reminder
-    const [hours, minutes] = time.split(':').map(Number)
-    const now = new Date()
-    const reminderTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
-    
-    // If reminder time has passed today, schedule for tomorrow
-    if (reminderTime <= now) {
-      reminderTime.setDate(reminderTime.getDate() + 1)
-    }
-
-    const timeUntilReminder = reminderTime - now
-
-    // Schedule the reminder
-    window.reminderTimeout = setTimeout(() => {
-      if (Notification.permission === 'granted') {
-        const today = toDateKey()
-        const incompleteHabits = habits.filter(habit => !isCompletedOnDate(habit, today))
-
-        new Notification('Habit Tracker Reminder', {
-          body: `You have ${incompleteHabits.length} habits to complete today!`,
-          icon: '/favicon.ico'
-        })
-      }
-      
-      // Schedule next day's reminder
-      scheduleReminder(time)
-    }, timeUntilReminder)
   }
 
   const handleExportData = () => {
@@ -906,11 +870,12 @@ const Settings = () => {
   const settings = [
     {
       icon: 'bell',
-      title: 'Notifications',
-      description: 'Daily reminders and achievements',
+      title: 'Daily Reminder',
+      description: 'One prompt for incomplete Habits while the app is open',
       type: 'toggle',
       value: notificationsEnabled,
-      onChange: handleNotificationsToggle
+      onChange: handleNotificationsToggle,
+      disabled: !isDailyReminderLoaded || isDailyReminderConfiguring
     },
     {
       icon: 'clock',
@@ -918,7 +883,8 @@ const Settings = () => {
       description: 'When to send daily reminders',
       type: 'time',
       value: reminderTime,
-      onChange: handleReminderTimeChange
+      onChange: handleReminderTimeChange,
+      disabled: !isDailyReminderLoaded || isDailyReminderConfiguring
     },
     {
       icon: 'calendar-week',
@@ -1123,14 +1089,18 @@ const Settings = () => {
                       type="checkbox"
                       checked={setting.value}
                       onChange={setting.onChange}
+                      disabled={setting.disabled}
+                      aria-label={setting.title}
                     />
                     <ToggleSlider />
                   </ToggleSwitch>
                 ) : setting.type === 'time' ? (
                   <ReminderTimeInput
+                    key={reminderTimeInputRevision}
                     type="time"
                     value={setting.value}
                     onChange={setting.onChange}
+                    disabled={setting.disabled}
                     aria-label={setting.title}
                   />
                 ) : setting.type === 'select' ? (

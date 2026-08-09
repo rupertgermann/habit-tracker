@@ -15,6 +15,7 @@ import { ToastProvider } from './context/ToastContext.jsx'
 import { ThemeProvider, useTheme } from './context/ThemeContext.jsx'
 import { NavigationProvider } from './context/NavigationContext.jsx'
 import { PreferencesProvider } from './context/PreferencesContext.jsx'
+import { DailyReminderProvider } from './context/DailyReminderContext.jsx'
 
 const SkipLink = styled.a`
   position: fixed;
@@ -104,11 +105,13 @@ function App() {
     <ThemeProvider>
       <PreferencesProvider>
         <HabitsProvider>
-          <Router>
-            <NavigationProvider>
-              <AppContent />
-            </NavigationProvider>
-          </Router>
+          <DailyReminderProvider>
+            <Router>
+              <NavigationProvider>
+                <AppContent />
+              </NavigationProvider>
+            </Router>
+          </DailyReminderProvider>
         </HabitsProvider>
       </PreferencesProvider>
     </ThemeProvider>

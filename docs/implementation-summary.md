@@ -58,12 +58,12 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 ### Settings, Profile, and Preferences
 
-- **Location**: `src/screens/Settings.jsx`, `src/context/ThemeContext.jsx`, `src/context/PreferencesContext.jsx`
+- **Location**: `src/screens/Settings.jsx`, `src/context/DailyReminderContext.jsx`, `src/context/ThemeContext.jsx`, `src/context/PreferencesContext.jsx`
 - Profile settings include name, email, image avatar upload, and avatar removal.
 - Design, theme, and week-start preferences are stored in the database through `/api/settings/:key`.
 - The Appearance picker switches between Standard, Rhythm Ledger, Orbit, Quiet Momentum, and Sunday Club while preserving an independent light/dark choice.
 - Legacy `localStorage` profile, theme, and week-start values are removed so the database remains the source of truth.
-- Reminder controls use the browser Notification API and a themed time-input clock glyph.
+- Daily Reminder settings are persisted independently from browser permission. One app-wide scheduler remains mounted across routes, reads current Habits when it fires, and prompts only while the app is open when at least one Habit is incomplete.
 - Settings links route to app-local Privacy, Terms, and Support pages in `src/screens/InfoPage.jsx`.
 
 ### Data Management
@@ -87,6 +87,8 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` provide pure Habit, Completion, Streak, Calendar Period, and timeline calculations.
 - `src/domain/dashboardHabitTracking.js` composes those calculations with the persistence-aware Completion writer, settles in-flight Completion writes, and returns committed dashboard outcomes.
 - `src/domain/journalEntryWrites.js` coordinates injected Journal Entry persistence, state replacement, same-entry ordering, exact rollback, and caller results.
+- `src/domain/dailyReminder.js` owns Daily Reminder normalization, persistence ordering, permission policy, scheduling, and incomplete-Habit decisions through injected persistence, clock, browser-notification, and current-Habit interfaces.
+- `src/context/DailyReminderContext.jsx` keeps one Daily Reminder module mounted above the router; `src/adapters/browserDailyReminder.js` supplies browser clock and notification effects.
 - `src/domain/backup.js` coordinates injected persisted-state reads and restore writes around canonical validation and legacy migration; browser file effects stay in `src/adapters/browserBackup.js`.
 - `shared/defaultCategories.json` keeps first-run and legacy-restore Category defaults identical.
 - `src/appDesign/catalog.jsx` registers metadata, previews, themes, global styles, dashboards, primary navigation, and responsive frames for all five designs.
@@ -154,7 +156,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 ### Domain and Context Tests
 
 - **Location**: `tests/domain/`, `tests/context/`, `scripts/run-domain-tests.mjs`
-- Covers dashboard projections and semantic outcomes, persistence-aware Completion and Journal Entry writes, App Design catalog completeness, canonical backup validation and legacy migration, Habit date/Streak rules, journal timelines, and preference normalization.
+- Covers dashboard projections and semantic outcomes, persistence-aware Completion and Journal Entry writes, Daily Reminder scheduling and failure policy, App Design catalog completeness, canonical backup validation and legacy migration, Habit date/Streak rules, journal timelines, and preference normalization.
 
 ### Server Tests
 
@@ -166,7 +168,7 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 - **Location**: `tests/e2e/`, `playwright.config.js`, `scripts/run-e2e-dev.mjs`
 - Uses a temp SQLite database under `.tmp/e2e`.
 - Verifies the runtime marker before destructive reset/restore operations.
-- Covers cross-design Completion persistence, reload, failure rollback, and confetti suppression; every App Design in light and dark mode across reloads; every design dashboard at mobile and desktop sizes; committed Journal Entry create/update/delete behavior; canonical and legacy backup/restore including visible failure preservation; invalid-file rejection; profile/avatar settings; dark calendar contrast; and responsive smoke coverage.
+- Covers cross-design Completion persistence, reload, failure rollback, and confetti suppression; every App Design in light and dark mode across reloads; every design dashboard at mobile and desktop sizes; committed Journal Entry create/update/delete behavior; Daily Reminder persistence across route navigation and reload; canonical and legacy backup/restore including visible failure preservation; invalid-file rejection; profile/avatar settings; dark calendar contrast; and responsive smoke coverage.
 
 ### Documentation Screenshots
 

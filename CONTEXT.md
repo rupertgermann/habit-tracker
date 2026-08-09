@@ -43,3 +43,7 @@ _Avoid_: Note, diary item
 **Mood**:
 The user's self-reported feeling attached to a journal entry.
 _Avoid_: Emotion, sentiment
+
+**Daily Reminder**:
+An app-wide prompt at a configured local time that summarizes incomplete Habits while the app is open.
+_Avoid_: Per-habit reminder, alarm, background notification

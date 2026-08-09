@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   expectNoRootOverflow,
   installConsoleErrorGuard,
+  makeHabit,
   resetAppData,
   waitForAppReady
 } from './helpers.js'
@@ -397,6 +398,156 @@ test('reminder time input remains fully visible in dark mode', async ({ page, re
   const inputWidth = await reminderTimeInput.evaluate(element => element.getBoundingClientRect().width)
   expect(inputWidth).toBeGreaterThanOrEqual(128)
   await expectNoRootOverflow(page)
+})
+
+test('Daily Reminder persists and remains scheduled across navigation and reload', async ({ page, request }) => {
+  await resetAppData(request, {
+    habits: [makeHabit({ name: 'Drink water' })],
+    settings: {
+      dailyReminder: {
+        enabled: false,
+        time: '09:00'
+      }
+    }
+  })
+  await page.addInitScript(() => {
+    const nativeSetTimeout = window.setTimeout.bind(window)
+    const nativeClearTimeout = window.clearTimeout.bind(window)
+    const timers = new Map()
+    const notifications = []
+    let nextTimerId = 1_000_000
+
+    window.__dailyReminderTest = {
+      notifications,
+      pendingTimerCount: () => timers.size,
+      fireNextTimer: () => {
+        const next = timers.entries().next().value
+        if (!next) return false
+        const [timerId, callback] = next
+        timers.delete(timerId)
+        callback()
+        return true
+      }
+    }
+    window.setTimeout = (callback, delay, ...args) => {
+      if (delay >= 60_000) {
+        const timerId = nextTimerId++
+        timers.set(timerId, () => callback(...args))
+        return timerId
+      }
+      return nativeSetTimeout(callback, delay, ...args)
+    }
+    window.clearTimeout = timerId => {
+      if (timers.delete(timerId)) return
+      nativeClearTimeout(timerId)
+    }
+
+    class FakeNotification {
+      static permission = 'granted'
+
+      static async requestPermission() {
+        return 'granted'
+      }
+
+      constructor(title, options) {
+        notifications.push({ title, options })
+      }
+    }
+
+    Object.defineProperty(window, 'Notification', {
+      configurable: true,
+      value: FakeNotification
+    })
+  })
+
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  const notificationToggle = page.getByRole('checkbox', { name: 'Daily Reminder' })
+  const reminderTimeInput = page.getByLabel('Reminder Time')
+  const reminderTime = await page.evaluate(() => {
+    const next = new Date(Date.now() + (2 * 60 * 60 * 1000))
+    return `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}`
+  })
+
+  await reminderTimeInput.fill(reminderTime)
+  await reminderTimeInput.blur()
+  await expect.poll(async () => (await getState(request)).settings?.dailyReminder).toEqual({
+    enabled: false,
+    time: reminderTime
+  })
+
+  await page.locator('label').filter({ has: notificationToggle }).click()
+  await expect(notificationToggle).toBeChecked()
+  await expect.poll(async () => (await getState(request)).settings?.dailyReminder).toEqual({
+    enabled: true,
+    time: reminderTime
+  })
+  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.pendingTimerCount())).toBe(1)
+
+  await page.getByRole('button', { name: 'Habits' }).click()
+  await expect(page).toHaveURL(/\/habits$/)
+  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.pendingTimerCount())).toBe(1)
+  expect(await page.evaluate(() => window.__dailyReminderTest.fireNextTimer())).toBe(true)
+  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.notifications)).toEqual([{
+    title: 'Habit Tracker Reminder',
+    options: {
+      body: 'You have 1 habit to complete today!',
+      icon: '/favicon.ico'
+    }
+  }])
+
+  await page.goto('/settings')
+  await waitForAppReady(page)
+  await expect(notificationToggle).toBeChecked()
+  await expect(reminderTimeInput).toHaveValue(reminderTime)
+  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.pendingTimerCount())).toBe(1)
+})
+
+test('Daily Reminder controls lock during a save and restore committed time after failure', async ({ page, request }) => {
+  await resetAppData(request, {
+    settings: {
+      dailyReminder: {
+        enabled: false,
+        time: '09:00'
+      }
+    }
+  })
+  let finishFailedSave
+  await page.route('**/api/settings/dailyReminder', async route => {
+    if (route.request().method() !== 'PUT') {
+      await route.continue()
+      return
+    }
+
+    await new Promise(resolve => { finishFailedSave = resolve })
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Database unavailable' })
+    })
+  })
+
+  await page.goto('/settings')
+  await waitForAppReady(page)
+
+  const notificationToggle = page.getByRole('checkbox', { name: 'Daily Reminder' })
+  const reminderTimeInput = page.getByLabel('Reminder Time')
+  await reminderTimeInput.fill('10:30')
+  await expect.poll(() => Boolean(finishFailedSave)).toBe(true)
+
+  await expect(notificationToggle).toBeDisabled()
+  await expect(reminderTimeInput).toBeDisabled()
+  finishFailedSave()
+
+  await expect(reminderTimeInput).toBeEnabled()
+  await expect(reminderTimeInput).toHaveValue('09:00')
+  await expect(page.getByText('Failed to save reminder time')).toBeVisible()
+  await expect.poll(async () => (await getState(request)).settings?.dailyReminder).toEqual({
+    enabled: false,
+    time: '09:00'
+  })
 })
 
 test('week start selector opens in place with readable options', async ({ page, request }) => {
