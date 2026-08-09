@@ -13,10 +13,10 @@ const ChartContainer = styled.div`
 const BarsContainer = styled.div`
   display: flex;
   align-items: flex-end;
-  justify-content: ${props => props.$scrollable ? 'flex-start' : 'space-around'};
+  justify-content: ${props => props.$compact ? 'center' : 'space-around'};
   flex: 1;
   padding: ${props => props.theme.spacing.md} 0;
-  overflow-x: auto;
+  overflow-x: ${props => props.$compact ? 'hidden' : 'auto'};
   overflow-y: hidden;
 `
 
@@ -25,11 +25,12 @@ const BarGroup = styled.div`
   flex-direction: column;
   align-items: center;
   flex: ${props => props.$interactive
-    ? `0 0 ${88 + props.$spacing * 2}px`
+    ? '1 1 0'
     : '1'};
   max-width: ${props => props.$interactive
-    ? `${88 + props.$spacing * 2}px`
+    ? '56px'
     : `${props.$barWidth + props.$spacing}px`};
+  min-width: 0;
 `
 
 const BarsWrapper = styled.div`
@@ -42,7 +43,9 @@ const BarsWrapper = styled.div`
 `
 
 const BarTarget = styled.div`
-  width: ${props => props.$barWidth}px;
+  width: ${props => typeof props.$barWidth === 'number'
+    ? `${props.$barWidth}px`
+    : props.$barWidth};
   height: ${props => Math.max(props.$targetHeight, 44)}px;
   display: flex;
   align-items: flex-end;
@@ -141,7 +144,6 @@ const BarChart = ({
   ...props
 }) => {
   const [hoveredBar, setHoveredBar] = React.useState(null)
-  const barsRef = React.useRef(null)
 
   const maxValue = Math.max(
     ...data.map(d => Math.max(d.completed || 0, d.missed || 0, d.value || 0)),
@@ -181,24 +183,12 @@ const BarChart = ({
     Array.isArray(item.completedHabits) && Array.isArray(item.missedHabits)
   )
 
-  React.useLayoutEffect(() => {
-    const bars = barsRef.current
-    const todayIndex = data.findIndex(item => item.isToday)
-    const todayGroup = todayIndex >= 0 ? bars?.children[todayIndex] : null
-    if (!bars || !todayGroup || bars.scrollWidth <= bars.clientWidth) return
-
-    bars.scrollLeft = Math.max(
-      0,
-      Math.min(
-        todayGroup.offsetLeft - (bars.clientWidth - todayGroup.offsetWidth) / 2,
-        bars.scrollWidth - bars.clientWidth
-      )
-    )
-  }, [data, hasInteractiveHabitBars])
-
   return (
     <ChartContainer $height={height} className={className} {...props}>
-      <BarsContainer ref={barsRef} $scrollable={hasInteractiveHabitBars}>
+      <BarsContainer
+        $compact={hasInteractiveHabitBars}
+        data-testid={hasInteractiveHabitBars ? 'weekly-bars-plot' : undefined}
+      >
         {data.map((item, index) => {
           const hasSeparateBars = item.completed !== undefined && item.missed !== undefined
           const hasHabitIdentity = Array.isArray(item.completedHabits) &&
@@ -221,7 +211,7 @@ const BarChart = ({
                 {hasSeparateBars ? (
                   <>
                     <BarTarget
-                      $barWidth={hasHabitIdentity ? 44 : barWidth / 2 - spacing / 2}
+                      $barWidth={hasHabitIdentity ? 'clamp(8px, 3vw, 20px)' : barWidth / 2 - spacing / 2}
                       $spacing={spacing}
                       $targetHeight={getBarHeight(item.completed)}
                       role={hasHabitIdentity ? 'img' : undefined}
@@ -245,7 +235,7 @@ const BarChart = ({
                       {showValues && <ValueLabel>{item.completed}</ValueLabel>}
                     </BarTarget>
                     <BarTarget
-                      $barWidth={hasHabitIdentity ? 44 : barWidth / 2 - spacing / 2}
+                      $barWidth={hasHabitIdentity ? 'clamp(8px, 3vw, 20px)' : barWidth / 2 - spacing / 2}
                       $spacing={spacing}
                       $targetHeight={getBarHeight(item.missed)}
                       role={hasHabitIdentity ? 'img' : undefined}

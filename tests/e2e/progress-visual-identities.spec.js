@@ -37,7 +37,7 @@ test.beforeEach(async ({ request }) => {
 })
 
 test('Weekly bars identify their completed and missed Habits on focus and hover', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.setViewportSize({ width: 833, height: 1171 })
   await page.clock.install({ time: referenceDate })
   await page.goto('/progress')
   await waitForAppReady(page)
@@ -52,8 +52,20 @@ test('Weekly bars identify their completed and missed Habits on focus and hover'
   const completedBounds = await completedBar.boundingBox()
   const missedBounds = await missedBar.boundingBox()
   expect(completedBounds?.height).toBeGreaterThanOrEqual(44)
-  expect(completedBounds?.width).toBeGreaterThanOrEqual(44)
   expect(missedBounds.x - (completedBounds.x + completedBounds.width)).toBeGreaterThanOrEqual(8)
+
+  const weeklyPlot = page.getByTestId('weekly-bars-plot')
+  const expectCompactWeek = async () => {
+    const dimensions = await weeklyPlot.evaluate(element => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth
+    }))
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
+    for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) {
+      await expect(weeklyPlot.getByText(day, { exact: true })).toBeVisible()
+    }
+  }
+  await expectCompactWeek()
   await completedBar.focus()
   await expect(page.getByRole('tooltip')).toContainText('Completed · Wed')
   await expect(page.getByRole('tooltip')).toContainText('Love, Walk in the Park')
@@ -67,6 +79,9 @@ test('Weekly bars identify their completed and missed Habits on focus and hover'
 
   await page.getByRole('img', { name: 'Tue missed: None' }).focus()
   await expect(page.getByRole('tooltip')).toContainText('No missed Habits')
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expectCompactWeek()
   await expectNoRootOverflow(page)
 })
 
