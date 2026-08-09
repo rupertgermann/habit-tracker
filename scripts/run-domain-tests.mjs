@@ -5,7 +5,7 @@ const testModules = [
   '/tests/domain/backup.test.js',
   '/tests/domain/browserBackupAdapter.test.js',
   '/tests/domain/habitTracking.test.js',
-  '/tests/domain/completionWrites.test.js',
+  '/tests/domain/habitLifecycle.test.js',
   '/tests/domain/dashboardHabitTracking.test.js',
   '/tests/domain/dailyReminder.test.js',
   '/tests/domain/journalEntryWrites.test.js',

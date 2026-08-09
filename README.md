@@ -167,9 +167,9 @@ habit-tracker/
 
 The frontend uses React Context for live app state. Pure calculations stay separate from persistence-aware coordinators, whose effects are supplied through injected interfaces:
 
-- `HabitsContext` loads application state and supplies persistence-aware Completion and Journal Entry writers. Both return committed results, serialize same-record writes, and restore exact prior state after persistence failure.
+- `HabitsContext` loads application state and adapts it to the Habit lifecycle and Journal Entry coordinators. Both return committed outcomes and serialize same-record writes; the Habit lifecycle owns creation metadata and orders create, edit, Completion, and deletion operations per Habit so stale writes cannot recreate deleted data.
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` contain pure date, Completion, Streak, Calendar Period, and timeline calculations.
-- `src/domain/dashboardHabitTracking.js` composes those shared calculations with the Completion writer, waits for in-flight Completion writes to settle, and returns committed semantic outcomes for all five dashboard presentations. App Designs own wording, layout, motion, and feedback rendering.
+- `src/domain/dashboardHabitTracking.js` composes those shared calculations with the Habit lifecycle, waits for in-flight Habit writes to settle, and returns committed semantic outcomes for all five dashboard presentations. App Designs own wording, layout, motion, and feedback rendering.
 - `src/domain/journalEntryWrites.js` coordinates injected persistence, same-entry ordering, exact rollback, and committed caller results.
 - `src/domain/dailyReminder.js` owns Daily Reminder validation, persistence ordering, permission policy, scheduling, and incomplete-Habit notification decisions through injected interfaces. `DailyReminderContext` keeps one instance mounted above the router, and `src/adapters/browserDailyReminder.js` supplies browser clock and notification effects.
 - `src/appDesign/catalog.jsx` is the single registration seam for each design's metadata, previews, light/dark themes, global styles, dashboard, primary navigation, and responsive frame.

@@ -72,6 +72,68 @@ test.beforeEach(async ({ request }) => {
   await resetAppData(request)
 })
 
+test('failed Habit creation keeps the draft visible and reports the rejected commit', async ({ page }) => {
+  await page.route('**/api/habits', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'forced create failure' })
+      })
+      return
+    }
+
+    await route.continue()
+  })
+
+  await page.goto('/add-habit')
+  await waitForAppReady(page)
+  const nameInput = page.getByPlaceholder('e.g., Drink 8 glasses of water')
+  await nameInput.fill('Keep this Habit draft')
+  await page.getByRole('button', { name: 'Create Habit' }).click()
+
+  await expect(page).toHaveURL(/\/add-habit$/)
+  await expect(page.getByRole('heading', { name: 'New Habit' })).toBeVisible()
+  await expect(nameInput).toHaveValue('Keep this Habit draft')
+  await expect(page.getByRole('alert')).toContainText('could not be created')
+  await expect(page.getByRole('button', { name: 'Create Habit' })).toBeEnabled()
+})
+
+test('failed Habit edit preserves the committed Habit and keeps the edited draft visible', async ({ page, request }) => {
+  const habit = makeHabit({
+    id: 'e2e-failed-habit-edit',
+    name: 'Committed Habit name'
+  })
+  await resetAppData(request, { habits: [habit] })
+  await page.route('**/api/habits/e2e-failed-habit-edit', async route => {
+    if (route.request().method() === 'PUT') {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'forced update failure' })
+      })
+      return
+    }
+
+    await route.continue()
+  })
+
+  await page.goto('/edit-habit/e2e-failed-habit-edit')
+  await waitForAppReady(page)
+  const nameInput = page.getByPlaceholder('e.g., Drink 8 glasses of water')
+  await nameInput.fill('Uncommitted edited name')
+  await page.getByRole('button', { name: 'Update Habit' }).click()
+
+  await expect(page).toHaveURL(/\/edit-habit\/e2e-failed-habit-edit$/)
+  await expect(page.getByRole('heading', { name: 'Edit Habit' })).toBeVisible()
+  await expect(nameInput).toHaveValue('Uncommitted edited name')
+  await expect(page.getByRole('alert')).toContainText('could not be updated')
+  await expect(page.getByRole('button', { name: 'Update Habit' })).toBeEnabled()
+
+  const persistedHabit = await findHabitByName(request, 'Committed Habit name')
+  expect(persistedHabit).toMatchObject({ id: habit.id, name: 'Committed Habit name' })
+})
+
 test('count habit persists daily logs through reloads and decrementing', async ({ page, request }) => {
   const habitName = 'E2E Count Persistence'
   const today = localDateKey()

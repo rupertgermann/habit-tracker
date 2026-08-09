@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { createDashboardHabitTracking } from '/src/domain/dashboardHabitTracking.js'
 import {
-  createInMemoryCompletionPersistence,
-  createYesNoCompletionWriter
-} from '/src/domain/completionWrites.js'
+  createHabitLifecycle,
+  createInMemoryHabitPersistence
+} from '/src/domain/habitLifecycle.js'
 
 const referenceDate = new Date('2026-07-12T12:00:00.000Z')
 
@@ -23,22 +23,19 @@ const completion = date => ({
 })
 
 const createHarness = (habits, {
-  persistence = createInMemoryCompletionPersistence({ habits })
+  persistence = createInMemoryHabitPersistence({ habits })
 } = {}) => {
   let currentHabits = habits
-  const writer = createYesNoCompletionWriter({
+  const lifecycle = createHabitLifecycle({
     persistence,
-    getHabit: habitId => currentHabits.find(habit => habit.id === habitId),
-    replaceHabit: replacement => {
-      currentHabits = currentHabits.map(habit => (
-        habit.id === replacement.id ? replacement : habit
-      ))
-    }
+    getHabits: () => currentHabits,
+    replaceHabits: replacement => { currentHabits = replacement },
+    replaceDeletedState: state => { currentHabits = state.habits }
   })
   const dashboard = createDashboardHabitTracking({
     getHabits: () => currentHabits,
-    toggleYesNoCompletion: (habitId, date) => writer.toggle({ habitId, date }),
-    settleCompletionWrites: () => writer.settle()
+    toggleYesNoCompletion: (habitId, date) => lifecycle.toggleYesNo({ habitId, date }),
+    settleCompletionWrites: () => lifecycle.settle()
   })
 
   return {
@@ -335,7 +332,7 @@ export const tests = [
       const habit = makeHabit({ id: 'rollback' })
       const error = new Error('database unavailable')
       const { dashboard, getHabits, persistence } = createHarness([habit])
-      persistence.failNextUpdate(error)
+      persistence.failNextWrite(error)
 
       const result = await dashboard.toggleYesNo({
         habitId: habit.id,

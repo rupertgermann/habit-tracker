@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { habitsApi } from '../api/habitsApi'
 import {
-  createCompletionPersistence,
-  createCountCompletionWriter,
-  createYesNoCompletionWriter
-} from '../domain/completionWrites'
+  createHabitLifecycle,
+  createHabitPersistence
+} from '../domain/habitLifecycle'
 import { createDashboardHabitTracking } from '../domain/dashboardHabitTracking'
 import {
   createJournalEntryPersistence,
@@ -42,15 +41,10 @@ const habitsReducer = (state, action) => {
       return { ...state, journalEntries: action.payload }
     case 'FETCH_CATEGORIES_SUCCESS':
       return { ...state, categories: action.payload }
-    case 'ADD_HABIT':
-      return { ...state, habits: [...state.habits, action.payload] }
-    case 'UPDATE_HABIT':
-      return {
-        ...state,
-        habits: state.habits.map(habit =>
-          habit.id === action.payload.id ? action.payload : habit
-        )
-      }
+    case 'REPLACE_HABITS':
+      return state.habits === action.payload
+        ? state
+        : { ...state, habits: action.payload }
     case 'DELETE_HABIT_SUCCESS':
       return {
         ...state,
@@ -84,8 +78,10 @@ const habitsReducer = (state, action) => {
   }
 }
 
-const productionCompletionPersistence = createCompletionPersistence({
-  updateHabit: habit => habitsApi.updateHabit(habit)
+const productionHabitPersistence = createHabitPersistence({
+  createHabit: habit => habitsApi.createHabit(habit),
+  updateHabit: habit => habitsApi.updateHabit(habit),
+  deleteHabit: id => habitsApi.deleteHabit(id)
 })
 
 const productionJournalEntryPersistence = createJournalEntryPersistence({
@@ -96,29 +92,37 @@ const productionJournalEntryPersistence = createJournalEntryPersistence({
 
 export const HabitsProvider = ({
   children,
-  completionPersistence = productionCompletionPersistence,
+  habitPersistence = productionHabitPersistence,
   journalEntryPersistence = productionJournalEntryPersistence
 }) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
   const habitsRef = useRef(state.habits)
   const journalEntriesRef = useRef(state.journalEntries)
-  const pendingCompletionWrites = useRef(new Map())
+  const pendingHabitWrites = useRef(new Map())
   const pendingJournalEntryWrites = useRef(new Map())
   habitsRef.current = state.habits
   journalEntriesRef.current = state.journalEntries
 
-  const replaceHabit = replacement => {
-    habitsRef.current = habitsRef.current.map(habit => (
-      habit.id === replacement.id ? replacement : habit
-    ))
-    dispatch({ type: 'UPDATE_HABIT', payload: replacement })
+  const replaceHabits = replacement => {
+    habitsRef.current = replacement
+    dispatch({ type: 'REPLACE_HABITS', payload: replacement })
   }
 
-  const getCompletionWriterDependencies = () => ({
-    persistence: completionPersistence,
-    getHabit: habitId => habitsRef.current.find(habit => habit.id === habitId),
-    replaceHabit,
-    pendingWrites: pendingCompletionWrites.current
+  const replaceDeletedState = replacement => {
+    habitsRef.current = replacement.habits
+    journalEntriesRef.current = replacement.journalEntries
+    dispatch({
+      type: 'DELETE_HABIT_SUCCESS',
+      payload: replacement
+    })
+  }
+
+  const getHabitLifecycle = () => createHabitLifecycle({
+    persistence: habitPersistence,
+    getHabits: () => habitsRef.current,
+    replaceHabits,
+    replaceDeletedState,
+    pendingWrites: pendingHabitWrites.current
   })
 
   const replaceJournalEntries = replacement => {
@@ -152,18 +156,7 @@ export const HabitsProvider = ({
     return () => { cancelled = true }
   }, [])
 
-  const addHabit = (habitData) => {
-    const newHabit = {
-      id: Date.now().toString(),
-      ...habitData,
-      category: habitData.category || 'other',
-      createdAt: new Date().toISOString(),
-      completions: []
-    }
-    dispatch({ type: 'ADD_HABIT', payload: newHabit })
-    habitsApi.createHabit(newHabit).catch(err => console.error('Failed to create habit:', err))
-    return newHabit
-  }
+  const addHabit = habitData => getHabitLifecycle().create(habitData)
 
   const addJournalEntry = entryData => getJournalEntryWriter().create(entryData)
 
@@ -188,69 +181,37 @@ export const HabitsProvider = ({
     )
   }
 
-  const updateHabit = (id, habitData) => {
-    const updatedHabit = {
-      ...state.habits.find(h => h.id === id),
-      ...habitData,
-      updatedAt: new Date().toISOString()
-    }
-    dispatch({ type: 'UPDATE_HABIT', payload: updatedHabit })
-    habitsApi.updateHabit(updatedHabit).catch(err => console.error('Failed to update habit:', err))
-    return updatedHabit
-  }
+  const updateHabit = (id, habitData) => getHabitLifecycle().update(id, habitData)
 
-  const deleteHabit = async (id) => {
-    try {
-      const result = await habitsApi.deleteHabit(id)
-      dispatch({
-        type: 'DELETE_HABIT_SUCCESS',
-        payload: {
-          habits: result.state.habits,
-          journalEntries: result.state.journalEntries
-        }
-      })
-      return result
-    } catch (error) {
-      console.error('Failed to delete habit:', error)
-      return { ok: false, error }
-    }
-  }
+  const deleteHabit = id => getHabitLifecycle().delete(id)
 
   const toggleYesNoCompletion = async (habitId, date = new Date()) => {
     dispatch({ type: 'CLEAR_MUTATION_ERROR' })
-    const writer = createYesNoCompletionWriter({
-      ...getCompletionWriterDependencies(),
-      onFailure: (error, previousHabit) => dispatch({
+    const result = await getHabitLifecycle().toggleYesNo({ habitId, date })
+    if (!result.ok) {
+      dispatch({
         type: 'SET_MUTATION_ERROR',
         payload: {
           habitId,
-          message: `Could not update "${previousHabit?.name || 'Habit'}". Please try again.`
+          message: `Could not update "${result.habit?.name || 'Habit'}". Please try again.`
         }
       })
-    })
-
-    const result = await writer.toggle({ habitId, date })
+    }
     return result
   }
 
-  const getCountCompletionWriter = () => createCountCompletionWriter({
-    ...getCompletionWriterDependencies()
-  })
-
   const incrementCountCompletion = async (habitId, date = new Date()) => {
-    return getCountCompletionWriter().increment({ habitId, date })
+    return getHabitLifecycle().incrementCount({ habitId, date })
   }
 
   const decrementCountCompletion = async (habitId, date = new Date()) => {
-    return getCountCompletionWriter().decrement({ habitId, date })
+    return getHabitLifecycle().decrementCount({ habitId, date })
   }
 
   const dashboardHabitTracking = createDashboardHabitTracking({
     getHabits: () => habitsRef.current,
     toggleYesNoCompletion,
-    settleCompletionWrites: () => createYesNoCompletionWriter(
-      getCompletionWriterDependencies()
-    ).settle()
+    settleCompletionWrites: () => getHabitLifecycle().settle()
   })
 
   const addCategory = (categoryData) => {

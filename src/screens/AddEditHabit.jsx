@@ -335,6 +335,16 @@ const ActionButtons = styled.div`
   margin-top: ${props => props.theme.spacing.xxl};
 `
 
+const SubmitError = styled.div`
+  margin-top: ${props => props.theme.spacing.lg};
+  border: 1px solid ${props => props.theme.colors.destructive};
+  border-radius: ${props => props.theme.borderRadius.small};
+  background-color: ${props => `${props.theme.colors.destructive}12`};
+  padding: ${props => props.theme.spacing.md};
+  color: ${props => props.theme.colors.destructive};
+  font-size: ${props => props.theme.typography.fontSize.bodyMedium};
+`
+
 const colorOptions = [
   { name: 'Leaf', value: '#6CC47C' },
   { name: 'Lime', value: '#84CC16' },
@@ -381,6 +391,8 @@ const AddEditHabit = () => {
   })
   const [activeIconGroup, setActiveIconGroup] = useState('all')
   const [iconSearchTerm, setIconSearchTerm] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const visibleColorOptions = useMemo(() => {
     const hasSelectedColor = colorOptions.some(option => option.value === formData.color)
@@ -509,9 +521,13 @@ const AddEditHabit = () => {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    
+    if (isSaving) return
+
+    setSubmitError('')
+    setIsSaving(true)
+
     const habitData = {
       ...formData,
       dailyTarget: formData.type === 'count' && formData.dailyTarget !== ''
@@ -519,14 +535,16 @@ const AddEditHabit = () => {
         : null
     }
 
-    if (!isEditing) {
-      habitData.createdAt = new Date().toISOString()
-    }
+    const result = isEditing
+      ? await updateHabit(id, habitData)
+      : await addHabit(habitData)
 
-    if (isEditing) {
-      updateHabit(id, habitData)
-    } else {
-      addHabit(habitData)
+    if (!result.ok) {
+      setSubmitError(isEditing
+        ? 'This Habit could not be updated. Your draft is still here. Please try again.'
+        : 'This Habit could not be created. Your draft is still here. Please try again.')
+      setIsSaving(false)
+      return
     }
 
     navigate('/habits')
@@ -540,7 +558,7 @@ const AddEditHabit = () => {
     <FormContainer>
       <Header>
         <Title>{isEditing ? 'Edit Habit' : 'New Habit'}</Title>
-        <Button variant="ghost" onClick={handleCancel}>
+        <Button variant="ghost" onClick={handleCancel} disabled={isSaving}>
           Cancel
         </Button>
       </Header>
@@ -808,19 +826,23 @@ const AddEditHabit = () => {
           </FormCard>
         </FormSection>
 
+        {submitError && <SubmitError role="alert">{submitError}</SubmitError>}
+
         <ActionButtons>
           <Button
             type="button"
             variant="ghost"
             fullWidth
             onClick={handleCancel}
+            disabled={isSaving}
           >
             Cancel
           </Button>
           <Button
             type="submit"
             fullWidth
-            disabled={!formData.name.trim()}
+            disabled={!formData.name.trim() || isSaving}
+            loading={isSaving}
           >
             {isEditing ? 'Update Habit' : 'Create Habit'}
           </Button>

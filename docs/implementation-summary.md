@@ -83,9 +83,10 @@ The original product brief lives in `docs/prompt.md`; the current UI specificati
 
 - `src/App.jsx` defines routes, provider order, and the Dashboard/navigation/global-style mapping for each design.
 - `src/api/habitsApi.js` centralizes REST requests.
-- `src/context/HabitsContext.jsx` owns Habit, Category, Completion, and Journal Entry state and injects production persistence into the shared writers.
+- `src/context/HabitsContext.jsx` owns Habit, Category, Completion, and Journal Entry state and injects production persistence into the shared lifecycle coordinators.
 - `src/domain/habitTracking.js` and `src/domain/journalTimeline.js` provide pure Habit, Completion, Streak, Calendar Period, and timeline calculations.
-- `src/domain/dashboardHabitTracking.js` composes those calculations with the persistence-aware Completion writer, settles in-flight Completion writes, and returns committed dashboard outcomes.
+- `src/domain/habitLifecycle.js` owns Habit creation metadata, committed create/edit outcomes, optimistic Completion rollback, authoritative deletion state, and caller-ordered writes per Habit through HTTP and in-memory persistence adapters.
+- `src/domain/dashboardHabitTracking.js` composes shared calculations with the Habit lifecycle, settles in-flight Habit writes, and returns committed dashboard outcomes.
 - `src/domain/journalEntryWrites.js` coordinates injected Journal Entry persistence, state replacement, same-entry ordering, exact rollback, and caller results.
 - `src/domain/dailyReminder.js` owns Daily Reminder normalization, persistence ordering, permission policy, scheduling, and incomplete-Habit decisions through injected persistence, clock, browser-notification, and current-Habit interfaces.
 - `src/context/DailyReminderContext.jsx` keeps one Daily Reminder module mounted above the router; `src/adapters/browserDailyReminder.js` supplies browser clock and notification effects.
