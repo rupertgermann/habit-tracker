@@ -324,6 +324,7 @@ const LineChart = ({
           <SvgContainer
             $height={height}
             viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            preserveAspectRatio="none"
             role="group"
             aria-label={ariaLabel}
           >

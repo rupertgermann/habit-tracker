@@ -32,7 +32,7 @@ const expectMonthlyTrend = async page => {
   expect(bounds?.height).toBeGreaterThan(0)
 
   for (const day of new Set([1, elapsedDaysInCurrentMonth()])) {
-    const pointBounds = await chart.getByRole('img', { name: new RegExp(`^Day ${day}:`) }).boundingBox()
+    const pointBounds = await chart.locator('circle').nth(day - 1).boundingBox()
     const labelBounds = await viewport.getByText(day.toString(), { exact: true }).boundingBox()
     const pointCenter = pointBounds.x + pointBounds.width / 2
     const labelCenter = labelBounds.x + labelBounds.width / 2
@@ -61,7 +61,11 @@ test('Monthly Trend renders after load, resize, and reload', async ({ page, requ
         name: 'Incomplete today',
         createdAt: firstDayOfCurrentMonth()
       })
-    ]
+    ],
+    settings: {
+      design: 'quiet-momentum',
+      theme: 'dark'
+    }
   })
 
   await page.setViewportSize({ width: 390, height: 844 })
@@ -69,7 +73,21 @@ test('Monthly Trend renders after load, resize, and reload', async ({ page, requ
 
   await page.goto('/progress')
   await waitForAppReady(page)
+  // Headless Chromium uses overlay scrollbars. Match browsers where the
+  // horizontal scrollbar consumes 15px of the chart's content height.
+  await page.addStyleTag({
+    content: '[data-testid="line-chart-scroller"] { flex: 0 0 185px; }'
+  })
   const mobileBounds = await expectMonthlyTrend(page)
+  await expectNoRootOverflow(page)
+
+  await page.setViewportSize({ width: 833, height: 1171 })
+  await expectMonthlyTrend(page)
+  await page.getByRole('group', { name: 'Monthly completion trend' })
+    .getByRole('img', { name: /^Day 1:/ })
+    .hover()
+  await expect(page.getByRole('tooltip')).toContainText('Day 1')
+  await expectMonthlyTrend(page)
   await expectNoRootOverflow(page)
 
   await page.setViewportSize({ width: 1024, height: 768 })
