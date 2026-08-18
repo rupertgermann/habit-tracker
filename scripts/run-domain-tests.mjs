@@ -11,6 +11,7 @@ const testModules = [
   '/tests/domain/dailyReminder.test.js',
   '/tests/domain/journalEntryWrites.test.js',
   '/tests/domain/journalTimeline.test.js',
+  '/tests/domain/journalComposer.test.js',
   '/tests/context/preferencesContext.test.js',
   '/tests/context/themeContext.test.js'
 ]

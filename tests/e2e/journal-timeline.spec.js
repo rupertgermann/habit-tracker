@@ -152,6 +152,51 @@ test.describe('journal timeline regression coverage', () => {
     expect(await getEntriesForHabitDate(request, habit.id, today)).toHaveLength(1)
   })
 
+  test('adds a backdated Journal Entry from the journal timeline and updates it instead of duplicating', async ({ page, request }) => {
+    const today = new Date()
+    const yesterdayKey = localDateKey(addDays(today, -1))
+    const habit = makeHabit({ id: 'journal-composer-habit', name: 'Evening Stretch' })
+    const createdContent = 'Composed straight from the journal timeline'
+    const updatedContent = 'Revised from the journal timeline composer'
+    await resetAppData(request, { habits: [habit] })
+
+    await page.goto('/journal')
+    await waitForAppReady(page)
+
+    await page.getByRole('button', { name: 'Add Entry' }).click()
+    await page.getByRole('button', { name: 'Journal entry habit' }).click()
+    await page.getByRole('option', { name: habit.name }).click()
+    await page.getByLabel('Journal entry date').fill(yesterdayKey)
+    await moodButton(page, 'Good').click()
+    await page.getByPlaceholder(reflectionInput).fill(createdContent)
+    await page.getByRole('button', { name: 'Save Entry' }).click()
+
+    await expect(page.getByText('Journal entry added successfully!')).toBeVisible()
+    await expect(page.getByText(createdContent, { exact: true })).toBeVisible()
+    await expect.poll(async () => {
+      const entries = await getEntriesForHabitDate(request, habit.id, yesterdayKey)
+      return entries.map(entry => `${entry.content}|${entry.moodId}`).join(',')
+    }).toBe(`${createdContent}|good`)
+
+    await page.getByRole('button', { name: 'Add Entry' }).click()
+    await page.getByRole('button', { name: 'Journal entry habit' }).click()
+    await page.getByRole('option', { name: habit.name }).click()
+    await page.getByLabel('Journal entry date').fill(yesterdayKey)
+
+    await expect(page.getByPlaceholder(reflectionInput)).toHaveValue(createdContent)
+    await expect(page.getByText(`${habit.name} already has an entry for this date. Saving will update it.`)).toBeVisible()
+    await page.getByPlaceholder(reflectionInput).fill(updatedContent)
+    await page.getByRole('button', { name: 'Update Entry' }).click()
+
+    await expect(page.getByText('Journal entry updated successfully!')).toBeVisible()
+    await expect(page.getByText(updatedContent, { exact: true })).toHaveCount(1)
+    await expect(page.getByText(createdContent, { exact: true })).toHaveCount(0)
+    await expect.poll(async () => {
+      const entries = await getEntriesForHabitDate(request, habit.id, yesterdayKey)
+      return entries.map(entry => entry.content)
+    }).toEqual([updatedContent])
+  })
+
   test('creates, searches, edits, and deletes habit journal entries through the app surface', async ({ page, request }) => {
     await page.setViewportSize({ width: 390, height: 900 })
 
