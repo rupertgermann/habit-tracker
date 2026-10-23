@@ -9,7 +9,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,green \"npm run server\" \"npm run dev:client\"",
-    "dev:client": "vite",
+    "dev:client": "vite --port 3300 --strictPort",
     "dev:e2e": "node scripts/run-e2e-dev.mjs",
     "build": "vite build",
     "test": "npm run test:domain && npm run test:server && npm run test:e2e",
