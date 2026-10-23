@@ -95,7 +95,7 @@ npm install
 npm run dev
 ```
 
-The app opens at `http://localhost:3300`. The API listens at `http://127.0.0.1:3301`, and Vite proxies `/api` to that backend.
+The app opens at `http://localhost:3300`. The API listens at `http://127.0.0.1:3301`, and Vite proxies `/api` to that backend. Vite uses `strictPort`, so `npm run dev` fails if port `3300` is already in use.
 
 ## Commands
 

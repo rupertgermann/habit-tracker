@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3300,
+    strictPort: true,
     open: process.env.VITE_OPEN === 'true',
     proxy: {
       '/api': {
