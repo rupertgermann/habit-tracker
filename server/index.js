@@ -1,6 +1,5 @@
 const path = require('path')
 const express = require('express')
-const cors = require('cors')
 const store = require('./db')
 const { createHabitDeletion } = require('./habitDeletion')
 
@@ -12,7 +11,18 @@ const E2E_DB_DIR = path.join(process.cwd(), '.tmp', 'e2e')
 const isE2ERuntime = process.env.HABIT_TRACKER_E2E === 'true' &&
   path.resolve(store.DB_PATH).startsWith(`${path.resolve(E2E_DB_DIR)}${path.sep}`)
 
-app.use(cors())
+const trustedOrigins = new Set(process.env.HABIT_TRACKER_ORIGIN
+  ? [process.env.HABIT_TRACKER_ORIGIN]
+  : ['http://localhost:3300', 'http://127.0.0.1:3300', 'http://localhost:4173', 'http://127.0.0.1:4173'])
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if ((origin !== undefined && !trustedOrigins.has(origin)) ||
+      (origin === undefined && req.headers['sec-fetch-site'] === 'cross-site')) {
+    return res.status(403).json({ error: 'Browser origin is not allowed' })
+  }
+  next()
+})
 app.use(express.json({ limit: '5mb' }))
 app.use((err, req, res, next) => {
   res.status(err.status || 400).json({ error: err.message })

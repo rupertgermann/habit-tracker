@@ -19,6 +19,7 @@ const env = {
   ...process.env,
   HABIT_TRACKER_DB_PATH: path.join(tmpDir, 'habit-tracker.db'),
   HABIT_TRACKER_E2E: 'true',
+  HABIT_TRACKER_ORIGIN: `http://127.0.0.1:${clientPort}`,
   HOST: '127.0.0.1',
   PORT: apiPort,
   VITE_API_TARGET: `http://127.0.0.1:${apiPort}`,
