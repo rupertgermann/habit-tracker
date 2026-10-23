@@ -152,6 +152,56 @@ test.describe('journal timeline regression coverage', () => {
     expect(await getEntriesForHabitDate(request, habit.id, today)).toHaveLength(1)
   })
 
+  test('composer habit and date switches load matching text and mood without overwriting other entries', async ({ page, request }) => {
+    const today = localDateKey()
+    const yesterday = localDateKey(addDays(new Date(), -1))
+    const emptyDate = localDateKey(addDays(new Date(), -2))
+    const habitA = makeHabit({ id: 'switch-a', name: 'Habit A' })
+    const habitB = makeHabit({ id: 'switch-b', name: 'Habit B' })
+    const entries = [
+      makeJournalEntry({ id: 'a-today', habitId: habitA.id, date: today, content: 'A today', moodId: 'good' }),
+      makeJournalEntry({ id: 'b-today', habitId: habitB.id, date: today, content: 'B today', moodId: 'neutral' }),
+      makeJournalEntry({ id: 'b-yesterday', habitId: habitB.id, date: yesterday, content: 'B yesterday', moodId: 'bad' })
+    ]
+    await resetAppData(request, { habits: [habitA, habitB], journalEntries: entries })
+    await page.goto('/journal')
+    await waitForAppReady(page)
+    const editor = page.getByPlaceholder(reflectionInput)
+    const selectHabit = async (name) => {
+      await page.getByRole('button', { name: 'Journal entry habit' }).click()
+      await page.getByRole('option', { name, exact: true }).click()
+    }
+    await page.getByRole('button', { name: 'Add Entry' }).click()
+    await selectHabit(habitA.name)
+    await expect(editor).toHaveValue('A today')
+    await editor.fill('Unsaved A revision')
+    await selectHabit(habitB.name)
+    await expect(editor).toHaveValue('B today')
+    await page.getByRole('button', { name: 'Update Entry' }).click()
+    await expect(editor).toHaveCount(0)
+    expect(await getEntriesForHabitDate(request, habitA.id, today)).toEqual([entries[0]])
+    expect(await getEntriesForHabitDate(request, habitB.id, today)).toMatchObject([entries[1]])
+
+    await page.getByRole('button', { name: 'Add Entry' }).click()
+    await selectHabit(habitB.name)
+    await page.getByLabel('Journal entry date').fill(yesterday)
+    await expect(editor).toHaveValue('B yesterday')
+    await page.getByRole('button', { name: 'Update Entry' }).click()
+    await expect(editor).toHaveCount(0)
+    expect(await getEntriesForHabitDate(request, habitB.id, yesterday)).toMatchObject([entries[2]])
+
+    await page.getByRole('button', { name: 'Add Entry' }).click()
+    await selectHabit(habitB.name)
+    await page.getByLabel('Journal entry date').fill(emptyDate)
+    await expect(editor).toHaveValue('')
+    await editor.fill('A fresh reflection')
+    await expect(editor).toHaveValue('A fresh reflection')
+    await page.getByRole('button', { name: 'Save Entry' }).click()
+    await expect(editor).toHaveCount(0)
+    const [created] = await getEntriesForHabitDate(request, habitB.id, emptyDate)
+    expect(created).toMatchObject({ content: 'A fresh reflection', moodId: null })
+  })
+
   test('adds a backdated Journal Entry from the journal timeline and updates it instead of duplicating', async ({ page, request }) => {
     const today = new Date()
     const yesterdayKey = localDateKey(addDays(today, -1))

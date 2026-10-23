@@ -282,21 +282,17 @@ const JournalView = () => {
 
   const composer = getJournalComposerState({ habits, journalEntries, draft })
 
-  const updateDraft = (changes) => setDraft(current => ({ ...current, ...changes }))
+  const updateDraft = (changes) => setDraft(current => {
+    const next = { ...current, ...changes }
+    if (next.habitId === current.habitId && next.date === current.date) return next
 
-  // Editing an existing habit/date combination starts from the committed entry
-  React.useEffect(() => {
-    const existingEntry = composer.existingEntry
-    if (!existingEntry) return
-
-    setDraft(current => current.content.trim()
-      ? current
-      : {
-          ...current,
-          content: existingEntry.content || '',
-          moodId: existingEntry.moodId || null
-        })
-  }, [composer.existingEntry])
+    const { existingEntry } = getJournalComposerState({ habits, journalEntries, draft: next })
+    return {
+      ...next,
+      content: existingEntry?.content || '',
+      moodId: existingEntry?.moodId || null
+    }
+  })
 
   const handleStartComposing = () => {
     setDraft({ ...emptyDraft, date: composer.defaultDate })
