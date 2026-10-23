@@ -621,3 +621,107 @@ test('week start selector opens in place with readable options', async ({ page, 
   await expect(page.evaluate(() => window.localStorage.getItem('habitTracker.weekStartsOn'))).resolves.toBe(null)
   await expectNoRootOverflow(page)
 })
+
+test('profile load failure blocks edits until retry and failed saves preserve the draft and saved avatar', async ({ page, request }) => {
+  const profile = { name: 'Saved Person', email: 'saved@example.com', avatarImage: `data:image/png;base64,${avatarPng.toString('base64')}` }
+  await resetAppData(request, { settings: { profile } })
+  let failRead = true
+  let failWrite = true
+  let finishSave
+  let writeCount = 0
+  await page.route('**/api/settings/profile', async route => {
+    if (route.request().method() === 'GET') {
+      if (failRead) return route.fulfill({ status: 503, json: { error: 'Unavailable' } })
+      return route.continue()
+    }
+    writeCount++
+    if (failWrite) {
+      await new Promise(resolve => { finishSave = resolve })
+      return route.fulfill({ status: 503, json: { error: 'Profile save unavailable' } })
+    }
+    return route.continue()
+  })
+  await page.goto('/settings')
+  await expect(page.getByText('Could not load profile. Retry before editing.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeDisabled()
+  await expect(page.getByLabel('Avatar image')).toBeDisabled()
+  expect(writeCount).toBe(0)
+  expect((await getState(request)).settings.profile).toEqual(profile)
+
+  failRead = false
+  await page.getByRole('button', { name: 'Retry profile' }).click()
+  await expect(page.getByText('Saved Person', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.getByLabel('Username', { exact: true }).fill('Changed Person')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect.poll(() => Boolean(finishSave)).toBe(true)
+  await expect(page.getByLabel('Username', { exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled()
+  finishSave()
+  await expect(page.getByText('Profile save unavailable')).toBeVisible()
+  await expect(page.getByLabel('Username', { exact: true })).toHaveValue('Changed Person')
+  expect((await getState(request)).settings.profile).toEqual(profile)
+  failWrite = false
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Changed Person', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Changed Person', { exact: true })).toBeVisible()
+  await expect(page.getByAltText('Changed Person avatar')).toBeVisible()
+
+  await page.getByLabel('Avatar image').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('broken image') })
+  await expect(page.getByText('Unable to load image file')).toBeVisible()
+  await expect(page.getByAltText('Changed Person avatar')).toHaveAttribute('src', profile.avatarImage)
+  expect((await getState(request)).settings.profile.avatarImage).toBe(profile.avatarImage)
+  await expect(page.getByRole('button', { name: 'Photo', exact: true })).toBeEnabled()
+})
+
+test('restore locks profile actions through the pending request and success reload window', async ({ page, request }) => {
+  const before = { name: 'Before restore', email: 'before@example.com', avatarImage: null }
+  const after = { name: 'Imported person', email: 'imported@example.com', avatarImage: null }
+  await resetAppData(request, { settings: { profile: before } })
+  await page.addInitScript(() => {
+    const setTimeout = window.setTimeout.bind(window)
+    window.setTimeout = (callback, delay, ...args) => {
+      if (delay === 1500) return 0
+      return setTimeout(callback, delay, ...args)
+    }
+  })
+  let finishRestore
+  await page.route('**/api/restore', async route => {
+    await new Promise(resolve => { finishRestore = resolve })
+    await route.continue()
+  })
+  page.on('dialog', dialog => dialog.accept())
+  await page.goto('/settings')
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeEnabled()
+  const chooserPromise = page.waitForEvent('filechooser')
+  await page.getByText('Restore Data', { exact: true }).click()
+  const chooser = await chooserPromise
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeDisabled()
+  await chooser.setFiles({ name: 'profile.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({
+    formatVersion: 2, metadata: { createdAt: new Date().toISOString() },
+    state: { habits: [], categories: [], journalEntries: [], settings: { profile: after } }
+  })) })
+  await expect.poll(() => Boolean(finishRestore)).toBe(true)
+  await expect(page.getByRole('button', { name: 'Photo', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Clear All Data', exact: true })).toBeDisabled()
+  finishRestore()
+  await expect(page.getByText('Data restored successfully')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeDisabled()
+  await expect(page.getByLabel('Avatar image')).toBeDisabled()
+  expect((await getState(request)).settings.profile).toEqual(after)
+})
+
+test('cancelled or invalid restore unlocks profile editing without writing defaults', async ({ page, request }) => {
+  const profile = { name: 'Existing person', email: 'existing@example.com', avatarImage: null }
+  await resetAppData(request, { settings: { profile } })
+  await page.goto('/settings')
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeEnabled()
+  for (const file of [[], { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{}') }]) {
+    const chooserPromise = page.waitForEvent('filechooser')
+    await page.getByText('Restore Data', { exact: true }).click()
+    await (await chooserPromise).setFiles(file)
+    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeEnabled()
+    expect((await getState(request)).settings.profile).toEqual(profile)
+  }
+})

@@ -68,7 +68,7 @@ Below the wide breakpoint, every design uses a touch-safe bottom navigation suit
 | Routing | React Router 7 |
 | Styling | styled-components 6 |
 | Animations | Framer Motion 12 |
-| Charts | Recharts 3 |
+| Charts | Custom SVG charts |
 | Icons | Tabler Icons React 3 |
 | Dates | date-fns 4 |
 | Celebrations | react-confetti 6 |
@@ -118,6 +118,7 @@ The app opens at `http://localhost:3300`. The API listens at `http://127.0.0.1:3
 
 | Option | Purpose |
 |---|---|
+| `HABIT_TRACKER_ORIGIN` | Exact trusted frontend origin. Defaults to localhost and 127.0.0.1 on ports 3300 and 4173. Test and screenshot scripts set their own origin. Requests without an Origin remain available to local CLI clients. |
 | `HOST` | API bind host. Defaults to `127.0.0.1`. |
 | `PORT` | API port. Defaults to `3301`; also drives Vite's default `/api` proxy target. |
 | `VITE_API_TARGET` | Explicit Vite proxy target. The e2e and screenshot harnesses set this automatically. |
@@ -176,6 +177,7 @@ The frontend uses React Context for live app state. Pure calculations stay separ
 - `src/appDesign/catalog.jsx` is the single registration seam for each design's metadata, previews, light/dark themes, global styles, dashboard, primary navigation, and responsive frame.
 - `ThemeContext` resolves the selected catalog registration, stores design and light/dark preferences in the database, and removes legacy browser-storage theme values.
 - `PreferencesContext` stores week-start preference in the database and feeds calendar, journal, and progress calculations.
+- The Profile lifecycle separates committed data from editable drafts, serializes text and avatar mutations, and blocks saving defaults after a failed load. Browser image conversion and profile persistence are supplied through adapters.
 - `ToastContext` owns notifications inside the UI.
 - `NavigationContext` keeps the bottom navigation aligned with the active route.
 - `src/domain/backup.js` coordinates persisted-state reads and restore writes around pure canonical validation and legacy migration, while `src/adapters/browserBackup.js` owns browser file I/O.

@@ -3,6 +3,7 @@ import { createServer } from 'vite'
 const testModules = [
   '/tests/appDesign/catalog.test.js',
   '/tests/domain/backup.test.js',
+  '/tests/domain/profile.test.js',
   '/tests/domain/browserBackupAdapter.test.js',
   '/tests/domain/habitTracking.test.js',
   '/tests/domain/habitLifecycle.test.js',
