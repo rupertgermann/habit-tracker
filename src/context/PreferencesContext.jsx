@@ -43,7 +43,6 @@ export const removeLegacyWeekStartPreference = (storage = getBrowserStorage()) =
 
 export const PreferencesProvider = ({ children }) => {
   const [weekStartsOn, setWeekStartsOnState] = useState(DEFAULT_WEEK_START)
-  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -58,24 +57,17 @@ export const PreferencesProvider = ({ children }) => {
       .catch(error => {
         if (!cancelled) console.error('Failed to load preferences:', error)
       })
-      .finally(() => {
-        if (!cancelled) setSettingsLoaded(true)
-      })
 
     return () => {
       cancelled = true
     }
   }, [])
 
-  useEffect(() => {
-    if (!settingsLoaded) return
-
-    habitsApi.saveSetting(PREFERENCES_SETTINGS_KEY, { weekStartsOn })
-      .catch(error => console.error('Failed to save preferences:', error))
-  }, [settingsLoaded, weekStartsOn])
-
   const setWeekStartsOn = (value) => {
-    setWeekStartsOnState(normalizeWeekStartsOn(value))
+    const nextWeekStartsOn = normalizeWeekStartsOn(value)
+    setWeekStartsOnState(nextWeekStartsOn)
+    habitsApi.saveSetting(PREFERENCES_SETTINGS_KEY, { weekStartsOn: nextWeekStartsOn })
+      .catch(error => console.error('Failed to save preferences:', error))
   }
 
   return (

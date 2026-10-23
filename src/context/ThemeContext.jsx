@@ -67,7 +67,6 @@ export const removeLegacyThemePreference = (storage = getBrowserStorage()) => {
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => resolveInitialIsDarkMode())
   const [design, setDesignState] = useState(DEFAULT_APP_DESIGN_ID)
-  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const appDesign = getAppDesign(design)
   const theme = getAppDesignTheme(design, isDarkMode)
 
@@ -96,8 +95,6 @@ export const ThemeProvider = ({ children }) => {
       } else {
         console.error('Failed to load design preference:', designResult.reason)
       }
-
-      setSettingsLoaded(true)
     }
 
     loadAppearanceSettings()
@@ -106,20 +103,6 @@ export const ThemeProvider = ({ children }) => {
       cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    if (!settingsLoaded) return
-
-    habitsApi.saveSetting(THEME_SETTINGS_KEY, isDarkMode ? DARK_THEME_VALUE : LIGHT_THEME_VALUE)
-      .catch(error => console.error('Failed to save theme preference:', error))
-  }, [isDarkMode, settingsLoaded])
-
-  useEffect(() => {
-    if (!settingsLoaded) return
-
-    habitsApi.saveSetting(DESIGN_SETTINGS_KEY, design)
-      .catch(error => console.error('Failed to save design preference:', error))
-  }, [design, settingsLoaded])
 
   // Apply theme class to body
   useEffect(() => {
@@ -136,11 +119,17 @@ export const ThemeProvider = ({ children }) => {
   }, [design])
 
   const toggleTheme = () => {
-    setIsDarkMode(currentIsDarkMode => !currentIsDarkMode)
+    const nextIsDarkMode = !isDarkMode
+    setIsDarkMode(nextIsDarkMode)
+    habitsApi.saveSetting(THEME_SETTINGS_KEY, nextIsDarkMode ? DARK_THEME_VALUE : LIGHT_THEME_VALUE)
+      .catch(error => console.error('Failed to save theme preference:', error))
   }
 
   const setDesign = value => {
-    setDesignState(normalizeAppDesignId(value))
+    const nextDesign = normalizeAppDesignId(value)
+    setDesignState(nextDesign)
+    habitsApi.saveSetting(DESIGN_SETTINGS_KEY, nextDesign)
+      .catch(error => console.error('Failed to save design preference:', error))
   }
 
   const value = {
