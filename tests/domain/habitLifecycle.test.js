@@ -400,5 +400,34 @@ export const tests = [
         journalEntries: [unrelatedEntry]
       })
     }
+  },
+  {
+    name: 'completion writes reject pre-creation and future additions but allow removing old invalid logs',
+    async run() {
+      for (const date of [new Date('2026-07-31T12:00:00Z'), new Date('2026-08-10T12:00:00Z')]) {
+        const dateKey = date.toISOString().slice(0, 10)
+        for (const action of ['incrementCount', 'toggleYesNo']) {
+          const habit = makeHabit()
+          const harness = createHarness({ habits: [habit] })
+          const result = await harness.lifecycle[action]({ habitId: habit.id, date })
+          assert.equal(result.ok, false)
+          assert.deepEqual(harness.persistence.getHabit(habit.id), habit)
+        }
+        for (const action of ['decrementCount', 'toggleYesNo']) {
+          const habit = makeHabit({ completions: [{ date: dateKey }] })
+          const harness = createHarness({ habits: [habit] })
+          const result = await harness.lifecycle[action]({ habitId: habit.id, date })
+          assert.equal(result.ok, true)
+          assert.deepEqual(harness.persistence.getHabit(habit.id).completions, [])
+        }
+      }
+      for (const date of [new Date('2026-08-01T12:00:00Z'), createdAt]) {
+        const habit = makeHabit()
+        const harness = createHarness({ habits: [habit] })
+        const result = await harness.lifecycle.incrementCount({ habitId: habit.id, date })
+        assert.equal(result.ok, true)
+        assert.equal(harness.persistence.getHabit(habit.id).completions.length, 1)
+      }
+    }
   }
 ]

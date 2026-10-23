@@ -1,0 +1,25 @@
+import { expect, test } from '@playwright/test'
+import { resetAppData, waitForAppReady } from './helpers.js'
+
+test('Category buttons support Tab, Enter and Space without submitting the Habit form', async ({ page, request }) => {
+  await resetAppData(request)
+  await page.goto('/add-habit')
+  await waitForAppReady(page)
+  await page.getByPlaceholder('e.g., Drink 8 glasses of water').fill('Keyboard Habit')
+  const health = page.getByRole('button', { name: 'Health & Fitness', exact: true })
+  const productivity = page.getByRole('button', { name: 'Productivity', exact: true })
+  await health.focus()
+  await page.keyboard.press('Tab')
+  await expect(productivity).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(productivity).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveURL(/\/add-habit$/)
+  expect((await (await request.get('/api/state')).json()).habits).toHaveLength(0)
+  await health.focus()
+  await page.keyboard.press('Space')
+  await expect(health).toHaveAttribute('aria-pressed', 'true')
+  await expect(productivity).toHaveAttribute('aria-pressed', 'false')
+  await expect(page).toHaveURL(/\/add-habit$/)
+  await page.getByRole('button', { name: 'Create Habit' }).click()
+  await expect.poll(async () => (await (await request.get('/api/state')).json()).habits[0]?.category).toBe('health')
+})

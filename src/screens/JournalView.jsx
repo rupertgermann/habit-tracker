@@ -527,7 +527,7 @@ const JournalView = () => {
               <JournalEntryCard key={entry.id} elevated>
                 <EntryHeader>
                   <EntryDate>
-                    {format(new Date(entry.date), 'EEEE, MMMM d, yyyy')}
+                    {format(parseISO(entry.date), 'EEEE, MMMM d, yyyy')}
                   </EntryDate>
                   {mood && (
                     <EntryMood>

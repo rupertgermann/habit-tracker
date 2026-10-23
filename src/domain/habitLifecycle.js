@@ -1,6 +1,7 @@
 import {
   decrementCompletionForDate,
   incrementCompletionForDate,
+  isHabitEligibleOnDate,
   toggleBinaryCompletionForDate
 } from './habitTracking'
 
@@ -210,6 +211,18 @@ export const createHabitLifecycle = ({
     if (!previousHabit) return missingHabitResult('update')
 
     const optimisticHabit = updateCompletion(previousHabit, date)
+    if (
+      optimisticHabit.completions.length > (previousHabit.completions || []).length &&
+      !isHabitEligibleOnDate(previousHabit, date, now())
+    ) {
+      return {
+        ok: false,
+        changed: false,
+        habit: previousHabit,
+        error: new Error('Completions must be between Habit creation and today'),
+        habits: getHabits()
+      }
+    }
     if (optimisticHabit === previousHabit) {
       return {
         ok: true,

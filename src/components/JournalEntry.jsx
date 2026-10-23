@@ -5,7 +5,7 @@ import Button from './Button'
 import Input from './Input'
 import { useHabits } from '../context/HabitsContext'
 import { useToast } from '../context/ToastContext'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 
 const JournalContainer = styled.div`
   margin-bottom: ${props => props.theme.spacing.lg};
@@ -231,7 +231,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
     <JournalContainer>
       <JournalHeader>
         <JournalTitle>Journal Reflection</JournalTitle>
-        <JournalDate>{format(new Date(date), 'MMM d, yyyy')}</JournalDate>
+        <JournalDate>{format(parseISO(date), 'MMM d, yyyy')}</JournalDate>
       </JournalHeader>
       
       {isEditing ? (
