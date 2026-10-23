@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import Card from '../components/Card'
@@ -433,10 +433,12 @@ const AddEditHabit = () => {
     ]
   }, [activeIconGroup, formData.icon, iconSearchTerm])
 
+  const loadedDraftId = useRef(null)
   useEffect(() => {
-    if (isEditing && id) {
+    if (isEditing && id && loadedDraftId.current !== id) {
       const habit = getHabitById(habits, id)
       if (habit) {
+        loadedDraftId.current = id
         setFormData({
           name: habit.name,
           description: habit.description || '',
@@ -540,7 +542,11 @@ const AddEditHabit = () => {
       : await addHabit(habitData)
 
     if (!result.ok) {
-      setSubmitError(isEditing
+      setSubmitError(result.error?.status === 409
+        ? `${result.error.message} Your draft is still here; saving again applies it to the latest Habit.`
+        : result.error?.status === 404
+        ? 'This Habit was deleted in another tab. Your draft is still here, but it cannot be saved to the deleted Habit.'
+        : isEditing
         ? 'This Habit could not be updated. Your draft is still here. Please try again.'
         : 'This Habit could not be created. Your draft is still here. Please try again.')
       setIsSaving(false)

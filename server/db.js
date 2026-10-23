@@ -1,6 +1,8 @@
+const { randomUUID } = require('node:crypto')
 const path = require('path')
 const fs = require('fs')
 const Database = require('better-sqlite3')
+const { validateState } = require('../shared/stateValidation.mjs')
 const DEFAULT_CATEGORIES = require('../shared/defaultCategories.json')
 
 const DB_PATH = process.env.HABIT_TRACKER_DB_PATH || path.join(__dirname, 'data', 'habit-tracker.db')
@@ -73,6 +75,13 @@ function seedCategories() {
 }
 seedCategories()
 
+// Older databases receive tokens once; reads never mutate stored records.
+db.transaction(() => {
+  for (const habit of listRows('habits')) {
+    if (!habit.revision) upsertRow('habits', habit)
+  }
+})()
+
 function listRows(table) {
   return db.prepare(`SELECT data FROM ${table}`).all().map(row => JSON.parse(row.data))
 }
@@ -107,6 +116,7 @@ function upsertSetting(key, value) {
 }
 
 function upsertRow(table, item) {
+  if (table === 'habits') item = { ...item, revision: randomUUID() }
   db.prepare(`INSERT INTO ${table} (id, data) VALUES (@id, @data)
               ON CONFLICT(id) DO UPDATE SET data = @data`)
     .run({ id: item.id, data: JSON.stringify(item) })
@@ -126,7 +136,8 @@ function getState() {
   }
 }
 
-function restoreState({ habits = [], categories = [], journalEntries = [], settings = {} }) {
+function restoreState(value) {
+  const { habits, categories, journalEntries, settings } = validateState(value)
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM habits').run()
     db.prepare('DELETE FROM categories').run()
@@ -134,7 +145,7 @@ function restoreState({ habits = [], categories = [], journalEntries = [], setti
     db.prepare('DELETE FROM settings').run()
 
     const insertHabit = db.prepare('INSERT INTO habits (id, data) VALUES (?, ?)')
-    for (const h of habits) insertHabit.run(h.id, JSON.stringify(h))
+    for (const h of habits) insertHabit.run(h.id, JSON.stringify({ ...h, revision: randomUUID() }))
 
     const insertCategory = db.prepare('INSERT INTO categories (id, data) VALUES (?, ?)')
     for (const c of categories) insertCategory.run(c.id, JSON.stringify(c))
@@ -158,6 +169,44 @@ function restoreState({ habits = [], categories = [], journalEntries = [], setti
   return tx()
 }
 
+function writeRecord(table, item, create = false) {
+  return db.transaction(() => {
+    const state = getState()
+    const collection = table === 'journal_entries' ? 'journalEntries' : table
+    const existing = state[collection].find(record => record.id === item?.id)
+    const exists = Boolean(existing)
+    if (create && exists) throw Object.assign(new Error('Record already exists'), { status: 409, state })
+    if (!create && !exists) throw Object.assign(new Error('Record does not exist'), { status: 404, state })
+    if (table === 'habits' && !create && (!item.revision || item.revision !== existing.revision)) {
+      throw Object.assign(new Error('Habit changed in another tab. Reloaded the latest saved data; review your changes before trying again.'), { status: 409, state })
+    }
+    state[collection] = [...state[collection].filter(record => record.id !== item?.id), item]
+    validateState(state)
+    return upsertRow(table, item)
+  })()
+}
+
+function writeSetting(key, value) {
+  const state = getState()
+  state.settings[key] = value
+  validateState(state)
+  return upsertSetting(key, value)
+}
+
+function deleteCategory(id) {
+  return db.transaction(() => {
+    if (id === 'other') throw Object.assign(new Error('The Other Category cannot be deleted'), { status: 400 })
+    if (!listRows('categories').some(category => category.id === 'other')) {
+      upsertRow('categories', DEFAULT_CATEGORIES.find(category => category.id === 'other'))
+    }
+    for (const habit of listRows('habits')) {
+      if (habit.category === id) upsertRow('habits', { ...habit, category: 'other' })
+    }
+    deleteRow('categories', id)
+    return { ok: true, state: getState() }
+  })()
+}
+
 function clearAll() {
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM habits').run()
@@ -170,6 +219,9 @@ function clearAll() {
 }
 
 module.exports = {
+  writeRecord,
+  writeSetting,
+  deleteCategory,
   DB_PATH,
   db,
   getState,

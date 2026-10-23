@@ -19,6 +19,8 @@ const replacementState = {
   journalEntries: [{
     id: 'replacement-entry',
     habitId: 'replacement-habit',
+    date: '2026-10-23',
+    createdAt: '2026-07-15T08:00:00.000Z',
     content: 'Chapter one'
   }],
   settings: {
@@ -44,11 +46,11 @@ test.beforeEach(() => {
 test('complete restore commits exact state and returns the authoritative result', () => {
   const result = store.restoreState(replacementState)
 
-  assert.deepEqual(result, {
-    ok: true,
-    state: replacementState
-  })
-  assert.deepEqual(store.getState(), replacementState)
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.state, store.getState())
+  assert.equal(typeof result.state.habits[0].revision, 'string')
+  const { revision, ...habit } = result.state.habits[0]
+  assert.deepEqual({ ...result.state, habits: [habit] }, replacementState)
 })
 
 test('forced complete restore failure preserves exact previous state', () => {
@@ -58,6 +60,8 @@ test('forced complete restore failure preserves exact previous state', () => {
     journalEntries: [{
       id: 'prior-entry',
       habitId: 'prior-habit',
+      date: '2026-10-23',
+      createdAt: '2026-07-15T08:00:00.000Z',
       content: 'Prior entry'
     }],
     settings: {
@@ -67,6 +71,7 @@ test('forced complete restore failure preserves exact previous state', () => {
     }
   }
   store.restoreState(priorState)
+  const committedPrior = store.getState()
   store.db.exec(`
     CREATE TRIGGER force_complete_restore_failure
     BEFORE INSERT ON settings
@@ -79,7 +84,7 @@ test('forced complete restore failure preserves exact previous state', () => {
     () => store.restoreState(replacementState),
     /forced complete restore failure/
   )
-  assert.deepEqual(store.getState(), priorState)
+  assert.deepEqual(store.getState(), committedPrior)
 
   store.db.exec('DROP TRIGGER force_complete_restore_failure')
 })

@@ -11,6 +11,7 @@ const defaultCreateId = () => globalThis.crypto?.randomUUID?.() || (
 const editableHabitData = habitData => {
   const {
     id: _id,
+    revision: _revision,
     createdAt: _createdAt,
     updatedAt: _updatedAt,
     completions: _completions,
@@ -92,6 +93,7 @@ export const createHabitLifecycle = ({
   getHabits,
   replaceHabits,
   replaceDeletedState,
+  reconcileDeletedHabit = () => {},
   pendingWrites = new Map(),
   createId = defaultCreateId,
   now = () => new Date()
@@ -149,6 +151,19 @@ export const createHabitLifecycle = ({
     return habits
   }
 
+  const reconcileConflict = (error, previousHabit) => {
+    if (![404, 409].includes(error.status) || !error.state) return previousHabit
+
+    const authoritativeHabit = error.state.habits.find(habit => habit.id === previousHabit.id)
+    if (authoritativeHabit) {
+      replaceHabitInCurrentCollection(authoritativeHabit)
+    } else {
+      replaceHabits(getHabits().filter(habit => habit.id !== previousHabit.id))
+      reconcileDeletedHabit(previousHabit.id)
+    }
+    return authoritativeHabit || null
+  }
+
   const missingHabitResult = action => ({
     ok: false,
     changed: false,
@@ -179,10 +194,11 @@ export const createHabitLifecycle = ({
         habits
       }
     } catch (error) {
+      const habit = reconcileConflict(error, previousHabit)
       return {
         ok: false,
         changed: false,
-        habit: previousHabit,
+        habit,
         error,
         habits: getHabits()
       }
@@ -215,13 +231,14 @@ export const createHabitLifecycle = ({
         habits
       }
     } catch (error) {
-      const habits = replaceHabitInCurrentCollection(previousHabit)
+      replaceHabitInCurrentCollection(previousHabit)
+      const habit = reconcileConflict(error, previousHabit)
       return {
         ok: false,
         changed: false,
-        habit: previousHabit,
+        habit,
         error,
-        habits
+        habits: getHabits()
       }
     }
   }

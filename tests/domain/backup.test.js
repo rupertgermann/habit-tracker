@@ -23,6 +23,7 @@ const completeState = {
     id: 'entry-1',
     habitId: 'read',
     date: '2026-07-15',
+    createdAt: '2026-07-15T08:00:00.000Z',
     content: 'Finished a chapter'
   }],
   settings: {
@@ -192,6 +193,15 @@ export const tests = [
       })
       const invalidStates = [
         null,
+        {},
+        { ...completeState, habits: [{ ...completeState.habits[0], reminders: {} }] },
+        { ...completeState, habits: [{ ...completeState.habits[0], selectedDays: 'invalid' }] },
+        { ...completeState, settings: { dailyReminder: { time: '25:00' } } },
+        { ...completeState, journalEntries: [{ ...completeState.journalEntries[0], content: {} }] },
+        { ...completeState, journalEntries: [{ ...completeState.journalEntries[0], createdAt: undefined }] },
+        { ...completeState, journalEntries: [{ ...completeState.journalEntries[0], date: '2026-02-30' }] },
+        { ...completeState, habits: [{ ...completeState.habits[0], name: null }] },
+        { ...completeState, habits: [{ ...completeState.habits[0], category: 'missing' }] },
         { ...completeState, habits: {} },
         { ...completeState, categories: 'invalid' },
         { ...completeState, journalEntries: {} },

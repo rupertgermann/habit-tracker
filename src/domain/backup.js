@@ -1,3 +1,4 @@
+import { validateState } from '../../shared/stateValidation.mjs'
 import defaultCategories from '../../shared/defaultCategories.json'
 
 export const BACKUP_FORMAT_VERSION = 2
@@ -20,64 +21,6 @@ const backupError = (code, message, cause) => {
   const error = new Error(message, cause ? { cause } : undefined)
   error.code = code
   return error
-}
-
-const requireRecordCollection = (collection, name) => {
-  if (!Array.isArray(collection)) {
-    throw backupError('invalid-backup', `${name} must be an array`)
-  }
-
-  const identities = new Set()
-  for (const record of collection) {
-    if (!isObject(record) || typeof record.id !== 'string' || !record.id.trim()) {
-      throw backupError('invalid-backup', `Every ${name} record must have a non-empty string id`)
-    }
-    if (identities.has(record.id)) {
-      throw backupError('invalid-backup', `${name} contains duplicate id "${record.id}"`)
-    }
-    identities.add(record.id)
-  }
-}
-
-const validateState = value => {
-  if (!isObject(value)) {
-    throw backupError('invalid-backup', 'Backup state must be an object')
-  }
-
-  requireRecordCollection(value.habits, 'Habits')
-  requireRecordCollection(value.categories, 'Categories')
-  requireRecordCollection(value.journalEntries, 'Journal Entries')
-
-  for (const habit of value.habits) {
-    if (!Array.isArray(habit.completions)) {
-      throw backupError('invalid-backup', `Habit "${habit.id}" Completions must be an array`)
-    }
-
-    for (const completion of habit.completions) {
-      if (!isObject(completion) || typeof completion.date !== 'string' || !completion.date.trim()) {
-        throw backupError('invalid-backup', `Habit "${habit.id}" contains an invalid Completion`)
-      }
-      if (hasOwn(completion, 'completedAt') && typeof completion.completedAt !== 'string') {
-        throw backupError('invalid-backup', `Habit "${habit.id}" contains an invalid Completion timestamp`)
-      }
-    }
-  }
-
-  const habitIds = new Set(value.habits.map(habit => habit.id))
-  for (const entry of value.journalEntries) {
-    if (typeof entry.habitId !== 'string' || !habitIds.has(entry.habitId)) {
-      throw backupError(
-        'invalid-backup',
-        `Journal Entry "${entry.id}" must be associated with an included Habit`
-      )
-    }
-  }
-
-  if (!isObject(value.settings)) {
-    throw backupError('invalid-backup', 'Settings must be an object')
-  }
-
-  return cloneJson(value)
 }
 
 const validateCanonicalDocument = document => {
@@ -238,7 +181,7 @@ export const createBackupModule = ({
     }
 
     try {
-      const state = validateState(await persistence.restoreState(prepared.state))
+      const state = validateState(await persistence.restoreState(validateState(prepared.state)))
       return {
         ok: true,
         sourceVersion: prepared.sourceVersion,

@@ -18,6 +18,7 @@ const makeState = (suffix = 'restored') => {
   const habit = makeHabit({
     id: `${suffix}-habit`,
     name: `${suffix} Habit`,
+    category: `${suffix}-category`,
     completions: [makeCompletion('2026-07-15')]
   })
 
@@ -116,20 +117,22 @@ test('valid canonical restore commits complete state before reloading', async ({
   await chooseRestoreFile(page, canonicalDocument(restoredState), 'canonical.json')
   const response = await responsePromise
   expect(response.ok()).toBe(true)
-  expect(await response.json()).toEqual({
-    ok: true,
-    state: restoredState
-  })
-  expect(await getState(request)).toEqual(restoredState)
+  const committed = await response.json()
+  expect(committed.ok).toBe(true)
+  expect(committed.state.habits[0].revision).toEqual(expect.any(String))
+  const { revision, ...habitData } = committed.state.habits[0]
+  expect({ ...committed.state, habits: [habitData] }).toEqual(restoredState)
+  expect(await getState(request)).toEqual(committed.state)
 
   await page.waitForEvent('load')
   await waitForAppReady(page)
-  expect(await getState(request)).toEqual(restoredState)
+  expect(await getState(request)).toEqual(committed.state)
   await expect(page.getByText('canonical User')).toBeVisible()
 })
 
 test('valid legacy version 1.0.0 restore supplies safe defaults', async ({ page, request }) => {
   const legacyState = makeState('legacy')
+  legacyState.habits[0].category = 'other'
   const { categories, ...legacyCollections } = legacyState
   await page.goto('/settings')
   await waitForAppReady(page)
@@ -190,6 +193,7 @@ test('restore transport failure preserves state and does not reload', async ({ p
   await page.goto('/settings')
   await waitForAppReady(page)
   await expectVisibleSettingsState(page, 'prior')
+  const committedPrior = await getState(request)
   page.on('dialog', dialog => dialog.accept())
   let navigationCount = 0
   page.on('framenavigated', () => {
@@ -207,7 +211,31 @@ test('restore transport failure preserves state and does not reload', async ({ p
   await expect(page.getByText('Data restored successfully')).toHaveCount(0)
   await page.waitForTimeout(1700)
   expect(navigationCount).toBe(0)
-  expect(await getState(request)).toEqual(priorState)
+  expect(await getState(request)).toEqual(committedPrior)
   await expectVisibleSettingsState(page, 'prior')
   await expect(page.getByText('failed User', { exact: true })).toHaveCount(0)
+})
+
+
+test('malformed record backup is rejected and leaves persisted and visible state intact', async ({ page, request }) => {
+  const prior = makeState('safe')
+  await resetAppData(request, prior)
+  await page.goto('/settings')
+  await waitForAppReady(page)
+  const persisted = await getState(request)
+  let restoreCalls = 0
+  let dialogCalls = 0
+  await page.route('**/api/restore', async route => {
+    restoreCalls += 1
+    await route.continue()
+  })
+  page.on('dialog', dialog => { dialogCalls += 1; dialog.dismiss() })
+  const malformed = makeState('broken')
+  malformed.journalEntries[0].content = { text: 'Not a string' }
+  await chooseRestoreFile(page, canonicalDocument(malformed))
+  await expect(page.getByText('Journal Entry content must be text')).toBeVisible()
+  expect(restoreCalls).toBe(0)
+  expect(dialogCalls).toBe(0)
+  expect(await getState(request)).toEqual(persisted)
+  await expectVisibleSettingsState(page, 'safe')
 })

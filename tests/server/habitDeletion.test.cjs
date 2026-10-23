@@ -52,13 +52,13 @@ test('deleting a Habit preserves unrelated Journal Entries', () => {
   const relatedEntry = { id: 'related-entry', habitId: deletedHabit.id, content: 'Read' }
   const unrelatedEntry = { id: 'unrelated-entry', habitId: keptHabit.id, content: 'Walked' }
   store.upsertRow('habits', deletedHabit)
-  store.upsertRow('habits', keptHabit)
+  const committedKeptHabit = store.upsertRow('habits', keptHabit)
   store.upsertRow('journal_entries', relatedEntry)
   store.upsertRow('journal_entries', unrelatedEntry)
 
   const result = deleteHabit(deletedHabit.id)
 
-  assert.deepEqual(result.state.habits, [keptHabit])
+  assert.deepEqual(result.state.habits, [committedKeptHabit])
   assert.deepEqual(result.state.journalEntries, [unrelatedEntry])
   assert.deepEqual(store.getState(), result.state)
 })
@@ -68,6 +68,7 @@ test('a failed Habit deletion rolls back its related Journal Entry deletion', ()
   const journalEntry = { id: 'related-entry', habitId: habit.id, content: 'Read' }
   store.upsertRow('habits', habit)
   store.upsertRow('journal_entries', journalEntry)
+  const priorState = store.getState()
   store.db.exec(`
     CREATE TRIGGER force_habit_delete_failure
     BEFORE DELETE ON habits
@@ -80,8 +81,7 @@ test('a failed Habit deletion rolls back its related Journal Entry deletion', ()
     () => deleteHabit(habit.id),
     /forced Habit deletion failure/
   )
-  assert.deepEqual(store.getState().habits, [habit])
-  assert.deepEqual(store.getState().journalEntries, [journalEntry])
+  assert.deepEqual(store.getState(), priorState)
 
   store.db.exec('DROP TRIGGER force_habit_delete_failure')
 })

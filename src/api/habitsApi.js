@@ -6,7 +6,11 @@ async function request(path, options = {}) {
     ...options
   })
   if (!res.ok) {
-    throw new Error(`API ${options.method || 'GET'} ${path} failed: ${res.status}`)
+    const body = await res.json().catch(() => ({}))
+    const error = new Error(body.error || `API ${options.method || 'GET'} ${path} failed: ${res.status}`)
+    error.status = res.status
+    error.state = body.state
+    throw error
   }
   if (res.status === 204) return null
   return res.json()
