@@ -60,11 +60,6 @@ const habitsReducer = (state, action) => {
           category.id === action.payload.id ? action.payload : category
         )
       }
-    case 'DELETE_CATEGORY':
-      return {
-        ...state,
-        categories: state.categories.filter(category => category.id !== action.payload)
-      }
     case 'REPLACE_JOURNAL_ENTRIES':
       return state.journalEntries === action.payload
         ? state
@@ -122,6 +117,9 @@ export const HabitsProvider = ({
     getHabits: () => habitsRef.current,
     replaceHabits,
     replaceDeletedState,
+    reconcileDeletedHabit: habitId => replaceJournalEntries(
+      journalEntriesRef.current.filter(entry => entry.habitId !== habitId)
+    ),
     pendingWrites: pendingHabitWrites.current
   })
 
@@ -236,15 +234,16 @@ export const HabitsProvider = ({
     return updatedCategory
   }
 
-  const deleteCategory = (id) => {
-    // Move habits with this category to 'other'
-    const habitsToUpdate = state.habits.filter(habit => habit.category === id)
-    habitsToUpdate.forEach(habit => {
-      updateHabit(habit.id, { category: 'other' })
-    })
-
-    dispatch({ type: 'DELETE_CATEGORY', payload: id })
-    habitsApi.deleteCategory(id).catch(err => console.error('Failed to delete category:', err))
+  const deleteCategory = async id => {
+    await getHabitLifecycle().settle()
+    const before = new Map(habitsRef.current.map(habit => [habit.id, habit]))
+    const result = await habitsApi.deleteCategory(id)
+    const committed = new Map(result.state.habits.map(habit => [habit.id, habit]))
+    replaceHabits(habitsRef.current.map(habit =>
+      before.get(habit.id) === habit ? committed.get(habit.id) || habit : habit
+    ))
+    dispatch({ type: 'FETCH_CATEGORIES_SUCCESS', payload: result.state.categories })
+    return result
   }
 
   const value = {

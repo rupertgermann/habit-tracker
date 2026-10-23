@@ -35,6 +35,9 @@ const createHarness = ({
       habits = state.habits
       journalEntries = state.journalEntries
     },
+    reconcileDeletedHabit: habitId => {
+      journalEntries = journalEntries.filter(entry => entry.habitId !== habitId)
+    },
     createId: () => 'created-habit',
     now
   })
@@ -48,6 +51,52 @@ const createHarness = ({
 }
 
 export const tests = [
+  {
+    name: 'conflicts reconcile only the rejected Habit and never forward a draft revision',
+    async run() {
+      const first = makeHabit({ revision: 'old' })
+      const unrelated = makeHabit({ id: 'another', revision: 'current' })
+      const authoritative = { ...first, revision: 'new', completions: [{ date: '2026-08-09' }] }
+      let submitted
+      const persistence = {
+        async updateHabit(habit) {
+          submitted = habit
+          throw Object.assign(new Error('conflict'), {
+            status: 409,
+            state: { habits: [authoritative, { ...unrelated, name: 'Old snapshot' }] }
+          })
+        }
+      }
+      const harness = createHarness({ habits: [first, unrelated], persistence })
+      const result = await harness.lifecycle.update(first.id, { name: 'draft', revision: 'forged' })
+      assert.equal(submitted.revision, 'old')
+      assert.equal(result.ok, false)
+      assert.deepEqual(harness.getHabits(), [authoritative, unrelated])
+    }
+  },
+  {
+    name: 'missing-record conflicts remove optimistic completions without replacing other Habits',
+    async run() {
+      const habit = makeHabit({ revision: 'old' })
+      const unrelated = makeHabit({ id: 'another' })
+      const persistence = {
+        async updateHabit() {
+          throw Object.assign(new Error('deleted'), { status: 404, state: { habits: [] } })
+        }
+      }
+      const relatedEntry = { id: 'related', habitId: habit.id }
+      const keptEntry = { id: 'kept', habitId: unrelated.id }
+      const harness = createHarness({
+        habits: [habit, unrelated],
+        journalEntries: [relatedEntry, keptEntry],
+        persistence
+      })
+      const result = await harness.lifecycle.toggleYesNo({ habitId: habit.id, date: createdAt })
+      assert.equal(result.ok, false)
+      assert.deepEqual(harness.getHabits(), [unrelated])
+      assert.deepEqual(harness.getJournalEntries(), [keptEntry])
+    }
+  },
   {
     name: 'Habit creation becomes visible only after persistence commits lifecycle-owned metadata',
     async run() {
@@ -350,6 +399,35 @@ export const tests = [
         habits: [],
         journalEntries: [unrelatedEntry]
       })
+    }
+  },
+  {
+    name: 'completion writes reject pre-creation and future additions but allow removing old invalid logs',
+    async run() {
+      for (const date of [new Date('2026-07-31T12:00:00Z'), new Date('2026-08-10T12:00:00Z')]) {
+        const dateKey = date.toISOString().slice(0, 10)
+        for (const action of ['incrementCount', 'toggleYesNo']) {
+          const habit = makeHabit()
+          const harness = createHarness({ habits: [habit] })
+          const result = await harness.lifecycle[action]({ habitId: habit.id, date })
+          assert.equal(result.ok, false)
+          assert.deepEqual(harness.persistence.getHabit(habit.id), habit)
+        }
+        for (const action of ['decrementCount', 'toggleYesNo']) {
+          const habit = makeHabit({ completions: [{ date: dateKey }] })
+          const harness = createHarness({ habits: [habit] })
+          const result = await harness.lifecycle[action]({ habitId: habit.id, date })
+          assert.equal(result.ok, true)
+          assert.deepEqual(harness.persistence.getHabit(habit.id).completions, [])
+        }
+      }
+      for (const date of [new Date('2026-08-01T12:00:00Z'), createdAt]) {
+        const habit = makeHabit()
+        const harness = createHarness({ habits: [habit] })
+        const result = await harness.lifecycle.incrementCount({ habitId: habit.id, date })
+        assert.equal(result.ok, true)
+        assert.equal(harness.persistence.getHabit(habit.id).completions.length, 1)
+      }
     }
   }
 ]

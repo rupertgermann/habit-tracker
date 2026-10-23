@@ -225,6 +225,7 @@ test('legacy string icons continue to render safely', async ({ page, request }) 
     habits: [
       makeHabit({
         id: 'e2e-legacy-icon',
+        category: 'legacy',
         name: 'E2E Legacy Icon',
         icon: 'Y',
         completions: []
@@ -239,9 +240,9 @@ test('legacy string icons continue to render safely', async ({ page, request }) 
   await waitForAppReady(page)
 
   await expect(page.getByText('E2E Legacy Icon')).toBeVisible()
-  await expect(page.getByText('Legacy Category')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Legacy Category', exact: true })).toBeVisible()
   await expect(page.getByText('Y', { exact: true })).toBeVisible()
-  await expect(page.getByText('L', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Legacy Category', exact: true }).getByText('L', { exact: true })).toBeVisible()
 })
 
 test('mobile editing preserves created date and keeps detail route usable', async ({ page, request }) => {
@@ -466,6 +467,7 @@ test('failed Habit deletion preserves visible and persisted Habit data', async (
     content: 'Preserve this reflection'
   })
   await resetAppData(request, { habits: [habit], journalEntries: [journalEntry] })
+  const committedBeforeDelete = await getState(request)
 
   await page.route(`**/api/habits/${habit.id}`, async route => {
     if (route.request().method() === 'DELETE') {
@@ -484,7 +486,7 @@ test('failed Habit deletion preserves visible and persisted Habit data', async (
   await expect(page.getByRole('heading', { level: 1, name: new RegExp(habit.name) })).toBeVisible()
   await expect(page.getByText(`Could not delete "${habit.name}". Please try again.`)).toBeVisible()
   const persistedState = await getState(request)
-  expect(persistedState.habits).toEqual([habit])
+  expect(persistedState).toEqual(committedBeforeDelete)
   expect(persistedState.journalEntries).toEqual([journalEntry])
 
   await page.reload()

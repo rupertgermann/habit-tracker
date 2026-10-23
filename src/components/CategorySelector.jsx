@@ -22,7 +22,7 @@ const CategoryGrid = styled.div`
   gap: ${props => props.theme.spacing.sm};
 `
 
-const CategoryOption = styled.div`
+const CategoryOption = styled.button`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.sm};
@@ -31,7 +31,13 @@ const CategoryOption = styled.div`
   border-radius: ${props => props.theme.borderRadius.small};
   border: 2px solid ${props => props.$selected ? props.theme.colors.primary : props.theme.colors.border};
   background-color: ${props => props.$selected ? `${props.theme.colors.primary}10` : props.theme.colors.white};
+  font: inherit;
   cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
+  }
   transition: all 0.2s ease;
   
   &:hover {
@@ -67,6 +73,8 @@ const CategorySelector = ({ selectedCategory, onCategoryChange, showLabel = true
         {categories.map((category) => (
           <CategoryOption
             key={category.id}
+            type="button"
+            aria-pressed={selectedCategory === category.id}
             $selected={selectedCategory === category.id}
             onClick={() => onCategoryChange(category.id)}
           >

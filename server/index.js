@@ -1,6 +1,5 @@
 const path = require('path')
 const express = require('express')
-const cors = require('cors')
 const store = require('./db')
 const { createHabitDeletion } = require('./habitDeletion')
 
@@ -12,15 +11,29 @@ const E2E_DB_DIR = path.join(process.cwd(), '.tmp', 'e2e')
 const isE2ERuntime = process.env.HABIT_TRACKER_E2E === 'true' &&
   path.resolve(store.DB_PATH).startsWith(`${path.resolve(E2E_DB_DIR)}${path.sep}`)
 
-app.use(cors())
+const trustedOrigins = new Set(process.env.HABIT_TRACKER_ORIGIN
+  ? [process.env.HABIT_TRACKER_ORIGIN]
+  : ['http://localhost:3300', 'http://127.0.0.1:3300', 'http://localhost:4173', 'http://127.0.0.1:4173'])
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if ((origin !== undefined && !trustedOrigins.has(origin)) ||
+      (origin === undefined && req.headers['sec-fetch-site'] === 'cross-site')) {
+    return res.status(403).json({ error: 'Browser origin is not allowed' })
+  }
+  next()
+})
 app.use(express.json({ limit: '5mb' }))
+app.use((err, req, res, next) => {
+  res.status(err.status || 400).json({ error: err.message })
+})
 
 const asyncWrap = handler => (req, res) => {
   try {
     handler(req, res)
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: err.message })
+    if (!err.status) console.error(err)
+    res.status(err.status || 500).json({ error: err.message, ...(err.state ? { state: err.state } : {}) })
   }
 }
 
@@ -42,23 +55,24 @@ app.get('/api/settings/:key', asyncWrap((req, res) => {
 }))
 
 app.put('/api/settings/:key', asyncWrap((req, res) => {
-  const value = req.body && Object.prototype.hasOwnProperty.call(req.body, 'value')
-    ? req.body.value
-    : null
+  if (!req.body || !Object.hasOwn(req.body, 'value')) {
+    return res.status(400).json({ error: 'Setting value is required' })
+  }
+  const value = req.body.value
 
   res.json({
     key: req.params.key,
-    value: store.upsertSetting(req.params.key, value)
+    value: store.writeSetting(req.params.key, value)
   })
 }))
 
 // Habits
 app.post('/api/habits', asyncWrap((req, res) => {
-  res.status(201).json(store.upsertRow('habits', req.body))
+  res.status(201).json(store.writeRecord('habits', req.body, true))
 }))
 
 app.put('/api/habits/:id', asyncWrap((req, res) => {
-  res.json(store.upsertRow('habits', { ...req.body, id: req.params.id }))
+  res.json(store.writeRecord('habits', { ...req.body, id: req.params.id }))
 }))
 
 app.delete('/api/habits/:id', asyncWrap((req, res) => {
@@ -67,25 +81,24 @@ app.delete('/api/habits/:id', asyncWrap((req, res) => {
 
 // Categories
 app.post('/api/categories', asyncWrap((req, res) => {
-  res.status(201).json(store.upsertRow('categories', req.body))
+  res.status(201).json(store.writeRecord('categories', req.body, true))
 }))
 
 app.put('/api/categories/:id', asyncWrap((req, res) => {
-  res.json(store.upsertRow('categories', { ...req.body, id: req.params.id }))
+  res.json(store.writeRecord('categories', { ...req.body, id: req.params.id }))
 }))
 
 app.delete('/api/categories/:id', asyncWrap((req, res) => {
-  store.deleteRow('categories', req.params.id)
-  res.status(204).end()
+  res.json(store.deleteCategory(req.params.id))
 }))
 
 // Journal entries
 app.post('/api/journal', asyncWrap((req, res) => {
-  res.status(201).json(store.upsertRow('journal_entries', req.body))
+  res.status(201).json(store.writeRecord('journal_entries', req.body, true))
 }))
 
 app.put('/api/journal/:id', asyncWrap((req, res) => {
-  res.json(store.upsertRow('journal_entries', { ...req.body, id: req.params.id }))
+  res.json(store.writeRecord('journal_entries', { ...req.body, id: req.params.id }))
 }))
 
 app.delete('/api/journal/:id', asyncWrap((req, res) => {
@@ -103,6 +116,8 @@ app.delete('/api/data', asyncWrap((req, res) => {
   res.json(store.getState())
 }))
 
-app.listen(PORT, HOST, () => {
+module.exports = app
+
+if (require.main === module) app.listen(PORT, HOST, () => {
   console.log(`Habit Tracker API listening on http://${HOST}:${PORT}`)
 })

@@ -16,37 +16,15 @@ import { createBrowserBackupAdapter } from '../adapters/browserBackup'
 import { createBackupModule } from '../domain/backup'
 import { toDateKey } from '../domain/habitTracking'
 import { removeLegacyWeekStartPreference, usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
+import { createProfileLifecycle, DEFAULT_PROFILE } from '../domain/profile'
+import { createAvatarImage, createBrowserProfilePersistence } from '../adapters/browserProfile'
 import { listAppDesigns } from '../appDesign/catalog'
 
-const DEFAULT_PROFILE = {
-  name: 'User Name',
-  email: 'user@example.com',
-  avatarImage: null
-}
 const LEGACY_PROFILE_NAME_STORAGE_KEY = 'habitTracker.profileName'
-const PROFILE_SETTINGS_KEY = 'profile'
-const AVATAR_SIZE = 256
 const CLOCK_ICON_MASK = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'9\'/%3E%3Cpath d=\'M12 7v5l3 2\'/%3E%3C/svg%3E")'
 const APP_DESIGN_OPTIONS = listAppDesigns()
 const canonicalBackup = createBackupModule({ persistence: backupPersistence })
 const browserBackup = createBrowserBackupAdapter()
-
-const isProfileSettings = value => value && typeof value === 'object' && !Array.isArray(value)
-const isValidEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-
-const normalizeProfileSettings = value => {
-  if (!isProfileSettings(value)) return { ...DEFAULT_PROFILE }
-
-  const name = typeof value.name === 'string' && value.name.trim()
-    ? value.name.trim()
-    : DEFAULT_PROFILE.name
-  const email = typeof value.email === 'string' && value.email.trim()
-    ? value.email.trim()
-    : DEFAULT_PROFILE.email
-  const avatarImage = typeof value.avatarImage === 'string' ? value.avatarImage : null
-
-  return { name, email, avatarImage }
-}
 
 const removeLegacyProfileName = () => {
   try {
@@ -54,51 +32,6 @@ const removeLegacyProfileName = () => {
   } catch {
     // The database remains the source of truth when browser storage is unavailable.
   }
-}
-
-const readImageFile = file => new Promise((resolve, reject) => {
-  const reader = new FileReader()
-  reader.onload = () => resolve(reader.result)
-  reader.onerror = () => reject(new Error('Unable to read image file'))
-  reader.readAsDataURL(file)
-})
-
-const loadImage = src => new Promise((resolve, reject) => {
-  const image = new Image()
-  image.onload = () => resolve(image)
-  image.onerror = () => reject(new Error('Unable to load image file'))
-  image.src = src
-})
-
-const createAvatarImage = async file => {
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Please choose an image file')
-  }
-
-  const dataUrl = await readImageFile(file)
-  const image = await loadImage(dataUrl)
-  const canvas = document.createElement('canvas')
-  canvas.width = AVATAR_SIZE
-  canvas.height = AVATAR_SIZE
-
-  const context = canvas.getContext('2d')
-  const sourceSize = Math.min(image.naturalWidth, image.naturalHeight)
-  const sourceX = (image.naturalWidth - sourceSize) / 2
-  const sourceY = (image.naturalHeight - sourceSize) / 2
-
-  context.drawImage(
-    image,
-    sourceX,
-    sourceY,
-    sourceSize,
-    sourceSize,
-    0,
-    0,
-    AVATAR_SIZE,
-    AVATAR_SIZE
-  )
-
-  return canvas.toDataURL('image/jpeg', 0.88)
 }
 
 const SettingsContainer = styled.div`
@@ -583,45 +516,37 @@ const Settings = () => {
     setTime: setDailyReminderTime
   } = useDailyReminder()
   const avatarInputRef = useRef(null)
-  const [profileName, setProfileName] = useState(DEFAULT_PROFILE.name)
-  const [profileEmail, setProfileEmail] = useState(DEFAULT_PROFILE.email)
-  const [draftProfileName, setDraftProfileName] = useState(DEFAULT_PROFILE.name)
-  const [draftProfileEmail, setDraftProfileEmail] = useState(DEFAULT_PROFILE.email)
-  const [profileAvatarImage, setProfileAvatarImage] = useState(DEFAULT_PROFILE.avatarImage)
+  const [profileLifecycle] = useState(() => createProfileLifecycle({
+    persistence: createBrowserProfilePersistence(habitsApi),
+    createAvatarImage
+  }))
+  const [profileState, setProfileState] = useState(profileLifecycle.getState)
+  const profile = profileState.committed || DEFAULT_PROFILE
+  const profileName = profile.name
+  const profileEmail = profile.email
+  const profileAvatarImage = profile.avatarImage
+  const draftProfileName = profileState.draft.name
+  const draftProfileEmail = profileState.draft.email
+  const setDraftProfileName = name => profileLifecycle.edit({ name })
+  const setDraftProfileEmail = email => profileLifecycle.edit({ email })
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
+  const dataBusyRef = useRef(false)
+  const [dataBusy, setDataBusy] = useState(false)
+  const setDataOperationBusy = busy => {
+    dataBusyRef.current = busy
+    setDataBusy(busy)
+  }
+  const profileBusy = dataBusy || !profileState.committed || profileState.status === 'saving'
   const [reminderTimeInputRevision, setReminderTimeInputRevision] = useState(0)
 
   useEffect(() => {
-    let cancelled = false
-
+    const unsubscribe = profileLifecycle.subscribe(setProfileState)
     removeLegacyProfileName()
-
-    habitsApi.getSetting(PROFILE_SETTINGS_KEY)
-      .then(({ value }) => {
-        if (cancelled) return
-
-        const nextProfile = normalizeProfileSettings(value)
-
-        setProfileName(nextProfile.name)
-        setProfileEmail(nextProfile.email)
-        setDraftProfileName(nextProfile.name)
-        setDraftProfileEmail(nextProfile.email)
-        setProfileAvatarImage(nextProfile.avatarImage)
-      })
-      .catch(() => {
-        // The local default profile remains usable if the API is unavailable.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const saveProfileSettings = (profile) => {
-    return habitsApi.saveSetting(PROFILE_SETTINGS_KEY, normalizeProfileSettings(profile))
-  }
+    profileLifecycle.load()
+    return unsubscribe
+  }, [profileLifecycle])
 
   const handleNotificationsToggle = async () => {
     const nextEnabled = !notificationsEnabled
@@ -715,28 +640,37 @@ const Settings = () => {
   }
 
   const handleRestoreData = async () => {
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
+    setDataOperationBusy(true)
     let selection
     try {
       selection = await browserBackup.selectFile()
     } catch {
+      setDataOperationBusy(false)
       showToast('Failed to read backup file', 'error')
       return
     }
 
-    if (selection.status === 'cancelled') return
+    if (selection.status === 'cancelled' || profileLifecycle.getState().status === 'saving') {
+      setDataOperationBusy(false)
+      return
+    }
 
     const prepared = canonicalBackup.prepareRestore(selection.serialized)
     if (!prepared.ok) {
+      setDataOperationBusy(false)
       showToast(prepared.error.message || 'Invalid backup file', 'error')
       return
     }
 
     if (!window.confirm('This will replace all your current data. Are you sure you want to continue?')) {
+      setDataOperationBusy(false)
       return
     }
 
     const result = await canonicalBackup.restore(prepared)
     if (!result.ok) {
+      setDataOperationBusy(false)
       showToast('Failed to restore data', 'error')
       return
     }
@@ -748,19 +682,27 @@ const Settings = () => {
   }
 
   const handleClearData = () => {
-    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      habitsApi.clearAll()
-        .then(() => {
-          removeLegacyProfileName()
-          removeLegacyThemePreference()
-          removeLegacyWeekStartPreference()
-          window.location.reload()
-        })
-        .catch(() => showToast('Failed to clear data', 'error'))
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
+    setDataOperationBusy(true)
+    if (!window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+      setDataOperationBusy(false)
+      return
     }
+    habitsApi.clearAll()
+      .then(() => {
+        removeLegacyProfileName()
+        removeLegacyThemePreference()
+        removeLegacyWeekStartPreference()
+        window.location.reload()
+      })
+      .catch(() => {
+        setDataOperationBusy(false)
+        showToast('Failed to clear data', 'error')
+      })
   }
 
   const handleEditProfile = () => {
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
     setDraftProfileName(profileName)
     setDraftProfileEmail(profileEmail)
     setIsEditingProfile(true)
@@ -773,38 +715,15 @@ const Settings = () => {
   }
 
   const handleSaveProfile = async () => {
-    const nextProfileName = draftProfileName.trim()
-    const nextProfileEmail = draftProfileEmail.trim()
-
-    if (!nextProfileName) {
-      showToast('Please enter a username', 'error')
-      return
-    }
-
-    if (!nextProfileEmail || !isValidEmail(nextProfileEmail)) {
-      showToast('Please enter a valid email', 'error')
-      return
-    }
-
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
     setIsSavingProfile(true)
-
-    try {
-      await saveProfileSettings({
-        name: nextProfileName,
-        email: nextProfileEmail,
-        avatarImage: profileAvatarImage
-      })
-
-      setProfileName(nextProfileName)
-      setDraftProfileName(nextProfileName)
-      setProfileEmail(nextProfileEmail)
-      setDraftProfileEmail(nextProfileEmail)
+    const result = await profileLifecycle.saveText()
+    setIsSavingProfile(false)
+    if (result.ok) {
       setIsEditingProfile(false)
       showToast('Profile updated', 'success')
-    } catch {
-      showToast('Failed to save profile', 'error')
-    } finally {
-      setIsSavingProfile(false)
+    } else {
+      showToast(result.error.message || 'Failed to save profile', 'error')
     }
   }
 
@@ -817,10 +736,12 @@ const Settings = () => {
   }
 
   const handleSelectAvatar = () => {
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
     avatarInputRef.current?.click()
   }
 
   const handleAvatarFileChange = async (event) => {
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
     const file = event.target.files?.[0]
     event.target.value = ''
 
@@ -828,41 +749,17 @@ const Settings = () => {
 
     setIsSavingAvatar(true)
 
-    try {
-      const nextAvatarImage = await createAvatarImage(file)
-
-      await saveProfileSettings({
-        name: profileName,
-        email: profileEmail,
-        avatarImage: nextAvatarImage
-      })
-
-      setProfileAvatarImage(nextAvatarImage)
-      showToast('Avatar updated', 'success')
-    } catch (error) {
-      showToast(error.message || 'Failed to save avatar', 'error')
-    } finally {
-      setIsSavingAvatar(false)
-    }
+    const result = await profileLifecycle.replaceAvatar(file)
+    setIsSavingAvatar(false)
+    showToast(result.ok ? 'Avatar updated' : result.error.message || 'Failed to save avatar', result.ok ? 'success' : 'error')
   }
 
   const handleRemoveAvatar = async () => {
+    if (dataBusyRef.current || profileLifecycle.getState().status === 'saving') return
     setIsSavingAvatar(true)
-
-    try {
-      await saveProfileSettings({
-        name: profileName,
-        email: profileEmail,
-        avatarImage: null
-      })
-
-      setProfileAvatarImage(null)
-      showToast('Avatar removed', 'success')
-    } catch {
-      showToast('Failed to remove avatar', 'error')
-    } finally {
-      setIsSavingAvatar(false)
-    }
+    const result = await profileLifecycle.removeAvatar()
+    setIsSavingAvatar(false)
+    showToast(result.ok ? 'Avatar removed' : 'Failed to remove avatar', result.ok ? 'success' : 'error')
   }
 
   const avatarInitial = profileName.trim().charAt(0).toUpperCase() || 'U'
@@ -917,11 +814,13 @@ const Settings = () => {
           accept="image/*"
           aria-label="Avatar image"
           onChange={handleAvatarFileChange}
+          disabled={profileBusy}
         />
         <ProfileInfo>
           {isEditingProfile ? (
             <ProfileEditFields>
               <ProfileNameInput
+                disabled={profileBusy}
                 aria-label="Username"
                 value={draftProfileName}
                 onChange={setDraftProfileName}
@@ -930,6 +829,7 @@ const Settings = () => {
                 autoFocus
               />
               <ProfileEmailInput
+                disabled={profileBusy}
                 aria-label="Email"
                 type="email"
                 value={draftProfileEmail}
@@ -951,7 +851,7 @@ const Settings = () => {
                 size="small"
                 onClick={handleSaveProfile}
                 loading={isSavingProfile}
-                disabled={!draftProfileName.trim() || !draftProfileEmail.trim()}
+                disabled={profileBusy || !draftProfileName.trim() || !draftProfileEmail.trim()}
               >
                 Save
               </Button>
@@ -975,6 +875,7 @@ const Settings = () => {
               compactOnNarrow
               onClick={handleSelectAvatar}
               loading={isSavingAvatar}
+              disabled={profileBusy}
             >
               Photo
             </Button>
@@ -985,6 +886,7 @@ const Settings = () => {
                 compactOnNarrow
                 onClick={handleRemoveAvatar}
                 loading={isSavingAvatar}
+                disabled={profileBusy}
               >
                 Remove Photo
               </Button>
@@ -994,11 +896,17 @@ const Settings = () => {
               variant="ghost"
               compactOnNarrow
               onClick={handleEditProfile}
-              disabled={isSavingAvatar}
+              disabled={profileBusy}
             >
               Edit
             </Button>
           </ProfileActions>
+        )}
+        {profileState.status === 'unavailable' && (
+          <div role="alert">
+            Could not load profile. Retry before editing.
+            <Button type="button" onClick={() => profileLifecycle.load()}>Retry profile</Button>
+          </div>
         )}
       </ProfileSection>
 
@@ -1169,7 +1077,7 @@ const Settings = () => {
               <AppIcon name="chevron-right" size={20} />
             </ChevronIcon>
           </SettingItem>
-          <SettingItem onClick={handleRestoreData}>
+          <SettingItem onClick={dataBusy || profileState.status === 'saving' ? undefined : handleRestoreData} aria-disabled={dataBusy || profileState.status === 'saving'}>
             <SettingLeft>
               <SettingIcon>
                 <AppIcon name="restore" size={22} />
@@ -1190,6 +1098,7 @@ const Settings = () => {
         variant="destructive"
         fullWidth
         onClick={handleClearData}
+        disabled={dataBusy || profileState.status === 'saving'}
       >
         Clear All Data
       </DangerButton>

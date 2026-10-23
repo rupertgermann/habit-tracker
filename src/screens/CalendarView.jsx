@@ -10,7 +10,7 @@ import SelectDropdown from '../components/SelectDropdown'
 import { useHabits } from '../context/HabitsContext'
 import { usePreferences } from '../context/PreferencesContext.jsx'
 import { useToast } from '../context/ToastContext'
-import { getCalendarPeriod, getCountForDate } from '../domain/habitTracking'
+import { getCalendarPeriod, getCountForDate, isHabitEligibleOnDate } from '../domain/habitTracking'
 import { DEFAULT_HABIT_ICON, getLegacyIconText } from '../domain/iconCatalog'
 
 const filledTileTextColor = '#102016'
@@ -515,6 +515,7 @@ const CalendarView = () => {
 
   const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
   const selectedDateCount = selectedHabit ? getCountForDate(selectedHabit, selectedDateKey) : 0
+  const canAddSelectedDate = isHabitEligibleOnDate(selectedHabit, selectedDate, new Date())
   const isCountHabit = selectedHabit?.type === 'count'
   const selectedDateLabel = format(selectedDate, 'MMMM d, yyyy')
 
@@ -831,7 +832,7 @@ const CalendarView = () => {
               >
                 Remove one
               </RemoveCompletionButton>
-              <Button onClick={handleIncrementSelectedDate}>
+              <Button onClick={handleIncrementSelectedDate} disabled={!canAddSelectedDate}>
                 Add log
               </Button>
             </>
@@ -839,6 +840,7 @@ const CalendarView = () => {
             <Button
               variant={selectedDateCount > 0 ? 'secondary' : 'primary'}
               onClick={handleToggleSelectedDate}
+              disabled={selectedDateCount === 0 && !canAddSelectedDate}
             >
               {selectedDateCount > 0 ? 'Mark Incomplete' : 'Mark Complete'}
             </Button>

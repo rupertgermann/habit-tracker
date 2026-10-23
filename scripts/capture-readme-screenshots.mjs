@@ -29,6 +29,7 @@ const bin = command => path.join(
 const env = {
   ...process.env,
   HABIT_TRACKER_DB_PATH: dbPath,
+  HABIT_TRACKER_ORIGIN: `http://127.0.0.1:${clientPort}`,
   HABIT_TRACKER_E2E: 'true',
   HOST: '127.0.0.1',
   PORT: apiPort,
