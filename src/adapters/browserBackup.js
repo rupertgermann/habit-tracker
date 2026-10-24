@@ -1,3 +1,5 @@
+import { assertBackupSize } from '../../shared/backupLimits.mjs'
+
 export const createBrowserBackupAdapter = ({
   documentObject = globalThis.document,
   FileReaderClass = globalThis.FileReader,
@@ -31,6 +33,12 @@ export const createBrowserBackupAdapter = ({
         const file = input.files?.[0]
         if (!file) {
           resolve({ status: 'cancelled' })
+          return
+        }
+        try {
+          assertBackupSize(file.size)
+        } catch (error) {
+          reject(error)
           return
         }
 

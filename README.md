@@ -199,6 +199,8 @@ The backend stores each collection item as JSON in SQLite tables. `server/db.js`
 
 Habit and Journal Entry responses include a server-issued `revision`. Updates must send the revision from the last read; stale updates return `409` and updates to deleted records return `404`, with authoritative state for client reconciliation. Restore issues fresh revisions for both collections; Category reassignment issues fresh Habit revisions. Invalid record writes and incomplete restores return `400` without changing stored data. Category deletion reassigns affected Habits to Other in the same transaction.
 
+Backup downloads and selected backup files support up to 32 MiB (33,554,432 bytes) of UTF-8 JSON. The prepared restore request body has the same limit, including defaults supplied when migrating legacy backups. Oversized backups are rejected with a visible size-limit message; oversized `POST /api/restore` bodies return `413` before changing data. Ordinary record-write requests retain their 5 MiB limit.
+
 ## Routes
 
 | Path | Screen |
