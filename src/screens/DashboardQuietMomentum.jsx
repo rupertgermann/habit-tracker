@@ -237,11 +237,10 @@ const LoadingLine = styled.div`
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { dashboardHabitTracking, isLoading, hasLoaded, error } = useHabits()
+  const { dashboardHabitTracking, referenceDate, getTodayDate, isLoading, hasLoaded, error } = useHabits()
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
   const [showConfetti, setShowConfetti] = useState(false)
-  const referenceDate = new Date()
   const {
     todayHabits,
     weeklyCompletionFacts: weeklyData,
@@ -255,9 +254,11 @@ const Dashboard = () => {
   const handleToggleHabit = async habitId => {
     const habit = todayHabits.find(item => item.id === habitId)
     if (!habit) return { ok: false }
+    const date = getTodayDate()
+    if (!date) return { ok: false }
     const result = await dashboardHabitTracking.toggleYesNo({
       habitId,
-      referenceDate: new Date()
+      referenceDate: date
     })
     if (!result.ok) { showErrorToast(`Could not update "${habit.name}". Please try again.`); return result }
     if (result.completionState === 'complete') {
@@ -276,7 +277,7 @@ const Dashboard = () => {
         ? { title: 'The day already has a shape.', text: 'Choose one more habit with care; momentum does not need to be rushed.' }
         : { title: 'Begin where there is least resistance.', text: 'One small completion is enough to give the day a direction.' }
 
-  const pageHeader = <><h1 className="sr-only">Dashboard</h1><Header><Brand>Still / daily</Brand><DateLine>{format(new Date(), 'EEEE · MMMM d')}</DateLine></Header></>
+  const pageHeader = <><h1 className="sr-only">Dashboard</h1><Header><Brand>Still / daily</Brand><DateLine>{format(referenceDate, 'EEEE · MMMM d')}</DateLine></Header></>
 
   if (isLoading && !hasLoaded) return <Shell aria-busy="true">{pageHeader}<StatePanel><AppIcon name="activity" size={38} /><h2>Gathering today’s rituals</h2><p>Your private record is opening quietly.</p><LoadingLine /><span className="sr-only">Loading habits</span></StatePanel></Shell>
   if (error) return <Shell>{pageHeader}<StatePanel role="alert"><AppIcon name="circle-x" size={38} /><h2>Your record is resting.</h2><p>Nothing changed while the local service was unavailable.</p><Button onClick={() => window.location.reload()}>Try again</Button></StatePanel></Shell>
@@ -300,7 +301,7 @@ const Dashboard = () => {
       <Reflection><div><Kicker>Today’s reflection</Kicker><h2>{gentleMessage.title}</h2><p>{gentleMessage.text}</p></div><Button variant="ghost" onClick={() => navigate('/progress')}>See the pattern</Button></Reflection>
 
       <Section aria-labelledby="today-habits-title">
-        <SectionHeader><div><Kicker>Tuesday’s rituals</Kicker><h2 id="today-habits-title">What will you return to?</h2></div><Button variant="ghost" onClick={() => navigate('/add-habit')} icon="plus">Add Habit</Button></SectionHeader>
+        <SectionHeader><div><Kicker>{format(referenceDate, 'EEEE')}’s rituals</Kicker><h2 id="today-habits-title">What will you return to?</h2></div><Button variant="ghost" onClick={() => navigate('/add-habit')} icon="plus">Add Habit</Button></SectionHeader>
         <HabitList>
           {todayHabits.map((habit, index) => {
             const isCountHabit = habit.type === 'count'

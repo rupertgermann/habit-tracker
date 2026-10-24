@@ -51,20 +51,22 @@ const CountTarget = styled.span`
 `
 
 const CountStepper = ({ habit, onChange }) => {
-  const { incrementCountCompletion, decrementCountCompletion } = useHabits()
+  const { incrementCountCompletion, decrementCountCompletion, referenceDate, getTodayDate } = useHabits()
   const { showSuccessToast, showErrorToast } = useToast()
   const [isWriting, setIsWriting] = useState(false)
 
-  const today = toDateKey()
+  const today = toDateKey(referenceDate)
   const count = getCountForDate(habit, today)
   const target = habit.dailyTarget
 
   const handleIncrement = async (e) => {
     e.stopPropagation()
     if (isWriting) return
+    const date = getTodayDate()
+    if (!date) return
 
     setIsWriting(true)
-    const result = await incrementCountCompletion(habit.id)
+    const result = await incrementCountCompletion(habit.id, date)
     setIsWriting(false)
     if (!result.ok) {
       showErrorToast(`Could not log "${habit.name}". Please try again.`)
@@ -84,9 +86,11 @@ const CountStepper = ({ habit, onChange }) => {
   const handleDecrement = async (e) => {
     e.stopPropagation()
     if (count === 0 || isWriting) return
+    const date = getTodayDate()
+    if (!date) return
 
     setIsWriting(true)
-    const result = await decrementCountCompletion(habit.id)
+    const result = await decrementCountCompletion(habit.id, date)
     setIsWriting(false)
     if (!result.ok) {
       showErrorToast(`Could not remove a log from "${habit.name}". Please try again.`)

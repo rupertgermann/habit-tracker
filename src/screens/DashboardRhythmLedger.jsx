@@ -1,5 +1,5 @@
 // Preserved from design snapshot 7c9a357e5f9fb6191abb4640dd256eb8272a8b31.
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
@@ -545,6 +545,8 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const {
     dashboardHabitTracking,
+    referenceDate,
+    getTodayDate,
     isLoading,
     hasLoaded,
     error
@@ -552,7 +554,6 @@ const Dashboard = () => {
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
   const [showConfetti, setShowConfetti] = useState(false)
-  const referenceDate = new Date()
   const {
     todayHabits,
     weeklyCompletionFacts: weeklyData,
@@ -563,15 +564,17 @@ const Dashboard = () => {
   } = dashboardHabitTracking.getSnapshot({ referenceDate, weekStartsOn })
   const maxWeeklyHabits = Math.max(totalHabits, 1)
 
-  const issueNumber = useMemo(() => format(new Date(), "II/'W'II"), [])
+  const issueNumber = format(referenceDate, "II/'W'II")
 
   const handleToggleHabit = async habitId => {
     const habit = todayHabits.find(item => item.id === habitId)
     if (!habit) return { ok: false }
 
+    const date = getTodayDate()
+    if (!date) return { ok: false }
     const result = await dashboardHabitTracking.toggleYesNo({
       habitId,
-      referenceDate: new Date()
+      referenceDate: date
     })
 
     if (!result.ok) {
@@ -637,7 +640,7 @@ const Dashboard = () => {
       <DashboardContainer>
         <PageHeader>
           <div><Eyebrow>Daily record · {issueNumber}</Eyebrow><Title>Dashboard</Title></div>
-          <DateBlock><DateText>{format(new Date(), 'EEEE')}<br />{format(new Date(), 'MMMM d, yyyy')}</DateText></DateBlock>
+          <DateBlock><DateText>{format(referenceDate, 'EEEE')}<br />{format(referenceDate, 'MMMM d, yyyy')}</DateText></DateBlock>
         </PageHeader>
         <EmptyState
           type="habits"
@@ -659,7 +662,7 @@ const Dashboard = () => {
           <Title>Dashboard</Title>
         </div>
         <DateBlock>
-          <DateText>{format(new Date(), 'EEEE')}<br />{format(new Date(), 'MMMM d, yyyy')}</DateText>
+          <DateText>{format(referenceDate, 'EEEE')}<br />{format(referenceDate, 'MMMM d, yyyy')}</DateText>
         </DateBlock>
       </PageHeader>
 
