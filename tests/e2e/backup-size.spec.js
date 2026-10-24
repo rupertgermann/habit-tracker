@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { MAX_BACKUP_BYTES, BACKUP_SIZE_ERROR_MESSAGE } from '../../shared/backupLimits.mjs'
 import { makeHabit, makeJournalEntry, resetAppData, waitForAppReady } from './helpers.js'
 

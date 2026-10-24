@@ -27,10 +27,15 @@ export const createBrowserBackupAdapter = ({
       const input = documentObject.createElement('input')
       input.type = 'file'
       input.accept = '.json,application/json'
+      input.hidden = true
 
-      input.oncancel = () => resolve({ status: 'cancelled' })
+      input.oncancel = () => {
+        input.remove()
+        resolve({ status: 'cancelled' })
+      }
       input.onchange = () => {
         const file = input.files?.[0]
+        input.remove()
         if (!file) {
           resolve({ status: 'cancelled' })
           return
@@ -52,7 +57,13 @@ export const createBrowserBackupAdapter = ({
         reader.readAsText(file)
       }
 
-      input.click()
+      documentObject.body.append(input)
+      try {
+        input.click()
+      } catch (error) {
+        input.remove()
+        reject(error)
+      }
     })
   }
 })

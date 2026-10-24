@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { makeHabit, makeJournalEntry, resetAppData, waitForAppReady } from './helpers.js'
 
 test('a delayed DELETE response preserves unrelated Habit edits, creation, and Journal saves', async ({ page, request }) => {

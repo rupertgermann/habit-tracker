@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { makeHabit, makeCompletion, resetAppData, waitForAppReady } from './helpers.js'
 
 test.use({ timezoneId: 'Europe/Berlin' })

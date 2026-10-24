@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures.js'
 import { resetAppData, waitForAppReady } from './helpers'
 
 for (const key of ['theme', 'design', 'preferences']) {
