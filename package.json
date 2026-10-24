@@ -1,6 +1,6 @@
 {
   "name": "habit-tracker",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "An AI-assisted full-stack habit tracker with five design modes, React, SQLite persistence, and browser regression coverage",
   "license": "MIT",
   "engines": {
