@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import Card from './Card'
 import Button from './Button'
@@ -131,16 +131,21 @@ const JournalEntry = ({ habitId, date, habitName }) => {
   const [existingEntry, setExistingEntry] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [saveConflict, setSaveConflict] = useState('')
+  const selection = useRef(null)
   const persistedEntry = getJournalEntryForHabit(habitId, date)
   
   useEffect(() => {
+    const sameSelection = selection.current?.habitId === habitId && selection.current?.date === date
+    selection.current = { habitId, date }
+    setExistingEntry(persistedEntry || null)
+    if (sameSelection && isEditing) return
+    setSaveConflict('')
     if (persistedEntry) {
-      setExistingEntry(persistedEntry)
       setContent(persistedEntry.content || '')
       setSelectedMood(persistedEntry.moodId || null)
       setIsEditing(false)
     } else {
-      setExistingEntry(null)
       setContent('')
       setSelectedMood(null)
       setIsEditing(true)
@@ -166,6 +171,12 @@ const JournalEntry = ({ habitId, date, habitName }) => {
         : await addJournalEntry(entryData)
 
       if (!result.ok) {
+        if (isUpdating && (result.error.status === 409 || result.error.status === 404)) {
+          setSaveConflict(result.error.status === 409
+            ? 'This entry changed in another tab. Your draft is kept. Review it before saving again to replace the latest saved entry.'
+            : 'This entry was deleted in another tab. Your draft is kept. Save again to create a new entry.')
+          return
+        }
         showErrorToast(
           isUpdating
             ? 'Failed to update journal entry. Please try again.'
@@ -174,6 +185,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
         return
       }
 
+      setSaveConflict('')
       setExistingEntry(result.entry)
       setContent(result.entry.content || '')
       setSelectedMood(result.entry.moodId || null)
@@ -236,12 +248,14 @@ const JournalEntry = ({ habitId, date, habitName }) => {
       
       {isEditing ? (
         <JournalForm elevated>
+          {saveConflict && <p role="alert">{saveConflict}</p>}
           <MoodSelector>
             {moodOptions.map((mood) => (
               <MoodOption
                 key={mood.id}
                 type="button"
                 $selected={selectedMood === mood.id}
+                aria-pressed={selectedMood === mood.id}
                 onClick={() => setSelectedMood(mood.id)}
                 disabled={isSaving}
               >

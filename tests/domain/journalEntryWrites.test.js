@@ -370,5 +370,85 @@ export const tests = [
       assert.deepEqual(journalEntries, [])
       assert.deepEqual(persistedEntries, [])
     }
+  },
+  {
+    name: 'a delayed Journal Entry conflict reconciles only its target and retries only on explicit input',
+    async run() {
+      const original = makeEntry({ revision: 'original' })
+      const latest = makeEntry({ content: 'Newer reflection', revision: 'latest' })
+      const unrelated = makeEntry({ id: 'unrelated', content: 'Concurrent creation' })
+      const error = Object.assign(new Error('Conflict'), {
+        status: 409,
+        state: { journalEntries: [latest] }
+      })
+      let journalEntries = [original]
+      let rejectWrite
+      const calls = []
+      const writer = createJournalEntryWriter({
+        persistence: {
+          async updateJournalEntry(entry) {
+            calls.push(entry)
+            if (calls.length === 1) return new Promise((resolve, reject) => { rejectWrite = reject })
+            return { ...entry, revision: 'retried' }
+          }
+        },
+        getJournalEntries: () => journalEntries,
+        replaceJournalEntries: replacement => { journalEntries = replacement }
+      })
+      const pending = writer.update(original.id, { moodId: 'very-good' })
+      await Promise.resolve()
+      journalEntries = [...journalEntries, unrelated]
+      rejectWrite(error)
+      const rejected = await pending
+      assert.equal(rejected.ok, false)
+      assert.equal(rejected.entry, latest)
+      assert.equal(rejected.error, error)
+      assert.deepEqual(journalEntries, [latest, unrelated])
+      assert.equal(calls.length, 1)
+      const retried = await writer.update(original.id, { content: original.content, moodId: 'very-good' })
+      assert.equal(retried.ok, true)
+      assert.equal(calls[1].revision, latest.revision)
+      assert.equal(retried.entry.content, original.content)
+      assert.equal(retried.entry.moodId, 'very-good')
+      assert.equal(journalEntries[1], unrelated)
+    }
+  },
+  {
+    name: 'a deleted Journal Entry is removed on a rejected update without dropping unrelated entries',
+    async run() {
+      const original = makeEntry()
+      const unrelated = makeEntry({ id: 'unrelated' })
+      let journalEntries = [original, unrelated]
+      const error = Object.assign(new Error('Deleted'), { status: 404, state: { journalEntries: [] } })
+      const writer = createJournalEntryWriter({
+        persistence: { async updateJournalEntry() { throw error } },
+        getJournalEntries: () => journalEntries,
+        replaceJournalEntries: replacement => { journalEntries = replacement }
+      })
+      const result = await writer.update(original.id, { content: 'Keep this draft' })
+      assert.equal(result.ok, false)
+      assert.equal(result.entry, null)
+      assert.equal(result.error, error)
+      assert.deepEqual(journalEntries, [unrelated])
+    }
+  },
+  {
+    name: 'Journal Entry update metadata comes from the committed entry',
+    async run() {
+      const original = makeEntry({ revision: 'committed' })
+      let journalEntries = [original]
+      const writer = createJournalEntryWriter({
+        persistence: createInMemoryJournalEntryPersistence({ journalEntries }),
+        getJournalEntries: () => journalEntries,
+        replaceJournalEntries: replacement => { journalEntries = replacement }
+      })
+      const result = await writer.update(original.id, {
+        id: 'replacement', createdAt: 'replacement', revision: 'replacement', content: 'Updated content'
+      })
+      assert.equal(result.entry.id, original.id)
+      assert.equal(result.entry.createdAt, original.createdAt)
+      assert.equal(result.entry.revision, original.revision)
+      assert.equal(result.entry.content, 'Updated content')
+    }
   }
 ]

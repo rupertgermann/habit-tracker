@@ -20,6 +20,7 @@ export const validateState = value => {
     const ids = new Set()
     for (const record of value[collection]) {
       requireValue(isObject(record) && nonempty(record.id), `${collection} records require a non-empty string id`)
+      requireValue(record.id !== '.' && record.id !== '..', `${collection} record id cannot be "." or ".."`)
       requireValue(!ids.has(record.id), `${collection} contains duplicate id "${record.id}"`)
       ids.add(record.id)
       for (const key of ['createdAt', 'updatedAt']) optional(record, key, timestamp)

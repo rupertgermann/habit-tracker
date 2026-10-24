@@ -77,8 +77,10 @@ seedCategories()
 
 // Older databases receive tokens once; reads never mutate stored records.
 db.transaction(() => {
-  for (const habit of listRows('habits')) {
-    if (!habit.revision) upsertRow('habits', habit)
+  for (const table of ['habits', 'journal_entries']) {
+    for (const record of listRows(table)) {
+      if (!record.revision) upsertRow(table, record)
+    }
   }
 })()
 
@@ -116,7 +118,7 @@ function upsertSetting(key, value) {
 }
 
 function upsertRow(table, item) {
-  if (table === 'habits') item = { ...item, revision: randomUUID() }
+  if (table === 'habits' || table === 'journal_entries') item = { ...item, revision: randomUUID() }
   db.prepare(`INSERT INTO ${table} (id, data) VALUES (@id, @data)
               ON CONFLICT(id) DO UPDATE SET data = @data`)
     .run({ id: item.id, data: JSON.stringify(item) })
@@ -151,7 +153,7 @@ function restoreState(value) {
     for (const c of categories) insertCategory.run(c.id, JSON.stringify(c))
 
     const insertEntry = db.prepare('INSERT INTO journal_entries (id, data) VALUES (?, ?)')
-    for (const e of journalEntries) insertEntry.run(e.id, JSON.stringify(e))
+    for (const e of journalEntries) insertEntry.run(e.id, JSON.stringify({ ...e, revision: randomUUID() }))
 
     const insertSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
     const settingEntries = settings && typeof settings === 'object' && !Array.isArray(settings)
@@ -177,8 +179,9 @@ function writeRecord(table, item, create = false) {
     const exists = Boolean(existing)
     if (create && exists) throw Object.assign(new Error('Record already exists'), { status: 409, state })
     if (!create && !exists) throw Object.assign(new Error('Record does not exist'), { status: 404, state })
-    if (table === 'habits' && !create && (!item.revision || item.revision !== existing.revision)) {
-      throw Object.assign(new Error('Habit changed in another tab. Reloaded the latest saved data; review your changes before trying again.'), { status: 409, state })
+    if ((table === 'habits' || table === 'journal_entries') && !create && (!item.revision || item.revision !== existing.revision)) {
+      const label = table === 'habits' ? 'Habit' : 'Journal Entry'
+      throw Object.assign(new Error(`${label} changed in another tab. Reloaded the latest saved data; review your changes before trying again.`), { status: 409, state })
     }
     state[collection] = [...state[collection].filter(record => record.id !== item?.id), item]
     validateState(state)

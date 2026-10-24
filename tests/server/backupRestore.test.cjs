@@ -50,7 +50,9 @@ test('complete restore commits exact state and returns the authoritative result'
   assert.deepEqual(result.state, store.getState())
   assert.equal(typeof result.state.habits[0].revision, 'string')
   const { revision, ...habit } = result.state.habits[0]
-  assert.deepEqual({ ...result.state, habits: [habit] }, replacementState)
+  const { revision: entryRevision, ...entry } = result.state.journalEntries[0]
+  assert.equal(typeof entryRevision, 'string')
+  assert.deepEqual({ ...result.state, habits: [habit], journalEntries: [entry] }, replacementState)
 })
 
 test('forced complete restore failure preserves exact previous state', () => {

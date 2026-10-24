@@ -120,9 +120,10 @@ export const createJournalEntryWriter = ({
       }
     }
 
+    const { id: _id, createdAt: _createdAt, revision: _revision, ...changes } = entryData
     const entry = {
       ...previousEntry,
-      ...entryData,
+      ...changes,
       updatedAt
     }
 
@@ -140,6 +141,16 @@ export const createJournalEntryWriter = ({
         journalEntries
       }
     } catch (error) {
+      if ((error.status === 409 || error.status === 404) && error.state) {
+        const latestEntry = error.state.journalEntries.find(entry => entry.id === id) || null
+        const currentJournalEntries = getJournalEntries()
+        const journalEntries = latestEntry
+          ? currentJournalEntries.map(entry => entry.id === id ? latestEntry : entry)
+          : currentJournalEntries.filter(entry => entry.id !== id)
+        replaceJournalEntries(journalEntries)
+        return { ok: false, changed: false, entry: latestEntry, error, journalEntries }
+      }
+
       const journalEntries = restorePreviousCollection(previousJournalEntries)
       return {
         ok: false,

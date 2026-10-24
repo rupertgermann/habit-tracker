@@ -197,7 +197,7 @@ The backend stores each collection item as JSON in SQLite tables. `server/db.js`
 | `POST /api/restore` | Atomically replace all stored app data and return `{ ok, state }` with authoritative committed state. |
 | `DELETE /api/data` | Clear all data and re-seed default categories. |
 
-Habit responses include a server-issued `revision`. Habit updates must send the revision from the last read; stale updates return `409` and updates to deleted Habits return `404`, with authoritative state for client reconciliation. Restore and Category reassignment issue fresh Habit revisions. Invalid record writes and incomplete restores return `400` without changing stored data. Category deletion reassigns affected Habits to Other in the same transaction.
+Habit and Journal Entry responses include a server-issued `revision`. Updates must send the revision from the last read; stale updates return `409` and updates to deleted records return `404`, with authoritative state for client reconciliation. Restore issues fresh revisions for both collections; Category reassignment issues fresh Habit revisions. Invalid record writes and incomplete restores return `400` without changing stored data. Category deletion reassigns affected Habits to Other in the same transaction.
 
 ## Routes
 

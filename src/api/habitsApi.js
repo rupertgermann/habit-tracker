@@ -1,5 +1,11 @@
 const BASE = '/api'
 
+function encodeRecordId(id) {
+  // URL parsing normalizes standalone dot segments even when percent-encoded.
+  if (id === '.' || id === '..') throw new Error('Record id cannot be "." or ".."')
+  return encodeURIComponent(id)
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -25,16 +31,16 @@ export const habitsApi = {
   }),
 
   createHabit: habit => request('/habits', { method: 'POST', body: JSON.stringify(habit) }),
-  updateHabit: habit => request(`/habits/${habit.id}`, { method: 'PUT', body: JSON.stringify(habit) }),
-  deleteHabit: id => request(`/habits/${id}`, { method: 'DELETE' }),
+  updateHabit: habit => request(`/habits/${encodeRecordId(habit.id)}`, { method: 'PUT', body: JSON.stringify(habit) }),
+  deleteHabit: id => request(`/habits/${encodeRecordId(id)}`, { method: 'DELETE' }),
 
   createCategory: category => request('/categories', { method: 'POST', body: JSON.stringify(category) }),
-  updateCategory: category => request(`/categories/${category.id}`, { method: 'PUT', body: JSON.stringify(category) }),
-  deleteCategory: id => request(`/categories/${id}`, { method: 'DELETE' }),
+  updateCategory: category => request(`/categories/${encodeRecordId(category.id)}`, { method: 'PUT', body: JSON.stringify(category) }),
+  deleteCategory: id => request(`/categories/${encodeRecordId(id)}`, { method: 'DELETE' }),
 
   createJournalEntry: entry => request('/journal', { method: 'POST', body: JSON.stringify(entry) }),
-  updateJournalEntry: entry => request(`/journal/${entry.id}`, { method: 'PUT', body: JSON.stringify(entry) }),
-  deleteJournalEntry: id => request(`/journal/${id}`, { method: 'DELETE' }),
+  updateJournalEntry: entry => request(`/journal/${encodeRecordId(entry.id)}`, { method: 'PUT', body: JSON.stringify(entry) }),
+  deleteJournalEntry: id => request(`/journal/${encodeRecordId(id)}`, { method: 'DELETE' }),
 
   restore: data => request('/restore', { method: 'POST', body: JSON.stringify(data) }),
   clearAll: () => request('/data', { method: 'DELETE' })
