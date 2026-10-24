@@ -221,14 +221,14 @@ const CountActionHint = styled.div`
 const HabitDetail = () => {
   const id = useHabitRouteId()
   const navigate = useNavigate()
-  const { habits, hasLoaded, mutationError, deleteHabit, toggleYesNoCompletion } = useHabits()
+  const { habits, hasLoaded, mutationError, deleteHabit, toggleYesNoCompletion, referenceDate, getTodayDate } = useHabits()
   const { showSuccessToast } = useToast()
   const [showConfetti, setShowConfetti] = useState(false)
   const [actionError, setActionError] = useState('')
 
   const habit = id ? getHabitById(habits, id) : null
-  const streak = habit ? getHabitStreak(habit) : 0
-  const recentDays = habit ? getRecentActivityDays(habit) : []
+  const streak = habit ? getHabitStreak(habit, referenceDate) : 0
+  const recentDays = habit ? getRecentActivityDays(habit, 30, referenceDate) : []
   const visibleActionError = actionError || (
     mutationError && mutationError.habitId === habit?.id ? mutationError.message : ''
   )
@@ -241,10 +241,12 @@ const HabitDetail = () => {
 
   const handleToggleCompletion = async () => {
     if (!habit) return { ok: false }
+    const date = getTodayDate()
+    if (!date) return { ok: false }
 
     const isCompleting = !recentDays.find(day => day.isToday)?.isCompleted
     setActionError('')
-    const result = await toggleYesNoCompletion(habit.id)
+    const result = await toggleYesNoCompletion(habit.id, date)
     if (!result.ok) {
       setActionError(`Could not update "${habit.name}". Please try again.`)
       return result
@@ -253,7 +255,7 @@ const HabitDetail = () => {
     if (isCompleting) {
       showSuccessToast(`Great job! "${habit.name}" completed!`)
 
-      const updatedStreak = getHabitStreak(result.habit)
+      const updatedStreak = getHabitStreak(result.habit, date)
       if (updatedStreak > 0 && updatedStreak % 7 === 0) {
         setShowConfetti(true)
         showSuccessToast(`${updatedStreak} day streak! Keep it up!`)
@@ -324,7 +326,7 @@ const HabitDetail = () => {
 
   const completionRate = getCompletionRate()
   const isCountHabit = habit.type === 'count'
-  const todayDate = toDateKey()
+  const todayDate = toDateKey(referenceDate)
   const todayCount = getCountForDate(habit, todayDate)
   const isCompletedToday = isCountHabit
     ? todayCount > 0

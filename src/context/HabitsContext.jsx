@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { habitsApi } from '../api/habitsApi'
+import { useLocalDay } from '../hooks/useLocalDay'
 import {
   createHabitLifecycle,
   createHabitPersistence
@@ -91,6 +92,7 @@ export const HabitsProvider = ({
   journalEntryPersistence = productionJournalEntryPersistence
 }) => {
   const [state, dispatch] = useReducer(habitsReducer, initialState)
+  const { referenceDate, getTodayDate } = useLocalDay()
   const habitsRef = useRef(state.habits)
   const journalEntriesRef = useRef(state.journalEntries)
   const pendingHabitWrites = useRef(new Map())
@@ -253,6 +255,8 @@ export const HabitsProvider = ({
 
   const value = {
     ...state,
+    referenceDate,
+    getTodayDate,
     addHabit,
     updateHabit,
     deleteHabit,

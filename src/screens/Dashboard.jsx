@@ -213,6 +213,8 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const {
     dashboardHabitTracking,
+    referenceDate,
+    getTodayDate,
     isLoading,
     hasLoaded,
     error
@@ -220,7 +222,6 @@ const Dashboard = () => {
   const { weekStartsOn } = usePreferences()
   const { showSuccessToast, showErrorToast } = useToast()
   const [showConfetti, setShowConfetti] = useState(false)
-  const referenceDate = new Date()
   const {
     todayHabits,
     weeklyCompletionFacts: weeklyData,
@@ -234,9 +235,11 @@ const Dashboard = () => {
     const habit = todayHabits.find(h => h.id === habitId)
     if (!habit) return { ok: false }
 
+    const date = getTodayDate()
+    if (!date) return { ok: false }
     const result = await dashboardHabitTracking.toggleYesNo({
       habitId,
-      referenceDate: new Date()
+      referenceDate: date
     })
     if (!result.ok) {
       showErrorToast(`Could not update "${habit.name}". Please try again.`)

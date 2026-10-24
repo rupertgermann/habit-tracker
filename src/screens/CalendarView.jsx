@@ -483,6 +483,7 @@ const CalendarView = () => {
   const { weekStartsOn } = usePreferences()
   const {
     habits,
+    referenceDate,
     toggleYesNoCompletion,
     incrementCountCompletion,
     decrementCountCompletion
@@ -506,7 +507,7 @@ const CalendarView = () => {
     label: (getLegacyIconText(habit.icon) ? `${getLegacyIconText(habit.icon)} ` : '') + habit.name
   }))
 
-  const calendarPeriod = getCalendarPeriod(selectedHabit, viewType, currentDate, new Date(), weekStartsOn)
+  const calendarPeriod = getCalendarPeriod(selectedHabit, viewType, currentDate, referenceDate, weekStartsOn)
   const { dayHeaders, stats: rangeStats } = calendarPeriod
 
   const targetLabel = selectedHabit && selectedHabit.dailyTarget
@@ -515,7 +516,7 @@ const CalendarView = () => {
 
   const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
   const selectedDateCount = selectedHabit ? getCountForDate(selectedHabit, selectedDateKey) : 0
-  const canAddSelectedDate = isHabitEligibleOnDate(selectedHabit, selectedDate, new Date())
+  const canAddSelectedDate = isHabitEligibleOnDate(selectedHabit, selectedDate, referenceDate)
   const isCountHabit = selectedHabit?.type === 'count'
   const selectedDateLabel = format(selectedDate, 'MMMM d, yyyy')
 

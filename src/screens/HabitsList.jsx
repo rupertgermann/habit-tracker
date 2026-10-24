@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { motion } from 'framer-motion'
@@ -240,34 +240,25 @@ const FloatingActionButton = styled(motion.button)`
 
 const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
   const navigate = useNavigate()
-  const { habits, categories, toggleYesNoCompletion } = useHabits()
+  const { habits, categories, toggleYesNoCompletion, referenceDate, getTodayDate } = useHabits()
   const { showSuccessToast, showErrorToast } = useToast()
   const [filter, setFilter] = useState('all')
-  const [filteredHabits, setFilteredHabits] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
-  const [todayHabits, setTodayHabits] = useState([])
+  const todayHabits = getTodayHabits(habits, referenceDate)
   const [showConfetti, setShowConfetti] = useState(false)
 
-  useEffect(() => {
-    setTodayHabits(getTodayHabits(habits))
-  }, [habits])
+  let filteredHabits = [...habits]
 
-  useEffect(() => {
-    let filtered = [...habits]
-    
-    if (filter === 'active') {
-      filtered = filtered.filter(habit => !habit.isArchived)
-    } else if (filter === 'completed') {
-      const completedIds = new Set(todayHabits.filter(habit => habit.isCompleted).map(habit => habit.id))
-      filtered = filtered.filter(habit => completedIds.has(habit.id))
-    }
-    
-    if (selectedCategory) {
-      filtered = filtered.filter(habit => habit.category === selectedCategory)
-    }
-    
-    setFilteredHabits(filtered)
-  }, [habits, filter, selectedCategory, todayHabits])
+  if (filter === 'active') {
+    filteredHabits = filteredHabits.filter(habit => !habit.isArchived)
+  } else if (filter === 'completed') {
+    const completedIds = new Set(todayHabits.filter(habit => habit.isCompleted).map(habit => habit.id))
+    filteredHabits = filteredHabits.filter(habit => completedIds.has(habit.id))
+  }
+
+  if (selectedCategory) {
+    filteredHabits = filteredHabits.filter(habit => habit.category === selectedCategory)
+  }
 
   const handleCategoryFilter = (id) => {
     setSelectedCategory(prev => (prev === id ? null : id))
@@ -281,7 +272,9 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
 
     const isCompleting = !todayHabit?.isCompleted
 
-    const result = await toggleYesNoCompletion(habitId)
+    const date = getTodayDate()
+    if (!date) return { ok: false }
+    const result = await toggleYesNoCompletion(habitId, date)
     if (!result.ok) {
       showErrorToast(`Could not update "${habit.name}". Please try again.`)
       return result
@@ -422,7 +415,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
                   <HabitName>{habit.name}</HabitName>
                   <HabitMeta>
                     <HabitStreak>
-                      <AppIcon name="flame" size={14} /> {getHabitStreak(habit)} days
+                      <AppIcon name="flame" size={14} /> {getHabitStreak(habit, referenceDate)} days
                     </HabitStreak>
                     <HabitFrequency>
                       {getFrequencyText(habit)}

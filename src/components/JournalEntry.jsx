@@ -133,11 +133,15 @@ const JournalEntry = ({ habitId, date, habitName }) => {
   const [isDeleting, setIsDeleting] = useState(false)
   const [saveConflict, setSaveConflict] = useState('')
   const selection = useRef(null)
-  const persistedEntry = getJournalEntryForHabit(habitId, date)
+  const hasDraft = isEditing && Boolean(content || selectedMood || existingEntry)
+  const entryDate = selection.current?.habitId === habitId && (hasDraft || isSaving || isDeleting)
+    ? selection.current.date
+    : date
+  const persistedEntry = getJournalEntryForHabit(habitId, entryDate)
   
   useEffect(() => {
-    const sameSelection = selection.current?.habitId === habitId && selection.current?.date === date
-    selection.current = { habitId, date }
+    const sameSelection = selection.current?.habitId === habitId && selection.current?.date === entryDate
+    selection.current = { habitId, date: entryDate }
     setExistingEntry(persistedEntry || null)
     if (sameSelection && isEditing) return
     setSaveConflict('')
@@ -150,7 +154,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
       setSelectedMood(null)
       setIsEditing(true)
     }
-  }, [habitId, date, persistedEntry])
+  }, [habitId, entryDate, persistedEntry])
   
   const handleSaveEntry = async () => {
     if (isSaving) return
@@ -161,7 +165,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
     try {
       const entryData = {
         habitId,
-        date,
+        date: entryDate,
         content,
         moodId: selectedMood
       }
@@ -243,7 +247,7 @@ const JournalEntry = ({ habitId, date, habitName }) => {
     <JournalContainer>
       <JournalHeader>
         <JournalTitle>Journal Reflection</JournalTitle>
-        <JournalDate>{format(parseISO(date), 'MMM d, yyyy')}</JournalDate>
+        <JournalDate>{format(parseISO(entryDate), 'MMM d, yyyy')}</JournalDate>
       </JournalHeader>
       
       {isEditing ? (

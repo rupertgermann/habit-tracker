@@ -411,36 +411,8 @@ test('Daily Reminder persists and remains scheduled across navigation and reload
     }
   })
   await page.addInitScript(() => {
-    const nativeSetTimeout = window.setTimeout.bind(window)
-    const nativeClearTimeout = window.clearTimeout.bind(window)
-    const timers = new Map()
     const notifications = []
-    let nextTimerId = 1_000_000
-
-    window.__dailyReminderTest = {
-      notifications,
-      pendingTimerCount: () => timers.size,
-      fireNextTimer: () => {
-        const next = timers.entries().next().value
-        if (!next) return false
-        const [timerId, callback] = next
-        timers.delete(timerId)
-        callback()
-        return true
-      }
-    }
-    window.setTimeout = (callback, delay, ...args) => {
-      if (delay >= 60_000) {
-        const timerId = nextTimerId++
-        timers.set(timerId, () => callback(...args))
-        return timerId
-      }
-      return nativeSetTimeout(callback, delay, ...args)
-    }
-    window.clearTimeout = timerId => {
-      if (timers.delete(timerId)) return
-      nativeClearTimeout(timerId)
-    }
+    window.__dailyReminderTest = { notifications }
 
     class FakeNotification {
       static permission = 'granted'
@@ -460,16 +432,14 @@ test('Daily Reminder persists and remains scheduled across navigation and reload
     })
   })
 
+  await page.clock.install({ time: new Date(2026, 7, 9, 8, 30) })
   await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/settings')
   await waitForAppReady(page)
 
   const notificationToggle = page.getByRole('checkbox', { name: 'Daily Reminder' })
   const reminderTimeInput = page.getByLabel('Reminder Time')
-  const reminderTime = await page.evaluate(() => {
-    const next = new Date(Date.now() + (2 * 60 * 60 * 1000))
-    return `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}`
-  })
+  const reminderTime = '09:30'
 
   await reminderTimeInput.fill(reminderTime)
   await reminderTimeInput.blur()
@@ -484,12 +454,10 @@ test('Daily Reminder persists and remains scheduled across navigation and reload
     enabled: true,
     time: reminderTime
   })
-  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.pendingTimerCount())).toBe(1)
 
   await page.getByRole('button', { name: 'Habits' }).click()
   await expect(page).toHaveURL(/\/habits$/)
-  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.pendingTimerCount())).toBe(1)
-  expect(await page.evaluate(() => window.__dailyReminderTest.fireNextTimer())).toBe(true)
+  await page.clock.fastForward(60 * 60 * 1000)
   await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.notifications)).toEqual([{
     title: 'Habit Tracker Reminder',
     options: {
@@ -502,7 +470,8 @@ test('Daily Reminder persists and remains scheduled across navigation and reload
   await waitForAppReady(page)
   await expect(notificationToggle).toBeChecked()
   await expect(reminderTimeInput).toHaveValue(reminderTime)
-  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.pendingTimerCount())).toBe(1)
+  await page.clock.fastForward(24 * 60 * 60 * 1000)
+  await expect.poll(() => page.evaluate(() => window.__dailyReminderTest.notifications.length)).toBe(1)
 })
 
 test('Daily Reminder controls lock during a save and restore committed time after failure', async ({ page, request }) => {

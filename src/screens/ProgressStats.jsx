@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import styled from 'styled-components'
 import Card from '../components/Card'
 import BarChart from '../components/BarChart'
@@ -197,37 +197,11 @@ const EmptyStateText = styled.p`
   margin-bottom: ${props => props.theme.spacing.lg};
 `
 
-const useProgressReferenceDate = () => {
-  const [referenceDate, setReferenceDate] = useState(() => new Date())
-
-  useEffect(() => {
-    let timeoutId
-
-    const scheduleNextDay = () => {
-      const now = new Date()
-      const nextDay = new Date(now)
-      nextDay.setHours(24, 0, 0, 0)
-      const delay = Math.max(nextDay.getTime() - now.getTime(), 0) + 50
-
-      timeoutId = window.setTimeout(() => {
-        setReferenceDate(new Date())
-        scheduleNextDay()
-      }, delay)
-    }
-
-    scheduleNextDay()
-    return () => window.clearTimeout(timeoutId)
-  }, [])
-
-  return referenceDate
-}
-
 const formatHabitNames = habits => habits.map(habit => habit.name).join(', ') || 'None'
 
 const ProgressStats = () => {
-  const { habits } = useHabits()
+  const { habits, referenceDate } = useHabits()
   const { weekStartsOn } = usePreferences()
-  const referenceDate = useProgressReferenceDate()
   const snapshot = useMemo(() => progressReadModel.getSnapshot({
     habits,
     referenceDate,

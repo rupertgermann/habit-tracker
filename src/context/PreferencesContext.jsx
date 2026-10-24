@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { habitsApi } from '../api/habitsApi'
 
 const PreferencesContext = createContext()
@@ -43,6 +43,7 @@ export const removeLegacyWeekStartPreference = (storage = getBrowserStorage()) =
 
 export const PreferencesProvider = ({ children }) => {
   const [weekStartsOn, setWeekStartsOnState] = useState(DEFAULT_WEEK_START)
+  const hasChosenWeekStart = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -51,7 +52,7 @@ export const PreferencesProvider = ({ children }) => {
 
     habitsApi.getSetting(PREFERENCES_SETTINGS_KEY)
       .then(({ value }) => {
-        if (cancelled) return
+        if (cancelled || hasChosenWeekStart.current) return
         setWeekStartsOnState(normalizePreferencesSettings(value).weekStartsOn)
       })
       .catch(error => {
@@ -64,6 +65,7 @@ export const PreferencesProvider = ({ children }) => {
   }, [])
 
   const setWeekStartsOn = (value) => {
+    hasChosenWeekStart.current = true
     const nextWeekStartsOn = normalizeWeekStartsOn(value)
     setWeekStartsOnState(nextWeekStartsOn)
     habitsApi.saveSetting(PREFERENCES_SETTINGS_KEY, { weekStartsOn: nextWeekStartsOn })
