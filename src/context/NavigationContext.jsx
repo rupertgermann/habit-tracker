@@ -3,6 +3,16 @@ import { useLocation } from 'react-router-dom'
 
 const NavigationContext = createContext()
 
+export const useHabitRouteId = () => {
+  const { pathname } = useLocation()
+  // Router params also turn literal "%2F" in imported IDs into a slash.
+  try {
+    return decodeURIComponent(pathname.split('/')[2] || '') || undefined
+  } catch {
+    return undefined
+  }
+}
+
 export const NavigationProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState('dashboard')
   const location = useLocation()

@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import React from 'react'
 import styled from 'styled-components'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import HabitsList from '../screens/HabitsList'
 import HabitDetail from '../screens/HabitDetail'
-import { useHabits } from '../context/HabitsContext'
+import { useHabitRouteId } from '../context/NavigationContext'
 import AppIcon from './AppIcon'
 
 const SplitViewContainer = styled.div`
@@ -56,26 +56,10 @@ const EmptyText = styled.p`
 
 const TabletSplitView = () => {
   const navigate = useNavigate()
-  const location = useLocation()
-  useHabits()
-  const [selectedHabitId, setSelectedHabitId] = useState(null)
-
-  // Check if we're currently viewing a habit detail
-  const isViewingHabit = location.pathname.startsWith('/habit/')
-  
-  // Extract habit ID from URL if viewing a habit
-  React.useEffect(() => {
-    if (isViewingHabit) {
-      const habitId = location.pathname.split('/habit/')[1]
-      setSelectedHabitId(habitId)
-    } else {
-      setSelectedHabitId(null)
-    }
-  }, [location.pathname, isViewingHabit])
+  const selectedHabitId = useHabitRouteId()
 
   const handleHabitSelect = (habitId) => {
-    setSelectedHabitId(habitId)
-    navigate(`/habit/${habitId}`)
+    navigate(`/habit/${encodeURIComponent(habitId)}`)
   }
 
   return (

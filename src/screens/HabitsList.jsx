@@ -304,7 +304,7 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
     if (isTabletView && onHabitSelect) {
       onHabitSelect(habitId)
     } else {
-      navigate(`/habit/${habitId}`)
+      navigate(`/habit/${encodeURIComponent(habitId)}`)
     }
   }
 
