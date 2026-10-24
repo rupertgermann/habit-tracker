@@ -103,13 +103,18 @@ export const HabitsProvider = ({
     dispatch({ type: 'REPLACE_HABITS', payload: replacement })
   }
 
-  const replaceDeletedState = replacement => {
+  const replaceDeletedState = habitId => {
+    const replacement = {
+      habits: habitsRef.current.filter(habit => habit.id !== habitId),
+      journalEntries: journalEntriesRef.current.filter(entry => entry.habitId !== habitId)
+    }
     habitsRef.current = replacement.habits
     journalEntriesRef.current = replacement.journalEntries
     dispatch({
       type: 'DELETE_HABIT_SUCCESS',
       payload: replacement
     })
+    return replacement
   }
 
   const getHabitLifecycle = () => createHabitLifecycle({

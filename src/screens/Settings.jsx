@@ -14,6 +14,7 @@ import { habitsApi } from '../api/habitsApi'
 import { backupPersistence } from '../api/backupPersistence'
 import { createBrowserBackupAdapter } from '../adapters/browserBackup'
 import { createBackupModule } from '../domain/backup'
+import { BACKUP_SIZE_ERROR_MESSAGE } from '../../shared/backupLimits.mjs'
 import { toDateKey } from '../domain/habitTracking'
 import { removeLegacyWeekStartPreference, usePreferences, WEEK_START_OPTIONS } from '../context/PreferencesContext.jsx'
 import { createProfileLifecycle, DEFAULT_PROFILE } from '../domain/profile'
@@ -512,6 +513,8 @@ const Settings = () => {
     time: reminderTime,
     isLoaded: isDailyReminderLoaded,
     isConfiguring: isDailyReminderConfiguring,
+    loadError: dailyReminderLoadError,
+    retryLoad: retryDailyReminderLoad,
     setEnabled: setDailyReminderEnabled,
     setTime: setDailyReminderTime
   } = useDailyReminder()
@@ -635,7 +638,7 @@ const Settings = () => {
       browserBackup.download(result)
       showToast('Backup created successfully', 'success')
     } catch (error) {
-      showToast('Failed to create backup', 'error')
+      showToast(error.code === 'backup-too-large' ? BACKUP_SIZE_ERROR_MESSAGE : 'Failed to create backup', 'error')
     }
   }
 
@@ -645,9 +648,9 @@ const Settings = () => {
     let selection
     try {
       selection = await browserBackup.selectFile()
-    } catch {
+    } catch (error) {
       setDataOperationBusy(false)
-      showToast('Failed to read backup file', 'error')
+      showToast(error.code === 'backup-too-large' ? BACKUP_SIZE_ERROR_MESSAGE : 'Failed to read backup file', 'error')
       return
     }
 
@@ -671,7 +674,8 @@ const Settings = () => {
     const result = await canonicalBackup.restore(prepared)
     if (!result.ok) {
       setDataOperationBusy(false)
-      showToast('Failed to restore data', 'error')
+      showToast(result.error.code === 'backup-too-large' || result.error.status === 413
+        ? BACKUP_SIZE_ERROR_MESSAGE : 'Failed to restore data', 'error')
       return
     }
 
@@ -978,6 +982,12 @@ const Settings = () => {
 
       <SettingsGroup>
         <GroupTitle>Preferences</GroupTitle>
+        {dailyReminderLoadError && (
+          <div role="alert">
+            Could not load Daily Reminder settings. Retry before editing.
+            <Button type="button" onClick={retryDailyReminderLoad}>Retry Daily Reminder</Button>
+          </div>
+        )}
         <SettingsCard elevated>
           {settings.map((setting, index) => (
             <SettingItem key={index}>

@@ -1,7 +1,28 @@
 import assert from 'node:assert/strict'
+import { MAX_BACKUP_BYTES, BACKUP_SIZE_ERROR_MESSAGE } from '/shared/backupLimits.mjs'
 import { createBrowserBackupAdapter } from '/src/adapters/browserBackup.js'
 
 export const tests = [
+  {
+    name: 'browser backup selection rejects oversized files before constructing a FileReader',
+    async run() {
+      let readers = 0
+      const adapter = createBrowserBackupAdapter({
+        documentObject: {
+          createElement() {
+            return {
+              files: [{ name: 'large.json', size: MAX_BACKUP_BYTES + 1 }],
+              click() { this.onchange() }
+            }
+          }
+        },
+        FileReaderClass: class { constructor() { readers += 1 } }
+      })
+      await assert.rejects(adapter.selectFile(), error =>
+        error.code === 'backup-too-large' && error.message === BACKUP_SIZE_ERROR_MESSAGE)
+      assert.equal(readers, 0)
+    }
+  },
   {
     name: 'browser backup adapter downloads prepared content and treats file cancellation as a no-op',
     async run() {
@@ -76,7 +97,7 @@ export const tests = [
         documentObject: {
           createElement() {
             return {
-              files: [{ name: 'backup.json' }],
+              files: [{ name: 'backup.json', size: 2 }],
               click() {
                 this.onchange()
               }

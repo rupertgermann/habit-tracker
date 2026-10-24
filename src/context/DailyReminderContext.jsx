@@ -33,11 +33,25 @@ export const DailyReminderProvider = ({ children }) => {
   const pendingConfigurationsRef = useRef(0)
   const [settings, setSettings] = useState({ ...DEFAULT_DAILY_REMINDER_SETTINGS })
   const [isLoaded, setIsLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(null)
   const [isConfiguring, setIsConfiguring] = useState(false)
   habitsStateRef.current = { habits, habitsHaveLoaded, habitsError }
 
+  const loadSettings = async () => {
+    const reminder = reminderRef.current
+    if (!reminder) return
+    isReadyRef.current = false
+    setIsLoaded(false)
+    setLoadError(null)
+    const result = await reminder.load()
+    if (reminderRef.current !== reminder) return
+    setSettings(result.settings)
+    isReadyRef.current = result.ok
+    setIsLoaded(result.ok)
+    setLoadError(result.ok ? null : result.error)
+  }
+
   useEffect(() => {
-    let active = true
     const reminder = createDailyReminderModule({
       persistence: dailyReminderPersistence,
       clock: createBrowserClockAdapter(),
@@ -52,18 +66,9 @@ export const DailyReminderProvider = ({ children }) => {
     })
 
     reminderRef.current = reminder
-    isReadyRef.current = false
-    setIsLoaded(false)
-
-    reminder.load().then(result => {
-      if (!active) return
-      setSettings(result.settings)
-      isReadyRef.current = true
-      setIsLoaded(true)
-    })
+    loadSettings()
 
     return () => {
-      active = false
       isReadyRef.current = false
       reminder.dispose()
       if (reminderRef.current === reminder) reminderRef.current = null
@@ -96,6 +101,8 @@ export const DailyReminderProvider = ({ children }) => {
     <DailyReminderContext.Provider value={{
       ...settings,
       isLoaded,
+      loadError,
+      retryLoad: loadSettings,
       isConfiguring,
       setEnabled: enabled => configure({ enabled }),
       setTime: time => configure({ time })

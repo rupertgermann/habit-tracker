@@ -59,6 +59,35 @@ const createNotificationAdapter = (permission = 'granted', requestedPermission =
 
 export const tests = [
   {
+    name: 'Daily Reminder blocks writes after a failed read and retries without losing saved enablement',
+    async run() {
+      let saved = { enabled: true, time: '18:45' }
+      let failRead = true
+      const writes = []
+      const reminder = createDailyReminderModule({
+        persistence: {
+          async load() {
+            if (failRead) throw new Error('Database unavailable')
+            return saved
+          },
+          async save(settings) { writes.push(settings); saved = settings }
+        },
+        clock: createFakeClock(new Date(2026, 7, 9, 8, 30)),
+        notifications: createNotificationAdapter(),
+        getHabits: () => []
+      })
+      assert.equal((await reminder.load()).ok, false)
+      assert.equal((await reminder.configure({ time: '19:00' })).ok, false)
+      assert.deepEqual(writes, [])
+      assert.deepEqual(saved, { enabled: true, time: '18:45' })
+      failRead = false
+      assert.deepEqual((await reminder.load()).settings, saved)
+      assert.equal((await reminder.configure({ time: '19:00' })).ok, true)
+      assert.deepEqual(saved, { enabled: true, time: '19:00' })
+      reminder.dispose()
+    }
+  },
+  {
     name: 'Daily Reminder loads committed settings, schedules once, and reads current Habits when it fires',
     async run() {
       const clock = createFakeClock(new Date(2026, 7, 9, 8, 30))

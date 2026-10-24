@@ -44,6 +44,7 @@ export const createDailyReminderModule = ({
   let settings = { ...DEFAULT_DAILY_REMINDER_SETTINGS }
   let timeoutId = null
   let disposed = false
+  let loaded = false
   let pendingConfiguration = Promise.resolve()
 
   const cancelSchedule = () => {
@@ -90,6 +91,7 @@ export const createDailyReminderModule = ({
   }
 
   const commitConfiguration = async (changes) => {
+    if (!loaded) return { ok: false, reason: 'loading', settings: { ...settings } }
     const nextSettings = normalizeDailyReminderSettings({ ...settings, ...changes })
 
     if (nextSettings.enabled) {
@@ -150,6 +152,8 @@ export const createDailyReminderModule = ({
 
   return {
     async load() {
+      loaded = false
+      cancelSchedule()
       try {
         settings = normalizeDailyReminderSettings(await persistence.load())
 
@@ -158,6 +162,7 @@ export const createDailyReminderModule = ({
           await persistence.save(settings)
         }
 
+        loaded = true
         scheduleNext()
         return { ok: true, settings: { ...settings } }
       } catch (error) {

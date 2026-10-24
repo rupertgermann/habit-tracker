@@ -1,4 +1,5 @@
 import { validateState } from '../../shared/stateValidation.mjs'
+import { assertBackupSize } from '../../shared/backupLimits.mjs'
 import defaultCategories from '../../shared/defaultCategories.json'
 
 export const BACKUP_FORMAT_VERSION = 2
@@ -76,6 +77,11 @@ const migrateLegacyDocument = document => {
 }
 
 const prepareRestore = serialized => {
+  try {
+    assertBackupSize(new TextEncoder().encode(serialized).byteLength)
+  } catch (error) {
+    return { ok: false, error }
+  }
   let document
   try {
     document = JSON.parse(serialized)
@@ -161,11 +167,13 @@ export const createBackupModule = ({
         },
         state
       }
+      const serialized = `${JSON.stringify(document, null, 2)}\n`
+      assertBackupSize(new TextEncoder().encode(serialized).byteLength)
 
       return {
         ok: true,
         document,
-        serialized: `${JSON.stringify(document, null, 2)}\n`,
+        serialized,
         filename: `habit-tracker-backup-${createdAt.slice(0, 10)}.json`
       }
     } catch (error) {
@@ -181,7 +189,9 @@ export const createBackupModule = ({
     }
 
     try {
-      const state = validateState(await persistence.restoreState(validateState(prepared.state)))
+      const nextState = validateState(prepared.state)
+      assertBackupSize(new TextEncoder().encode(JSON.stringify(nextState)).byteLength)
+      const state = validateState(await persistence.restoreState(nextState))
       return {
         ok: true,
         sourceVersion: prepared.sourceVersion,

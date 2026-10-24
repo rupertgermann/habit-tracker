@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { MAX_BACKUP_BYTES, BACKUP_SIZE_ERROR_MESSAGE } from '/shared/backupLimits.mjs'
 import {
   BACKUP_FORMAT_VERSION,
   createBackupModule,
@@ -44,6 +45,52 @@ const completeState = {
 }
 
 export const tests = [
+  {
+    name: 'backup size checks count UTF-8 bytes before parsing and accept the exact limit',
+    run() {
+      const backup = createBackupModule({ persistence: createInMemoryBackupPersistence() })
+      const prefix = JSON.stringify({
+        formatVersion: 2,
+        metadata: { createdAt: '2026-07-16T09:10:11.000Z' },
+        state: { habits: [], categories: [], journalEntries: [], settings: {} }
+      })
+      const atLimit = prefix + ' '.repeat(MAX_BACKUP_BYTES - new TextEncoder().encode(prefix).byteLength)
+      assert.equal(backup.prepareRestore(atLimit).ok, true)
+      const oversized = 'é'.repeat(MAX_BACKUP_BYTES / 2 + 1)
+      assert.ok(oversized.length < MAX_BACKUP_BYTES)
+      const result = backup.prepareRestore(oversized)
+      assert.equal(result.ok, false)
+      assert.equal(result.error.code, 'backup-too-large')
+      assert.equal(result.error.message, BACKUP_SIZE_ERROR_MESSAGE)
+    }
+  },
+  {
+    name: 'snapshot creation refuses an oversized UTF-8 document',
+    async run() {
+      const state = { habits: [], categories: [], journalEntries: [], settings: { large: 'é'.repeat(MAX_BACKUP_BYTES / 2) } }
+      const backup = createBackupModule({ persistence: { async readState() { return state } } })
+      const result = await backup.createSnapshot()
+      assert.equal(result.ok, false)
+      assert.equal(result.error.code, 'backup-too-large')
+      assert.equal(result.serialized, undefined)
+    }
+  },
+  {
+    name: 'legacy defaults cannot push a prepared restore past the body limit',
+    async run() {
+      let writes = 0
+      const backup = createBackupModule({ persistence: { async restoreState() { writes += 1 } } })
+      const document = { version: '1.0.0', habits: [], settings: { padding: '' } }
+      document.settings.padding = ' '.repeat(MAX_BACKUP_BYTES - JSON.stringify(document).length)
+      const prepared = backup.prepareRestore(JSON.stringify(document))
+      assert.equal(prepared.ok, true)
+      assert.ok(new TextEncoder().encode(JSON.stringify(prepared.state)).byteLength > MAX_BACKUP_BYTES)
+      const result = await backup.restore(prepared)
+      assert.equal(result.ok, false)
+      assert.equal(result.error.code, 'backup-too-large')
+      assert.equal(writes, 0)
+    }
+  },
   {
     name: 'canonical snapshots preserve complete persisted state with deterministic version 2 metadata',
     async run() {

@@ -2,6 +2,7 @@ const path = require('path')
 const express = require('express')
 const store = require('./db')
 const { createHabitDeletion } = require('./habitDeletion')
+const { MAX_BACKUP_BYTES, BACKUP_SIZE_ERROR_MESSAGE } = require('../shared/backupLimits.mjs')
 
 const app = express()
 const deleteHabit = createHabitDeletion({ db: store.db, getState: store.getState })
@@ -22,6 +23,12 @@ app.use((req, res, next) => {
     return res.status(403).json({ error: 'Browser origin is not allowed' })
   }
   next()
+})
+app.post('/api/restore', express.json({ limit: MAX_BACKUP_BYTES }), (err, req, res, next) => {
+  if (err.status === 413) {
+    return res.status(413).json({ error: BACKUP_SIZE_ERROR_MESSAGE, code: 'backup-too-large' })
+  }
+  next(err)
 })
 app.use(express.json({ limit: '5mb' }))
 app.use((err, req, res, next) => {
