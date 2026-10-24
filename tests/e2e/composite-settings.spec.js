@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { resetAppData, waitForAppReady } from './helpers.js'
 
 const avatarImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8AARLJgwiBqBgAe9gICN3XFoAAAAABJRU5ErkJggg=='

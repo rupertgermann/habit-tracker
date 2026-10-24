@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { makeHabit, makeJournalEntry, resetAppData, waitForAppReady } from './helpers.js'
 
 const habit = makeHabit({ id: 'shared-journal-habit', name: 'Shared Journal Habit' })

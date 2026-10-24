@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { resetAppData, waitForAppReady } from './helpers.js'
 
 test('failed Daily Reminder reads block writes until retry recovers saved settings', async ({ page, request }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { resetAppData, waitForAppReady } from './helpers.js'
 
 test('Category buttons support Tab, Enter and Space without submitting the Habit form', async ({ page, request }) => {

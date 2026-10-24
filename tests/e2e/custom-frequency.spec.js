@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 import { makeHabit, resetAppData, waitForAppReady } from './helpers.js'
 
 test.use({ viewport: { width: 390, height: 844 } })
