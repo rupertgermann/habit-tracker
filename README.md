@@ -191,6 +191,7 @@ The backend stores each collection item as JSON in SQLite tables. `server/db.js`
 | `GET /api/state` | Full app state: habits, categories, journal entries, and settings. |
 | `GET /api/runtime` | Runtime marker used by the e2e reset guard. |
 | `GET /api/settings/:key` / `PUT /api/settings/:key` | Read or persist database-backed settings such as `design`, `theme`, `profile`, `preferences`, and `dailyReminder`. |
+| `PATCH /api/settings/:key` | Atomically merge `{ value: { ...changedFields } }` for `profile` or `dailyReminder` and return the complete saved value. Other settings do not support field patches. |
 | `POST /api/habits` / `PUT /api/habits/:id` / `DELETE /api/habits/:id` | Create, update, or delete a habit. Deleting a habit also removes its journal entries. |
 | `POST /api/categories` / `PUT /api/categories/:id` / `DELETE /api/categories/:id` | Manage categories. |
 | `POST /api/journal` / `PUT /api/journal/:id` / `DELETE /api/journal/:id` | Manage journal entries. |

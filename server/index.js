@@ -73,6 +73,13 @@ app.put('/api/settings/:key', asyncWrap((req, res) => {
   })
 }))
 
+app.patch('/api/settings/:key', asyncWrap((req, res) => {
+  res.json({
+    key: req.params.key,
+    value: store.patchSetting(req.params.key, req.body?.value)
+  })
+}))
+
 // Habits
 app.post('/api/habits', asyncWrap((req, res) => {
   res.status(201).json(store.writeRecord('habits', req.body, true))

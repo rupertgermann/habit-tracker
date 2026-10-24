@@ -20,9 +20,15 @@ export const createProfileLifecycle = ({ persistence, createAvatarImage }) => {
     const operation = queue.then(async () => {
       publish({ status: 'saving' })
       try {
+        const previous = state.committed
+        const previousDraft = state.draft
         const patch = await getPatch()
-        const committed = normalizeProfile(await persistence.save({ ...state.committed, ...patch }))
-        publish({ status: 'committed', committed })
+        const committed = normalizeProfile(await persistence.save(patch))
+        const draft = { ...state.draft }
+        for (const field of ['name', 'email']) {
+          if (draft[field] === previous[field] && draft[field] === previousDraft[field]) draft[field] = committed[field]
+        }
+        publish({ status: 'committed', committed, draft })
         return { ok: true, profile: committed }
       } catch (error) {
         publish({ status: 'failed' })
@@ -64,7 +70,10 @@ export const createProfileLifecycle = ({ persistence, createAvatarImage }) => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return { ok: false, error: new Error('Please enter a valid email') }
       }
-      const result = await mutate(() => ({ name, email }))
+      const patch = {}
+      if (name !== state.committed?.name) patch.name = name
+      if (email !== state.committed?.email) patch.email = email
+      const result = await mutate(() => patch)
       if (result.ok && state.draft.name.trim() === name && state.draft.email.trim() === email) {
         publish({ draft: { ...state.draft, name: result.profile.name, email: result.profile.email } })
       }

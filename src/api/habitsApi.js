@@ -29,6 +29,10 @@ export const habitsApi = {
     method: 'PUT',
     body: JSON.stringify({ value })
   }),
+  patchSetting: (key, value) => request(`/settings/${encodeURIComponent(key)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ value })
+  }),
 
   createHabit: habit => request('/habits', { method: 'POST', body: JSON.stringify(habit) }),
   updateHabit: habit => request(`/habits/${encodeRecordId(habit.id)}`, { method: 'PUT', body: JSON.stringify(habit) }),

@@ -516,7 +516,7 @@ test('Daily Reminder controls lock during a save and restore committed time afte
   })
   let finishFailedSave
   await page.route('**/api/settings/dailyReminder', async route => {
-    if (route.request().method() !== 'PUT') {
+    if (route.request().method() !== 'PATCH') {
       await route.continue()
       return
     }

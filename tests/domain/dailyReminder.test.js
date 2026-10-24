@@ -59,6 +59,48 @@ const createNotificationAdapter = (permission = 'granted', requestedPermission =
 
 export const tests = [
   {
+    name: 'independent reminder instances preserve changed fields and adopt the authoritative response',
+    async run() {
+      let saved = { enabled: true, time: '09:00' }
+      const persistence = {
+        async load() { return { ...saved } },
+        async save(patch) { saved = { ...saved, ...patch }; return { ...saved } }
+      }
+      const makeReminder = () => createDailyReminderModule({
+        persistence, clock: createFakeClock(new Date(2026, 7, 9, 8, 30)),
+        notifications: createNotificationAdapter(), getHabits: () => []
+      })
+      const first = makeReminder(), second = makeReminder()
+      await Promise.all([first.load(), second.load()])
+      await first.configure({ enabled: false })
+      const result = await second.configure({ time: '10:00' })
+      assert.deepEqual(saved, { enabled: false, time: '10:00' })
+      assert.deepEqual(result.settings, saved)
+      await second.configure({ enabled: true })
+      await first.configure({ enabled: false })
+      assert.deepEqual(saved, { enabled: false, time: '10:00' })
+      first.dispose()
+      second.dispose()
+    }
+  },
+  {
+    name: 'permission recovery disables reminders without replacing a newer stored time',
+    async run() {
+      let saved = { enabled: true, time: '20:00' }
+      const reminder = createDailyReminderModule({
+        persistence: {
+          async load() { return { enabled: true, time: '09:00' } },
+          async save(patch) { saved = { ...saved, ...patch }; return saved }
+        },
+        clock: createFakeClock(new Date(2026, 7, 9, 8, 30)),
+        notifications: createNotificationAdapter('denied'), getHabits: () => []
+      })
+      assert.deepEqual((await reminder.load()).settings, { enabled: false, time: '20:00' })
+      assert.deepEqual(saved, { enabled: false, time: '20:00' })
+      reminder.dispose()
+    }
+  },
+  {
     name: 'Daily Reminder blocks writes after a failed read and retries without losing saved enablement',
     async run() {
       let saved = { enabled: true, time: '18:45' }
@@ -70,7 +112,7 @@ export const tests = [
             if (failRead) throw new Error('Database unavailable')
             return saved
           },
-          async save(settings) { writes.push(settings); saved = settings }
+          async save(patch) { writes.push(patch); saved = { ...saved, ...patch }; return saved }
         },
         clock: createFakeClock(new Date(2026, 7, 9, 8, 30)),
         notifications: createNotificationAdapter(),
@@ -158,10 +200,10 @@ export const tests = [
       await waitFor(() => savedSettings.length === 1)
 
       assert.equal(notificationAdapter.permissionRequestCount(), 1)
-      assert.deepEqual(savedSettings, [{ enabled: true, time: '09:00' }])
+      assert.deepEqual(savedSettings, [{ enabled: true }])
       assert.equal(clock.pendingCount(), 0)
 
-      commitSave(savedSettings[0])
+      commitSave({ enabled: true, time: '09:00' })
       assert.deepEqual(await enabling, {
         ok: true,
         changed: true,
@@ -181,7 +223,7 @@ export const tests = [
           load: async () => ({ enabled: true, time: '09:00' }),
           save: async settings => {
             savedSettings.push(settings)
-            return settings
+            return { enabled: true, time: '09:00', ...settings }
           }
         },
         clock,
@@ -195,7 +237,7 @@ export const tests = [
         ok: true,
         settings: { enabled: false, time: '09:00' }
       })
-      assert.deepEqual(savedSettings, [{ enabled: false, time: '09:00' }])
+      assert.deepEqual(savedSettings, [{ enabled: false }])
       assert.equal(notificationAdapter.permissionRequestCount(), 0)
       assert.equal(clock.pendingCount(), 0)
     }
@@ -223,9 +265,9 @@ export const tests = [
       await waitFor(() => pendingSaves.length === 1)
 
       assert.equal(pendingSaves.length, 1)
-      assert.deepEqual(pendingSaves[0].settings, { enabled: true, time: '10:00' })
+      assert.deepEqual(pendingSaves[0].settings, { time: '10:00' })
 
-      pendingSaves[0].resolve(pendingSaves[0].settings)
+      pendingSaves[0].resolve({ enabled: true, time: '10:00' })
       assert.deepEqual(await firstChange, {
         ok: true,
         changed: true,
@@ -234,8 +276,8 @@ export const tests = [
       await waitFor(() => pendingSaves.length === 2)
 
       assert.equal(pendingSaves.length, 2)
-      assert.deepEqual(pendingSaves[1].settings, { enabled: true, time: '11:00' })
-      pendingSaves[1].resolve(pendingSaves[1].settings)
+      assert.deepEqual(pendingSaves[1].settings, { time: '11:00' })
+      pendingSaves[1].resolve({ enabled: true, time: '11:00' })
       assert.deepEqual(await secondChange, {
         ok: true,
         changed: true,

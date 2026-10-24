@@ -6,7 +6,7 @@ const setup = (overrides = {}) => {
   let stored = { ...original }
   const persistence = {
     async load() { return stored },
-    async save(profile) { stored = profile; return profile },
+    async save(patch) { stored = { ...stored, ...patch }; return stored },
     ...overrides
   }
   const lifecycle = createProfileLifecycle({ persistence, createAvatarImage: async file => file, ...overrides.adapters })
@@ -14,6 +14,39 @@ const setup = (overrides = {}) => {
 }
 
 export const tests = [
+  {
+    name: 'independent profiles preserve renamed text during stale avatar removal and later email edits',
+    async run() {
+      const { lifecycle: first, persistence, getStored } = setup()
+      const second = createProfileLifecycle({ persistence, createAvatarImage: async file => file })
+      await Promise.all([first.load(), second.load()])
+      first.edit({ name: 'New name' })
+      await first.saveText()
+      await second.removeAvatar()
+      assert.deepEqual(getStored(), { ...original, name: 'New name', avatarImage: null })
+      assert.equal(second.getState().draft.name, 'New name')
+      second.edit({ email: 'new@example.com' })
+      await second.saveText()
+      assert.deepEqual(getStored(), { name: 'New name', email: 'new@example.com', avatarImage: null })
+    }
+  },
+  {
+    name: 'a stale profile sends only edited text fields and preserves drafts during avatar reconciliation',
+    async run() {
+      const { lifecycle: first, persistence, getStored } = setup()
+      const second = createProfileLifecycle({ persistence, createAvatarImage: async file => file })
+      await Promise.all([first.load(), second.load()])
+      first.edit({ name: 'New name' })
+      await first.saveText()
+      second.edit({ email: 'new@example.com' })
+      await second.saveText()
+      assert.deepEqual(getStored(), { ...original, name: 'New name', email: 'new@example.com' })
+      second.edit({ name: 'Unsaved draft' })
+      await second.replaceAvatar('new-avatar')
+      assert.equal(second.getState().draft.name, 'Unsaved draft')
+      assert.equal(getStored().name, 'New name')
+    }
+  },
   {
     name: 'profile failed load blocks writes and can be retried without defaults overwriting saved data',
     async run() {
@@ -39,7 +72,7 @@ export const tests = [
       let fail = true
       const { lifecycle } = setup({ async save(profile) {
         if (fail) throw new Error('offline')
-        return { ...profile, name: 'Server normalized' }
+        return { ...original, ...profile, name: 'Server normalized' }
       } })
       await lifecycle.load()
       lifecycle.edit({ name: ' New name ', email: 'new@example.com' })
@@ -94,7 +127,7 @@ export const tests = [
       let finish
       let started
       const pending = new Promise(resolve => { started = resolve })
-      const { lifecycle } = setup({ async save(profile) { await new Promise(resolve => { finish = resolve; started() }); return profile } })
+      const { lifecycle } = setup({ async save(profile) { await new Promise(resolve => { finish = resolve; started() }); return { ...original, ...profile } } })
       await lifecycle.load()
       lifecycle.edit({ email: 'invalid' })
       assert.equal((await lifecycle.saveText()).ok, false)
@@ -105,6 +138,25 @@ export const tests = [
       finish()
       await saving
       assert.equal(lifecycle.getState().draft.name, 'Later')
+      assert.equal(lifecycle.getState().committed.name, 'First')
+    }
+  },
+  {
+    name: 'profile keeps a draft reverted to its old value while a text save is pending',
+    async run() {
+      let finish
+      const { lifecycle } = setup({ async save(patch) {
+        await new Promise(resolve => { finish = resolve })
+        return { ...original, ...patch }
+      } })
+      await lifecycle.load()
+      lifecycle.edit({ name: 'First' })
+      const saving = lifecycle.saveText()
+      while (!finish) await Promise.resolve()
+      lifecycle.edit({ name: original.name })
+      finish()
+      await saving
+      assert.equal(lifecycle.getState().draft.name, original.name)
       assert.equal(lifecycle.getState().committed.name, 'First')
     }
   }

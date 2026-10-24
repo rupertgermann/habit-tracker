@@ -19,8 +19,8 @@ const dailyReminderPersistence = {
     const { value } = await habitsApi.getSetting(DAILY_REMINDER_SETTINGS_KEY)
     return value
   },
-  async save(settings) {
-    const { value } = await habitsApi.saveSetting(DAILY_REMINDER_SETTINGS_KEY, settings)
+  async save(changes) {
+    const { value } = await habitsApi.patchSetting(DAILY_REMINDER_SETTINGS_KEY, changes)
     return value
   }
 }

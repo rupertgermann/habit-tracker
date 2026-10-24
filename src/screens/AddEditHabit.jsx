@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -7,6 +7,7 @@ import Input from '../components/Input'
 import CategorySelector from '../components/CategorySelector'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import { useHabitRouteId } from '../context/NavigationContext'
 import { getHabitById } from '../domain/habitTracking'
 import {
   DEFAULT_HABIT_ICON,
@@ -371,7 +372,7 @@ const colorOptions = [
 const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 const AddEditHabit = () => {
-  const { id } = useParams()
+  const id = useHabitRouteId()
   const navigate = useNavigate()
   const { habits, addHabit, updateHabit } = useHabits()
   const isEditing = Boolean(id)

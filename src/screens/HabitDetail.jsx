@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { format, parseISO } from 'date-fns'
 import Card from '../components/Card'
@@ -10,6 +10,7 @@ import JournalEntry from '../components/JournalEntry'
 import CountStepper from '../components/CountStepper'
 import AppIcon from '../components/AppIcon'
 import { useHabits } from '../context/HabitsContext'
+import { useHabitRouteId } from '../context/NavigationContext'
 import { useToast } from '../context/ToastContext'
 import {
   getCountForDate,
@@ -218,7 +219,7 @@ const CountActionHint = styled.div`
 `
 
 const HabitDetail = () => {
-  const { id } = useParams()
+  const id = useHabitRouteId()
   const navigate = useNavigate()
   const { habits, hasLoaded, mutationError, deleteHabit, toggleYesNoCompletion } = useHabits()
   const { showSuccessToast } = useToast()
@@ -263,7 +264,7 @@ const HabitDetail = () => {
   }
 
   const handleEdit = () => {
-    navigate(`/edit-habit/${id}`)
+    navigate(`/edit-habit/${encodeURIComponent(id)}`)
   }
 
   const handleDelete = async () => {

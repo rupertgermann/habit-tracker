@@ -122,14 +122,10 @@ export const createDailyReminderModule = ({
       }
     }
 
-    const changed = nextSettings.enabled !== settings.enabled || nextSettings.time !== settings.time
-    if (!changed) {
-      scheduleNext()
-      return { ok: true, changed: false, settings: { ...settings } }
-    }
-
+    let committed
     try {
-      await persistence.save(nextSettings)
+      const patch = Object.fromEntries(Object.keys(changes).map(key => [key, nextSettings[key]]))
+      committed = normalizeDailyReminderSettings(await persistence.save(patch))
     } catch (error) {
       return {
         ok: false,
@@ -139,9 +135,10 @@ export const createDailyReminderModule = ({
       }
     }
 
-    settings = nextSettings
+    const changed = committed.enabled !== settings.enabled || committed.time !== settings.time
+    settings = committed
     scheduleNext()
-    return { ok: true, changed: true, settings: { ...settings } }
+    return { ok: true, changed, settings: { ...settings } }
   }
 
   const configure = (changes) => {
@@ -158,8 +155,7 @@ export const createDailyReminderModule = ({
         settings = normalizeDailyReminderSettings(await persistence.load())
 
         if (settings.enabled && !canNotify()) {
-          settings = { ...settings, enabled: false }
-          await persistence.save(settings)
+          settings = normalizeDailyReminderSettings(await persistence.save({ enabled: false }))
         }
 
         loaded = true

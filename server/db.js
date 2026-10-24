@@ -196,6 +196,16 @@ function writeSetting(key, value) {
   return upsertSetting(key, value)
 }
 
+function patchSetting(key, patch) {
+  if (!['profile', 'dailyReminder'].includes(key) || !patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    throw Object.assign(new Error('Profile or Daily Reminder field changes must be an object'), { status: 400 })
+  }
+  return db.transaction(() => {
+    const value = { ...getSetting(key), ...patch }
+    return writeSetting(key, value)
+  })()
+}
+
 function deleteCategory(id) {
   return db.transaction(() => {
     if (id === 'other') throw Object.assign(new Error('The Other Category cannot be deleted'), { status: 400 })
@@ -224,6 +234,7 @@ function clearAll() {
 module.exports = {
   writeRecord,
   writeSetting,
+  patchSetting,
   deleteCategory,
   DB_PATH,
   db,
