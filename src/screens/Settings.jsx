@@ -512,6 +512,8 @@ const Settings = () => {
     time: reminderTime,
     isLoaded: isDailyReminderLoaded,
     isConfiguring: isDailyReminderConfiguring,
+    loadError: dailyReminderLoadError,
+    retryLoad: retryDailyReminderLoad,
     setEnabled: setDailyReminderEnabled,
     setTime: setDailyReminderTime
   } = useDailyReminder()
@@ -978,6 +980,12 @@ const Settings = () => {
 
       <SettingsGroup>
         <GroupTitle>Preferences</GroupTitle>
+        {dailyReminderLoadError && (
+          <div role="alert">
+            Could not load Daily Reminder settings. Retry before editing.
+            <Button type="button" onClick={retryDailyReminderLoad}>Retry Daily Reminder</Button>
+          </div>
+        )}
         <SettingsCard elevated>
           {settings.map((setting, index) => (
             <SettingItem key={index}>
