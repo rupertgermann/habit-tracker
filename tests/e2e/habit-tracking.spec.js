@@ -439,6 +439,7 @@ test('deleting a Habit removes only its Journal Entries and stays deleted after 
     habits: [deletedHabit, keptHabit],
     journalEntries: [relatedEntry, unrelatedEntry]
   })
+  const committedUnrelatedEntry = (await getState(request)).journalEntries.find(entry => entry.id === unrelatedEntry.id)
 
   page.once('dialog', dialog => dialog.accept())
   await page.goto(`/habit/${deletedHabit.id}`)
@@ -451,7 +452,7 @@ test('deleting a Habit removes only its Journal Entries and stays deleted after 
 
   const committedState = await getState(request)
   expect(committedState.habits.map(habit => habit.id)).toEqual([keptHabit.id])
-  expect(committedState.journalEntries).toEqual([unrelatedEntry])
+  expect(committedState.journalEntries).toEqual([committedUnrelatedEntry])
 
   await page.reload()
   await waitForAppReady(page)
@@ -487,7 +488,7 @@ test('failed Habit deletion preserves visible and persisted Habit data', async (
   await expect(page.getByText(`Could not delete "${habit.name}". Please try again.`)).toBeVisible()
   const persistedState = await getState(request)
   expect(persistedState).toEqual(committedBeforeDelete)
-  expect(persistedState.journalEntries).toEqual([journalEntry])
+  expect(persistedState.journalEntries).toEqual(committedBeforeDelete.journalEntries)
 
   await page.reload()
   await waitForAppReady(page)

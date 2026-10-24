@@ -164,6 +164,7 @@ test.describe('journal timeline regression coverage', () => {
       makeJournalEntry({ id: 'b-yesterday', habitId: habitB.id, date: yesterday, content: 'B yesterday', moodId: 'bad' })
     ]
     await resetAppData(request, { habits: [habitA, habitB], journalEntries: entries })
+    const committedEntries = (await getState(request)).journalEntries
     await page.goto('/journal')
     await waitForAppReady(page)
     const editor = page.getByPlaceholder(reflectionInput)
@@ -179,7 +180,7 @@ test.describe('journal timeline regression coverage', () => {
     await expect(editor).toHaveValue('B today')
     await page.getByRole('button', { name: 'Update Entry' }).click()
     await expect(editor).toHaveCount(0)
-    expect(await getEntriesForHabitDate(request, habitA.id, today)).toEqual([entries[0]])
+    expect(await getEntriesForHabitDate(request, habitA.id, today)).toEqual([committedEntries[0]])
     expect(await getEntriesForHabitDate(request, habitB.id, today)).toMatchObject([entries[1]])
 
     await page.getByRole('button', { name: 'Add Entry' }).click()

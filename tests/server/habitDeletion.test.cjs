@@ -54,12 +54,12 @@ test('deleting a Habit preserves unrelated Journal Entries', () => {
   store.upsertRow('habits', deletedHabit)
   const committedKeptHabit = store.upsertRow('habits', keptHabit)
   store.upsertRow('journal_entries', relatedEntry)
-  store.upsertRow('journal_entries', unrelatedEntry)
+  const committedUnrelatedEntry = store.upsertRow('journal_entries', unrelatedEntry)
 
   const result = deleteHabit(deletedHabit.id)
 
   assert.deepEqual(result.state.habits, [committedKeptHabit])
-  assert.deepEqual(result.state.journalEntries, [unrelatedEntry])
+  assert.deepEqual(result.state.journalEntries, [committedUnrelatedEntry])
   assert.deepEqual(store.getState(), result.state)
 })
 

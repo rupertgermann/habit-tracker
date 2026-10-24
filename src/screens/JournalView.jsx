@@ -254,6 +254,7 @@ const JournalView = () => {
   const [isComposing, setIsComposing] = useState(false)
   const [draft, setDraft] = useState(emptyDraft)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveConflict, setSaveConflict] = useState('')
 
   React.useEffect(() => {
     setCurrentWeekStart(prev => startOfWeek(prev, { weekStartsOn }))
@@ -282,19 +283,24 @@ const JournalView = () => {
 
   const composer = getJournalComposerState({ habits, journalEntries, draft })
 
-  const updateDraft = (changes) => setDraft(current => {
-    const next = { ...current, ...changes }
-    if (next.habitId === current.habitId && next.date === current.date) return next
+  const updateDraft = (changes) => {
+    if ((changes.habitId !== undefined && changes.habitId !== draft.habitId) ||
+        (changes.date !== undefined && changes.date !== draft.date)) setSaveConflict('')
+    setDraft(current => {
+      const next = { ...current, ...changes }
+      if (next.habitId === current.habitId && next.date === current.date) return next
 
-    const { existingEntry } = getJournalComposerState({ habits, journalEntries, draft: next })
-    return {
-      ...next,
-      content: existingEntry?.content || '',
-      moodId: existingEntry?.moodId || null
-    }
-  })
+      const { existingEntry } = getJournalComposerState({ habits, journalEntries, draft: next })
+      return {
+        ...next,
+        content: existingEntry?.content || '',
+        moodId: existingEntry?.moodId || null
+      }
+    })
+  }
 
   const handleStartComposing = () => {
+    setSaveConflict('')
     setDraft({ ...emptyDraft, date: composer.defaultDate })
     setIsComposing(true)
   }
@@ -316,6 +322,12 @@ const JournalView = () => {
         : await addJournalEntry(composer.entryData)
 
       if (!result.ok) {
+        if (isUpdating && (result.error.status === 409 || result.error.status === 404)) {
+          setSaveConflict(result.error.status === 409
+            ? 'This entry changed in another tab. Your draft is kept. Review it before saving again to replace the latest saved entry.'
+            : 'This entry was deleted in another tab. Your draft is kept. Save again to create a new entry.')
+          return
+        }
         showErrorToast(
           isUpdating
             ? 'Failed to update journal entry. Please try again.'
@@ -369,6 +381,7 @@ const JournalView = () => {
 
       {isComposing && (
         <ComposerForm elevated>
+          {saveConflict && <ComposerNotice role="alert">{saveConflict}</ComposerNotice>}
           <ComposerFields>
             <FieldLabel as="div">
               Habit
@@ -402,6 +415,7 @@ const JournalView = () => {
                 key={mood.id}
                 type="button"
                 $selected={draft.moodId === mood.id}
+                aria-pressed={draft.moodId === mood.id}
                 onClick={() => updateDraft({ moodId: mood.id })}
                 disabled={isSaving}
               >

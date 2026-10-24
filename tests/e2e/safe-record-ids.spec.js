@@ -41,7 +41,11 @@ test('restored Journal IDs keep edit and delete on the selected reflection acros
   await reload
   await waitForAppReady(page)
   const prior = await getState(request)
-  expect(prior.journalEntries).toEqual(restored.journalEntries)
+  expect(prior.journalEntries.map(({ revision, ...entry }) => {
+    expect(revision).toEqual(expect.any(String))
+    return entry
+  })).toEqual(restored.journalEntries)
+  const committedUnrelated = prior.journalEntries.find(entry => entry.id === unrelated.id)
 
   await page.goto(`/habit/${habit.id}`)
   await waitForAppReady(page)
@@ -52,17 +56,17 @@ test('restored Journal IDs keep edit and delete on the selected reflection acros
   const edited = await getState(request)
   const editedTarget = edited.journalEntries.find(entry => entry.id === target.id)
   expect(editedTarget).toMatchObject({ ...target, content: 'Revised imported reflection' })
-  expect(edited).toEqual({ ...prior, journalEntries: [unrelated, editedTarget] })
+  expect(edited).toEqual({ ...prior, journalEntries: [committedUnrelated, editedTarget] })
 
   await page.reload()
   await waitForAppReady(page)
   await cardFor(page, editedTarget.content).getByRole('button', { name: 'Delete', exact: true }).click()
   await expect(page.getByText('Journal entry deleted successfully!')).toBeVisible()
-  expect(await getState(request)).toEqual({ ...prior, journalEntries: [unrelated] })
+  expect(await getState(request)).toEqual({ ...prior, journalEntries: [committedUnrelated] })
   await page.reload()
   await waitForAppReady(page)
   await expect(page.getByText(editedTarget.content, { exact: true })).toHaveCount(0)
-  expect(await getState(request)).toEqual({ ...prior, journalEntries: [unrelated] })
+  expect(await getState(request)).toEqual({ ...prior, journalEntries: [committedUnrelated] })
   await page.goto(`/habit/${otherHabit.id}`)
   await waitForAppReady(page)
   await expect(page.getByText(unrelated.content, { exact: true })).toBeVisible()

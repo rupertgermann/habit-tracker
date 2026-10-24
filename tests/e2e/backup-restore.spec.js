@@ -121,7 +121,9 @@ test('valid canonical restore commits complete state before reloading', async ({
   expect(committed.ok).toBe(true)
   expect(committed.state.habits[0].revision).toEqual(expect.any(String))
   const { revision, ...habitData } = committed.state.habits[0]
-  expect({ ...committed.state, habits: [habitData] }).toEqual(restoredState)
+  const { revision: entryRevision, ...entryData } = committed.state.journalEntries[0]
+  expect(entryRevision).toEqual(expect.any(String))
+  expect({ ...committed.state, habits: [habitData], journalEntries: [entryData] }).toEqual(restoredState)
   expect(await getState(request)).toEqual(committed.state)
 
   await page.waitForEvent('load')

@@ -63,7 +63,9 @@ test('restore rejects incomplete and malformed states before deleting anything',
   assert.notEqual(restored.state.habits[0].revision, valid.habits[0].revision)
   const { revision, ...habitData } = restored.state.habits[0]
   const { revision: priorRevision, ...priorHabitData } = valid.habits[0]
-  assert.deepEqual({ ...restored.state, habits: [habitData] }, { ...valid, habits: [priorHabitData] })
+  const { revision: entryRevision, ...entryData } = restored.state.journalEntries[0]
+  assert.equal(typeof entryRevision, 'string')
+  assert.deepEqual({ ...restored.state, habits: [habitData], journalEntries: [entryData] }, { ...valid, habits: [priorHabitData] })
 })
 test('category deletion reassigns Habits atomically and rolls back on storage failure', async () => {
   await call('/habits', habit)
