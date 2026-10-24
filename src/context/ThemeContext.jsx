@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { habitsApi } from '../api/habitsApi'
 import {
   DEFAULT_APP_DESIGN_ID,
@@ -67,6 +67,7 @@ export const removeLegacyThemePreference = (storage = getBrowserStorage()) => {
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => resolveInitialIsDarkMode())
   const [design, setDesignState] = useState(DEFAULT_APP_DESIGN_ID)
+  const hasChosenAppearance = useRef({ theme: false, design: false })
   const appDesign = getAppDesign(design)
   const theme = getAppDesignTheme(design, isDarkMode)
 
@@ -85,13 +86,13 @@ export const ThemeProvider = ({ children }) => {
 
       if (themeResult.status === 'fulfilled') {
         const savedTheme = normalizeThemePreference(themeResult.value.value)
-        if (savedTheme) setIsDarkMode(savedTheme === DARK_THEME_VALUE)
+        if (savedTheme && !hasChosenAppearance.current.theme) setIsDarkMode(savedTheme === DARK_THEME_VALUE)
       } else {
         console.error('Failed to load theme preference:', themeResult.reason)
       }
 
       if (designResult.status === 'fulfilled') {
-        setDesignState(normalizeAppDesignId(designResult.value.value))
+        if (!hasChosenAppearance.current.design) setDesignState(normalizeAppDesignId(designResult.value.value))
       } else {
         console.error('Failed to load design preference:', designResult.reason)
       }
@@ -119,6 +120,7 @@ export const ThemeProvider = ({ children }) => {
   }, [design])
 
   const toggleTheme = () => {
+    hasChosenAppearance.current.theme = true
     const nextIsDarkMode = !isDarkMode
     setIsDarkMode(nextIsDarkMode)
     habitsApi.saveSetting(THEME_SETTINGS_KEY, nextIsDarkMode ? DARK_THEME_VALUE : LIGHT_THEME_VALUE)
@@ -126,6 +128,7 @@ export const ThemeProvider = ({ children }) => {
   }
 
   const setDesign = value => {
+    hasChosenAppearance.current.design = true
     const nextDesign = normalizeAppDesignId(value)
     setDesignState(nextDesign)
     habitsApi.saveSetting(DESIGN_SETTINGS_KEY, nextDesign)
