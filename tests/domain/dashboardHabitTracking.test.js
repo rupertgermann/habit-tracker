@@ -30,7 +30,10 @@ const createHarness = (habits, {
     persistence,
     getHabits: () => currentHabits,
     replaceHabits: replacement => { currentHabits = replacement },
-    replaceDeletedState: state => { currentHabits = state.habits }
+    replaceDeletedState: habitId => {
+      currentHabits = currentHabits.filter(habit => habit.id !== habitId)
+      return { habits: currentHabits, journalEntries: [] }
+    }
   })
   const dashboard = createDashboardHabitTracking({
     getHabits: () => currentHabits,

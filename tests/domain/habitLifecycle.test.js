@@ -31,9 +31,10 @@ const createHarness = ({
     persistence,
     getHabits: () => habits,
     replaceHabits: replacement => { habits = replacement },
-    replaceDeletedState: state => {
-      habits = state.habits
-      journalEntries = state.journalEntries
+    replaceDeletedState: habitId => {
+      habits = habits.filter(habit => habit.id !== habitId)
+      journalEntries = journalEntries.filter(entry => entry.habitId !== habitId)
+      return { habits, journalEntries }
     },
     reconcileDeletedHabit: habitId => {
       journalEntries = journalEntries.filter(entry => entry.habitId !== habitId)
@@ -46,7 +47,8 @@ const createHarness = ({
     lifecycle,
     persistence,
     getHabits: () => habits,
-    getJournalEntries: () => journalEntries
+    getJournalEntries: () => journalEntries,
+    replaceJournalEntries: replacement => { journalEntries = replacement }
   }
 }
 
@@ -352,7 +354,7 @@ export const tests = [
     }
   },
   {
-    name: 'deletion is terminal for later queued writes and returns authoritative related state',
+    name: 'deletion is terminal for later queued writes and removes related state',
     async run() {
       const habit = makeHabit()
       const relatedEntry = { id: 'related', habitId: habit.id }
@@ -399,6 +401,84 @@ export const tests = [
         habits: [],
         journalEntries: [unrelatedEntry]
       })
+    }
+  },
+  {
+    name: 'delayed deletion preserves newer unrelated Habit and Journal Entry writes',
+    async run() {
+      const deletedHabit = makeHabit()
+      const keptHabit = makeHabit({ id: 'kept-habit' })
+      const relatedEntry = { id: 'related', habitId: deletedHabit.id }
+      const keptEntry = { id: 'kept-entry', habitId: keptHabit.id, content: 'Before deletion' }
+      const persistence = createInMemoryHabitPersistence({
+        habits: [deletedHabit, keptHabit],
+        journalEntries: [relatedEntry, keptEntry]
+      })
+      let releaseDelete
+      const harness = createHarness({
+        habits: [deletedHabit, keptHabit],
+        journalEntries: [relatedEntry, keptEntry],
+        persistence: {
+          ...persistence,
+          async deleteHabit(habitId) {
+            const snapshot = await persistence.deleteHabit(habitId)
+            await new Promise(resolve => { releaseDelete = resolve })
+            return snapshot
+          }
+        }
+      })
+
+      const deletion = harness.lifecycle.delete(deletedHabit.id)
+      await Promise.resolve()
+      await Promise.resolve()
+      const updated = await harness.lifecycle.update(keptHabit.id, { name: 'Newer name' })
+      const created = await harness.lifecycle.create({ name: 'Newer Habit' })
+      const savedEntry = { ...keptEntry, content: 'Newer reflection' }
+      harness.replaceJournalEntries([relatedEntry, savedEntry])
+
+      releaseDelete()
+      const result = await deletion
+
+      assert.equal(result.ok, true)
+      assert.deepEqual(harness.getHabits(), [updated.habit, created.habit])
+      assert.deepEqual(harness.getJournalEntries(), [savedEntry])
+      assert.equal(result.habits, harness.getHabits())
+      assert.equal(result.journalEntries, harness.getJournalEntries())
+      assert.deepEqual(persistence.getState().habits, harness.getHabits())
+    }
+  },
+  {
+    name: 'failed deletion preserves current collections including newer unrelated writes',
+    async run() {
+      const deletedHabit = makeHabit()
+      const keptHabit = makeHabit({ id: 'kept-habit' })
+      const relatedEntry = { id: 'related', habitId: deletedHabit.id }
+      const error = new Error('Deletion failed')
+      let rejectDelete
+      const persistence = createInMemoryHabitPersistence({ habits: [deletedHabit, keptHabit] })
+      const harness = createHarness({
+        habits: [deletedHabit, keptHabit],
+        journalEntries: [relatedEntry],
+        persistence: {
+          ...persistence,
+          deleteHabit: () => new Promise((resolve, reject) => { rejectDelete = reject })
+        }
+      })
+
+      const deletion = harness.lifecycle.delete(deletedHabit.id)
+      await Promise.resolve()
+      await harness.lifecycle.update(keptHabit.id, { name: 'Newer name' })
+      const currentHabits = harness.getHabits()
+      const currentEntries = [relatedEntry, { id: 'new-entry', habitId: keptHabit.id }]
+      harness.replaceJournalEntries(currentEntries)
+      rejectDelete(error)
+      const result = await deletion
+
+      assert.equal(result.ok, false)
+      assert.equal(result.error, error)
+      assert.equal(result.habits, currentHabits)
+      assert.equal(harness.getHabits(), currentHabits)
+      assert.equal(harness.getJournalEntries(), currentEntries)
     }
   },
   {

@@ -268,14 +268,14 @@ export const createHabitLifecycle = ({
     }
 
     try {
-      const committedState = await persistence.deleteHabit(habitId)
-      replaceDeletedState(committedState)
+      await persistence.deleteHabit(habitId)
+      const currentState = replaceDeletedState(habitId)
       return {
         ok: true,
         changed: true,
         habit: previousHabit,
-        habits: committedState.habits,
-        journalEntries: committedState.journalEntries
+        habits: currentState.habits,
+        journalEntries: currentState.journalEntries
       }
     } catch (error) {
       return {
