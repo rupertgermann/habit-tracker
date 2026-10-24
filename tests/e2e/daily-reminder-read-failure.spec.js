@@ -13,7 +13,7 @@ test('failed Daily Reminder reads block writes until retry recovers saved settin
   })
   const writes = []
   page.on('request', req => {
-    if (req.url().endsWith('/api/settings/dailyReminder') && req.method() === 'PUT') writes.push(req.postDataJSON())
+    if (req.url().endsWith('/api/settings/dailyReminder') && req.method() === 'PATCH') writes.push(req.postDataJSON())
   })
   const unavailable = route => route.request().method() === 'GET'
     ? route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }) : route.continue()
@@ -38,7 +38,7 @@ test('failed Daily Reminder reads block writes until retry recovers saved settin
   expect(writes).toEqual([])
   await time.fill('19:00')
   await expect.poll(read).toEqual({ enabled: true, time: '19:00' })
-  expect(writes).toEqual([{ value: { enabled: true, time: '19:00' } }])
+  expect(writes).toEqual([{ value: { time: '19:00' } }])
   await page.reload()
   await waitForAppReady(page)
   await expect(enabled).toBeChecked()

@@ -47,5 +47,5 @@ export const createAvatarImage = async file => {
 
 export const createBrowserProfilePersistence = api => ({
   async load() { return (await api.getSetting('profile')).value },
-  async save(profile) { return (await api.saveSetting('profile', profile)).value }
+  async save(changes) { return (await api.patchSetting('profile', changes)).value }
 })
