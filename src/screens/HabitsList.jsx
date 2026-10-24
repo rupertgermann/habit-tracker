@@ -323,8 +323,10 @@ const HabitsList = ({ onHabitSelect, selectedHabitId, isTabletView }) => {
         return 'Daily'
       case 'weekly':
         return 'Weekly'
-      case 'custom':
-        return `${habit.daysPerWeek} days/week`
+      case 'custom': {
+        const days = habit.selectedDays?.filter(Boolean).length ?? habit.daysPerWeek
+        return `${days} day${days === 1 ? '' : 's'}/week`
+      }
       default:
         return 'Daily'
     }

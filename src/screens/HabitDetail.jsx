@@ -299,8 +299,10 @@ const HabitDetail = () => {
         return 'Every day'
       case 'weekly':
         return 'Every week'
-      case 'custom':
-        return `${habit.daysPerWeek} days per week`
+      case 'custom': {
+        const days = habit.selectedDays?.filter(Boolean).length ?? habit.daysPerWeek
+        return `${days} day${days === 1 ? '' : 's'} per week`
+      }
       default:
         return 'Every day'
     }
