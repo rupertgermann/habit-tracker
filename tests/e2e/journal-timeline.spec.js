@@ -287,7 +287,7 @@ test.describe('journal timeline regression coverage', () => {
     await page.getByRole('button', { name: 'Save Entry' }).click()
 
     await expect(page.getByText(createdContent, { exact: true })).toBeVisible()
-    await expect(page.getByText(/Good/)).toBeVisible()
+    await expect(journalEntryCardFor(page, createdContent).getByText('😊 Good', { exact: true })).toBeVisible()
     await expect.poll(async () => {
       const entries = await getEntriesForHabitDate(request, habit.id, todayKey)
       return entries.map(entry => `${entry.content}|${entry.moodId}`).join(',')
@@ -296,7 +296,7 @@ test.describe('journal timeline regression coverage', () => {
     await page.reload()
     await waitForAppReady(page)
     await expect(page.getByText(createdContent, { exact: true })).toBeVisible()
-    await expect(page.getByText(/Good/)).toBeVisible()
+    await expect(journalEntryCardFor(page, createdContent).getByText('😊 Good', { exact: true })).toBeVisible()
 
     await page.goto('/journal')
     await waitForAppReady(page)
@@ -326,7 +326,7 @@ test.describe('journal timeline regression coverage', () => {
 
     await expect(page.getByText(updatedContent, { exact: true })).toBeVisible()
     await expect(page.getByText(createdContent, { exact: true })).toHaveCount(0)
-    await expect(page.getByText(/Very Good/)).toBeVisible()
+    await expect(journalEntryCardFor(page, updatedContent).getByText('😄 Very Good', { exact: true })).toBeVisible()
     await expect.poll(async () => {
       const entries = await getEntriesForHabitDate(request, habit.id, todayKey)
       return entries.map(entry => `${entry.content}|${entry.moodId}`).join(',')
@@ -336,14 +336,14 @@ test.describe('journal timeline regression coverage', () => {
     await waitForAppReady(page)
     await expect(page.getByText(updatedContent, { exact: true })).toBeVisible()
     await expect(page.getByText(createdContent, { exact: true })).toHaveCount(0)
-    await expect(page.getByText(/Very Good/)).toBeVisible()
+    await expect(journalEntryCardFor(page, updatedContent).getByText('😄 Very Good', { exact: true })).toBeVisible()
 
     await page.goto('/journal')
     await waitForAppReady(page)
 
     await expect(page.getByText(updatedContent, { exact: true })).toHaveCount(1)
     await expect(page.getByText(createdContent, { exact: true })).toHaveCount(0)
-    await expect(page.getByText(/Very Good/)).toBeVisible()
+    await expect(page.getByText(updatedContent, { exact: true }).locator('..').getByText('😄 Very Good', { exact: true })).toBeVisible()
 
     await page.goto(`/habit/${habit.id}`)
     await waitForAppReady(page)
