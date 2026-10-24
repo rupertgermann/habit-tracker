@@ -99,10 +99,8 @@ function parseSettingValue(value) {
 }
 
 function listSettings() {
-  return db.prepare('SELECT key, value FROM settings').all().reduce((settings, row) => {
-    settings[row.key] = parseSettingValue(row.value)
-    return settings
-  }, {})
+  return Object.fromEntries(db.prepare('SELECT key, value FROM settings').all()
+    .map(row => [row.key, parseSettingValue(row.value)]))
 }
 
 function getSetting(key, fallback = null) {
@@ -191,7 +189,7 @@ function writeRecord(table, item, create = false) {
 
 function writeSetting(key, value) {
   const state = getState()
-  state.settings[key] = value
+  state.settings = { ...state.settings, [key]: value }
   validateState(state)
   return upsertSetting(key, value)
 }
