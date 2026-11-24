@@ -182,9 +182,9 @@ test.describe('responsive smoke coverage', () => {
 
       await expectSurfaceReady(page, '/calendar', 'Calendar')
       await expect(page.getByLabel('Select habit to view')).toBeVisible()
-      await expectCalendarMode(page, 'Month', 'This Month: Days Said')
-      await expectCalendarMode(page, 'Week', 'This Week: Days Said')
-      await expectCalendarMode(page, 'Year', 'This Year: Days Said')
+      await expectCalendarMode(page, 'Month', 'This Month: Days Completed')
+      await expectCalendarMode(page, 'Week', 'This Week: Days Completed')
+      await expectCalendarMode(page, 'Year', 'This Year: Days Completed')
 
       await expectSurfaceReady(page, '/journal', 'Journal')
       await expect(page.getByText('Responsive smoke journal entry for today.')).toBeVisible()

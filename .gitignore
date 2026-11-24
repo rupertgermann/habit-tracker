@@ -100,6 +100,10 @@ temp/
 playwright-report/
 test-results/
 
+# Mutation testing output
+/.stryker-tmp/
+/reports/mutation/
+
 # Storybook build outputs
 .out
 .storybook-out

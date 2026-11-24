@@ -16,6 +16,7 @@
     "test:domain": "node scripts/run-domain-tests.mjs",
     "test:server": "node --test tests/server/*.test.cjs",
     "test:e2e": "playwright test",
+    "test:mutation": "stryker run",
     "screenshots": "node scripts/capture-readme-screenshots.mjs",
     "preview": "vite preview",
     "server": "node server/index.js",
@@ -33,8 +34,15 @@
     "date-fns": "^4.4.0",
     "react-confetti": "^6.4.0"
   },
+  "overrides": {
+    "@stryker-mutator/core": {
+      "minimatch": "^11.0.1",
+      "qs": "6.16.1"
+    }
+  },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@stryker-mutator/core": "^10.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",

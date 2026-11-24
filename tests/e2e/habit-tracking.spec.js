@@ -505,9 +505,9 @@ test('calendar stats for a count habit survive reload', async ({ page, request }
   const completionDates = includesYesterday ? [yesterdayKey, todayKey] : [todayKey]
   const daysWithEntry = new Set(completionDates).size
   const daysElapsed = today.getDate()
-  const daysSaidPercent = Math.round((daysWithEntry / daysElapsed) * 100)
-  const expectedDaysSaid = `${daysSaidPercent}%`
-  const expectedDaysNotSaid = `${100 - daysSaidPercent}%`
+  const daysCompletedPercent = Math.round((daysWithEntry / daysElapsed) * 100)
+  const expectedDaysCompleted = `${daysCompletedPercent}%`
+  const expectedDaysMissed = `${100 - daysCompletedPercent}%`
   const completions = [
     ...(includesYesterday ? [makeCompletion(yesterdayKey, 8)] : []),
     makeCompletion(todayKey, 9),
@@ -535,8 +535,8 @@ test('calendar stats for a count habit survive reload', async ({ page, request }
   await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Select habit to view' })).toContainText(habit.name)
 
-  await expectCalendarStat(page, 'This Month: Days Said', expectedDaysSaid)
-  await expectCalendarStat(page, 'This Month: Days Not Said', expectedDaysNotSaid)
+  await expectCalendarStat(page, 'This Month: Days Completed', expectedDaysCompleted)
+  await expectCalendarStat(page, 'This Month: Days Missed', expectedDaysMissed)
   await expectCalendarStat(page, 'Total Count', String(completions.length))
   await expectCalendarStat(page, 'Best Day', '3')
 })

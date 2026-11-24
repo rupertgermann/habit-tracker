@@ -108,6 +108,7 @@ The app opens at `http://localhost:3300`. The API listens at `http://127.0.0.1:3
 | `npm run test` | Run domain, server, and Playwright browser tests. |
 | `npm run test:domain` | Run domain and context tests through Vite SSR. |
 | `npm run test:server` | Run transactional SQLite server tests. |
+| `npm run test:mutation` | Run Stryker against the app, API, and shared code using the domain and server tests. |
 | `npm run test:e2e` | Run the Playwright suite with an isolated temp database and runtime reset guard. |
 | `npm run screenshots` | Seed synthetic data in `.tmp/screenshots`, start isolated local servers on `3330/3331`, and capture the five dashboards, Appearance picker, and dark-mode README surfaces into `docs/images/`. |
 | `npm run build` | Build the production bundle to `dist/` with source maps. |
@@ -222,6 +223,8 @@ Backup downloads and selected backup files support up to 32 MiB (33,554,432 byte
 ## Testing
 
 Domain tests run with `npm run test:domain` and cover Habit tracking, dashboard semantic outcomes, persistence-aware Completion and Journal Entry writes, App Design registrations, canonical backup validation/migration, journal timelines, and database-backed preference normalization. Server tests force complete-restore failures to verify SQLite rollback.
+
+For a focused mutation run, use `npm run test:mutation -- --mutate server/habitDeletion.js`. Stryker runs the domain and server suites for each mutation, so a full run takes longer. Open `reports/mutation/mutation.html` to see which mutations the tests caught. With the command runner, survivors can also indicate code the suites never exercised. There is no minimum score.
 
 Browser tests run with `npm run test:e2e`. Playwright starts `npm run dev:e2e`, verifies the API is using `.tmp/e2e/habit-tracker.db`, and only then allows reset/restore operations. The suite covers cross-design Completion success, reload, rollback, and confetti suppression; every App Design's light/dark persistence matrix; committed Journal Entry feedback; canonical and legacy backup/restore including visible failure preservation; persisted habit flows; profile/avatar persistence; calendar contrast; and responsive smoke coverage.
 

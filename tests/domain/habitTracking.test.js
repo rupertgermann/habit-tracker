@@ -44,14 +44,14 @@ export const tests = [
     }
   },
   {
-    name: 'range stats report said and missed day percentages',
+    name: 'range stats report completed and missed day percentages',
     run() {
       const stats = getHabitRangeStats(createCountHabit(), 'month', refDate, refDate)
 
       assert.equal(stats.daysElapsed, 3)
       assert.equal(stats.daysWithEntry, 2)
       assert.equal(stats.daysWithoutEntry, 1)
-      assert.equal(stats.percentDaysSaid, 67)
+      assert.equal(stats.percentDaysCompleted, 67)
       assert.equal(stats.percentDaysMissed, 33)
       assert.equal(stats.totalCount, 3)
       assert.equal(stats.bestCount, 2)
