@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { version as appVersion } from '../../package.json'
 import Card from '../components/Card'
 import AppIcon from '../components/AppIcon'
 
@@ -45,7 +46,7 @@ const PAGES = {
   },
   support: {
     title: 'Support',
-    updated: 'Habit Tracker v1.0.0',
+    updated: `Habit Tracker v${appVersion}`,
     summary: 'For help with Habit Tracker, include the screen, the action you tried, and what happened.',
     sections: [
       {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { version as appVersion } from '../../package.json'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
@@ -1114,7 +1115,7 @@ const Settings = () => {
       </DangerButton>
 
       <AppInfo elevated>
-        <AppVersion>Habit Tracker v1.0.0</AppVersion>
+        <AppVersion>Habit Tracker v{appVersion}</AppVersion>
         <AppLinks>
           <AppLink to="/privacy">Privacy Policy</AppLink>
           <AppLink to="/terms">Terms of Service</AppLink>
