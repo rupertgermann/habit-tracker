@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import { chromium, expect } from '@playwright/test'
+import defaultCategories from '../shared/defaultCategories.json' with { type: 'json' }
 
 const root = process.cwd()
 const outputDir = path.join(root, 'docs', 'images')
@@ -120,7 +121,7 @@ const screenshotState = {
       color: '#0EA5E9',
       icon: 'laptop',
       category: 'productivity',
-      reminders: [{ id: 'deep-work-morning', time: '09:00' }],
+      reminders: ['09:00'],
       completions: [completion(0, 8), completion(-1, 8), completion(-2, 9), completion(-4, 8), completion(-5, 9), completion(-6, 8)],
       streak: 3,
       longestStreak: 12
@@ -178,7 +179,7 @@ const screenshotState = {
       longestStreak: 7
     })
   ],
-  categories: [],
+  categories: defaultCategories,
   journalEntries: [
     {
       id: 'example-journal-today',
@@ -242,6 +243,7 @@ const waitForSettledFrame = async page => {
   await page.waitForTimeout(600)
 }
 
+let browser
 try {
   start('server', process.execPath, ['server/index.js'])
   start('client', bin('vite'), ['--host', '127.0.0.1', '--port', clientPort, '--strictPort'])
@@ -249,7 +251,7 @@ try {
   await waitFor(`${apiURL}/api/runtime`)
   await waitFor(`${baseURL}/api/runtime`)
 
-  const browser = await chromium.launch()
+  browser = await chromium.launch()
   const desktopContext = await browser.newContext({
     baseURL,
     viewport: { width: 1280, height: 900 },
@@ -299,14 +301,13 @@ try {
 
   await mobilePage.goto('/calendar')
   await expect(mobilePage.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
-  await expect(mobilePage.getByText('This Month: Days Said')).toBeVisible()
+  await expect(mobilePage.getByText('This Month: Days Completed')).toBeVisible()
   await waitForSettledFrame(mobilePage)
   await mobilePage.screenshot({
     path: path.join(outputDir, 'readme-calendar-dark.png')
   })
 
   await mobileContext.close()
-  await browser.close()
   for (const screenshot of designScreenshots) {
     console.log(`Captured docs/images/${screenshot.file}`)
   }
@@ -319,4 +320,5 @@ try {
   process.exitCode = 1
 } finally {
   stopProcesses()
+  await browser?.close()
 }
