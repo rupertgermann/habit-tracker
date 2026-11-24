@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "npm run test:domain && npm run test:server"
+  },
+  "coverageAnalysis": "off",
+  "concurrency": 4,
+  "timeoutMS": 10000,
+  "mutate": [
+    "{server,shared,src}/**/*.{js,jsx,mjs}",
+    "!**/*.{test,spec}.{js,jsx,mjs}"
+  ],
+  "ignorePatterns": [
+    "/server/data",
+    "/.tmp",
+    "/dist",
+    "/test-results",
+    "/playwright-report",
+    "/docs/images"
+  ]
+}

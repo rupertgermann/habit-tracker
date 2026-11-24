@@ -26,7 +26,7 @@ const emptyRangeStats = {
   daysWithEntry: 0,
   daysWithoutEntry: 0,
   daysElapsed: 0,
-  percentDaysSaid: 0,
+  percentDaysCompleted: 0,
   percentDaysMissed: 0,
   avgPerActiveDay: 0,
   bestCount: 0,
@@ -157,15 +157,15 @@ const getRangeStatsForDays = (days) => {
       : currentBest,
     { count: 0, date: null }
   )
-  const percentDaysSaid = Math.round((daysWithEntry / daysElapsed) * 100)
+  const percentDaysCompleted = Math.round((daysWithEntry / daysElapsed) * 100)
 
   return {
     totalCount,
     daysWithEntry,
     daysWithoutEntry,
     daysElapsed,
-    percentDaysSaid,
-    percentDaysMissed: 100 - percentDaysSaid,
+    percentDaysCompleted,
+    percentDaysMissed: 100 - percentDaysCompleted,
     avgPerActiveDay: daysWithEntry > 0 ? Math.round((totalCount / daysWithEntry) * 10) / 10 : 0,
     bestCount: best.count,
     bestDate: best.date

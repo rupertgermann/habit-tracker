@@ -874,12 +874,12 @@ const CalendarView = () => {
 
       <StatsCard elevated>
         <StatItem>
-          <StatValue>{rangeStats.percentDaysSaid}%</StatValue>
-          <StatLabel>{periodLabel}: Days Said</StatLabel>
+          <StatValue>{rangeStats.percentDaysCompleted}%</StatValue>
+          <StatLabel>{periodLabel}: Days Completed</StatLabel>
         </StatItem>
         <StatItem>
           <StatValue>{rangeStats.percentDaysMissed}%</StatValue>
-          <StatLabel>{periodLabel}: Days Not Said</StatLabel>
+          <StatLabel>{periodLabel}: Days Missed</StatLabel>
         </StatItem>
         <StatItem>
           <StatValue>{rangeStats.totalCount}</StatValue>
